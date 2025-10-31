@@ -5,7 +5,9 @@ export type User = {
   auth_id: string; // uuid from auth.users table
   name: string;
   email: string;
-  role: UserRole;
+  // The 'role' in the frontend app is a string, but is stored as a SMALLINT in the DB.
+  // See `auth.tsx` for the mapping logic.
+  role: UserRole; 
   avatar_url: string;
   created_at: string;
   assigned_outlet_ids?: string[];

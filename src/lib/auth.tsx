@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { User } from './types';
+import type { User, UserRole } from './types';
 import { supabase } from './supabaseClient';
 import type { AuthChangeEvent, Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { usePathname, useRouter } from 'next/navigation';
@@ -13,6 +13,16 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const mapNumericRoleToString = (role: number): UserRole => {
+    switch (role) {
+        case 1: return 'admin';
+        case 2: return 'sales_executive';
+        case 3: return 'distributor';
+        case 4: return 'delivery_partner';
+        default: return 'sales_executive'; // Fallback role
+    }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -31,7 +41,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("Error fetching user profile:", error);
       return null;
     }
-    return profile;
+    
+    // Map the numeric role from DB to string role for the app
+    const appProfile: User = {
+        ...profile,
+        role: mapNumericRoleToString(profile.role)
+    };
+
+    return appProfile;
   }, []);
 
   useEffect(() => {
