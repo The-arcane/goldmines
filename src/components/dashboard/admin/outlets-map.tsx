@@ -1,7 +1,8 @@
 "use client";
 
-import { Map, AdvancedMarker, Pin, Circle } from "@vis.gl/react-google-maps";
+import { Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps";
 import type { Outlet } from "@/lib/types";
+import { Circle } from "@/components/map/circle";
 
 export function OutletsMap({ outlets }: { outlets: Outlet[] }) {
   return (

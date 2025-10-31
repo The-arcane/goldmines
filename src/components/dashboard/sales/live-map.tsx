@@ -1,6 +1,7 @@
 "use client";
 
-import { Map, AdvancedMarker, Pin, Circle } from "@vis.gl/react-google-maps";
+import { Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps";
+import { Circle } from "@/components/map/circle";
 import type { Outlet } from "@/lib/types";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { useEffect, useState } from "react";
