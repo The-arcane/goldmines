@@ -1,0 +1,238 @@
+-- This is a pseudo-file to deliver the SQL script.
+-- Please run this script in your Supabase SQL Editor.
+
+-- ----------------------------------------------------------------
+-- 0. PERMISSION GRANTS (Fix for "permission denied for schema auth" error)
+-- ----------------------------------------------------------------
+-- Grant usage on the 'auth' schema to the 'postgres' role
+GRANT USAGE ON SCHEMA auth TO postgres;
+-- Grant permissions for the 'postgres' role to access tables in the 'auth' schema
+GRANT ALL ON ALL TABLES IN SCHEMA auth TO postgres;
+
+
+-- ----------------------------------------------------------------
+-- 1. CLEANUP (Optional: Use if you are starting over and need to remove old structures)
+-- ----------------------------------------------------------------
+-- DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+-- DROP FUNCTION IF EXISTS public.handle_new_user();
+-- DROP FUNCTION IF EXISTS auth.get_user_role();
+-- DROP TABLE IF EXISTS public.deliveries;
+-- DROP TABLE IF EXISTS public.orders;
+-- DROP TABLE IF EXISTS public.visits;
+-- DROP TABLE IF EXISTS public.geofences;
+-- DROP TABLE IF EXISTS public.outlets;
+-- DROP TABLE IF EXISTS public.users;
+
+
+-- ----------------------------------------------------------------
+-- 2. TABLE CREATION
+-- ----------------------------------------------------------------
+-- Table: users
+-- Stores user profile information and links to Supabase Auth.
+CREATE TABLE public.users (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    auth_id uuid UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE, -- Link to the Supabase auth user
+    name TEXT NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    -- Role definitions: 1: admin, 2: sales_executive, 3: distributor, 4: delivery_partner
+    role SMALLINT NOT NULL CHECK (role BETWEEN 1 AND 4),
+    avatar_url TEXT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+COMMENT ON TABLE public.users IS 'Stores user profiles and roles, linked to auth.users. Roles are: 1-admin, 2-sales_executive, 3-distributor, 4-delivery_partner.';
+
+-- Table: outlets
+CREATE TABLE public.outlets (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    type TEXT, -- e.g., 'Retail', 'Distributor', 'Warehouse'
+    address TEXT,
+    lat NUMERIC(10, 7) NOT NULL,
+    lng NUMERIC(10, 7) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+COMMENT ON TABLE public.outlets IS 'Manages all physical outlets and their locations.';
+
+
+-- Table: geofences
+CREATE TABLE public.geofences (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    outlet_id uuid UNIQUE NOT NULL REFERENCES public.outlets(id) ON DELETE CASCADE,
+    lat NUMERIC(10, 7) NOT NULL,
+    lng NUMERIC(10, 7) NOT NULL,
+    radius NUMERIC NOT NULL, -- Max 150m
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+COMMENT ON TABLE public.geofences IS 'Stores geofence circles for each outlet.';
+
+
+-- Table: visits
+CREATE TABLE public.visits (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    outlet_id uuid NOT NULL REFERENCES public.outlets(id) ON DELETE CASCADE,
+    entry_time TIMESTAMPTZ,
+    exit_time TIMESTAMPTZ,
+    within_radius BOOLEAN,
+    duration_minutes INT,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+COMMENT ON TABLE public.visits IS 'Logs sales executive visits to geofenced outlets.';
+
+
+-- Table: orders
+CREATE TABLE public.orders (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    outlet_id uuid NOT NULL REFERENCES public.outlets(id) ON DELETE CASCADE,
+    order_date DATE NOT NULL,
+    total_amount NUMERIC(10, 2),
+    status TEXT, -- 'Pending', 'In Transit', 'Delivered'
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+COMMENT ON TABLE public.orders IS 'Manages orders created for outlets.';
+
+
+-- Table: deliveries
+CREATE TABLE public.deliveries (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_id uuid NOT NULL REFERENCES public.orders(id) ON DELETE CASCADE,
+    delivery_person_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    status TEXT, -- 'Pending', 'Delivered'
+    delivered_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+COMMENT ON TABLE public.deliveries IS 'Tracks the delivery status of orders.';
+
+
+-- ----------------------------------------------------------------
+-- 3. DATABASE FUNCTIONS & TRIGGERS
+-- ----------------------------------------------------------------
+-- Function to automatically create a public.users entry when a new user signs up.
+-- This function converts the string role from the signup form into its corresponding integer.
+-- **UPDATED to handle NULL metadata from Supabase dashboard.**
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+DECLARE
+  role_int SMALLINT;
+  user_name TEXT;
+BEGIN
+    -- Convert string role from metadata to integer, defaulting if not present
+    role_int := CASE NEW.raw_user_meta_data->>'role'
+        WHEN 'admin' THEN 1
+        WHEN 'sales_executive' THEN 2
+        WHEN 'distributor' THEN 3
+        WHEN 'delivery_partner' THEN 4
+        ELSE 2 -- Default to 'sales_executive'
+    END;
+
+    -- Use the name from metadata, or fallback to the email if name is not provided
+    user_name := COALESCE(NEW.raw_user_meta_data->>'name', NEW.email);
+
+    INSERT INTO public.users (auth_id, name, email, role, avatar_url)
+    VALUES (
+        NEW.id,
+        user_name,
+        NEW.email,
+        role_int,
+        NEW.raw_user_meta_data->>'avatar_url'
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+COMMENT ON FUNCTION public.handle_new_user() IS 'Triggered on new user signup in auth.users. Creates a corresponding profile in public.users, converting the text-based role to an integer.';
+
+
+-- Trigger to call the function after a new user is created in Supabase Auth.
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users; -- Drop existing trigger before creating
+CREATE TRIGGER on_auth_user_created
+AFTER INSERT ON auth.users
+FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+
+-- Helper function to get the current authenticated user's role as an integer.
+-- This function is defined in the PUBLIC schema but accesses the AUTH schema.
+CREATE OR REPLACE FUNCTION public.get_user_role()
+RETURNS SMALLINT AS $$
+  SELECT role
+  FROM public.users
+  WHERE auth_id = auth.uid()
+$$ LANGUAGE sql STABLE SECURITY DEFINER;
+COMMENT ON FUNCTION public.get_user_role() IS 'Returns the integer role of the currently authenticated user.';
+
+
+-- ----------------------------------------------------------------
+-- 4. ROW LEVEL SECURITY (RLS) POLICIES
+-- ----------------------------------------------------------------
+-- Enable RLS for all tables
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.outlets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.geofences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.visits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.deliveries ENABLE ROW LEVEL SECURITY;
+
+-- Clear old policies before creating new ones
+DROP POLICY IF EXISTS "Allow admin to read all users" ON public.users;
+DROP POLICY IF EXISTS "Allow user to read their own profile" ON public.users;
+DROP POLICY IF EXISTS "Allow user to update their own profile" ON public.users;
+DROP POLICY IF EXISTS "Allow admin to manage all outlets" ON public.outlets;
+DROP POLICY IF EXISTS "Allow authenticated users to read outlets" ON public.outlets;
+DROP POLICY IF EXISTS "Allow admin to manage all geofences" ON public.geofences;
+DROP POLICY IF EXISTS "Allow authenticated users to read geofences" ON public.geofences;
+DROP POLICY IF EXISTS "Allow admin to read all visits" ON public.visits;
+DROP POLICY IF EXISTS "Allow sales exec (role 2) to read their own visits" ON public.visits;
+DROP POLICY IF EXISTS "Allow sales exec (role 2) to log their own visits" ON public.visits;
+DROP POLICY IF EXISTS "Allow sales exec (role 2) to update their own visits" ON public.visits;
+DROP POLICY IF EXISTS "Allow authenticated users to manage orders" ON public.orders;
+DROP POLICY IF EXISTS "Allow authenticated users to manage deliveries" ON public.deliveries;
+
+
+-- --- Policies for `users` table ---
+CREATE POLICY "Allow admin to read all users" ON public.users FOR SELECT TO authenticated USING (public.get_user_role() = 1);
+CREATE POLICY "Allow user to read their own profile" ON public.users FOR SELECT TO authenticated USING (auth_id = auth.uid());
+CREATE POLICY "Allow user to update their own profile" ON public.users FOR UPDATE TO authenticated USING (auth_id = auth.uid());
+
+-- --- Policies for `outlets` table ---
+CREATE POLICY "Allow admin to manage all outlets" ON public.outlets FOR ALL TO authenticated USING (public.get_user_role() = 1) WITH CHECK (public.get_user_role() = 1);
+CREATE POLICY "Allow authenticated users to read outlets" ON public.outlets FOR SELECT TO authenticated USING (true);
+
+-- --- Policies for `geofences` table ---
+CREATE POLICY "Allow admin to manage all geofences" ON public.geofences FOR ALL TO authenticated USING (public.get_user_role() = 1) WITH CHECK (public.get_user_role() = 1);
+CREATE POLICY "Allow authenticated users to read geofences" ON public.geofences FOR SELECT TO authenticated USING (true);
+
+-- --- Policies for `visits` table ---
+CREATE POLICY "Allow admin to read all visits" ON public.visits FOR SELECT TO authenticated USING (public.get_user_role() = 1);
+CREATE POLICY "Allow sales exec (role 2) to read their own visits" ON public.visits FOR SELECT TO authenticated USING ((SELECT auth_id FROM public.users WHERE id = user_id) = auth.uid());
+CREATE POLICY "Allow sales exec (role 2) to log their own visits" ON public.visits FOR INSERT TO authenticated WITH CHECK (((SELECT auth_id FROM public.users WHERE id = user_id) = auth.uid()) AND (public.get_user_role() = 2));
+CREATE POLICY "Allow sales exec (role 2) to update their own visits" ON public.visits FOR UPDATE TO authenticated USING (((SELECT auth_id FROM public.users WHERE id = user_id) = auth.uid()) AND (public.get_user_role() = 2));
+
+-- --- Permissive policies for optional tables ---
+CREATE POLICY "Allow authenticated users to manage orders" ON public.orders FOR ALL TO authenticated USING (true) WITH CHECK (true);
+CREATE POLICY "Allow authenticated users to manage deliveries" ON public.deliveries FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+
+-- ----------------------------------------------------------------
+-- 5. STORAGE BUCKETS & POLICIES
+-- ----------------------------------------------------------------
+-- Create a public bucket for user avatars.
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('avatars', 'avatars', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Policies for the 'avatars' bucket
+DROP POLICY IF EXISTS "Allow authenticated users to upload avatars" ON storage.objects;
+DROP POLICY IF EXISTS "Allow user to manage their own avatar" ON storage.objects;
+DROP POLICY IF EXISTS "Allow public read access to avatars" ON storage.objects;
+
+
+CREATE POLICY "Allow authenticated users to upload avatars"
+ON storage.objects FOR INSERT TO authenticated
+WITH CHECK ( bucket_id = 'avatars' );
+
+CREATE POLICY "Allow user to manage their own avatar"
+ON storage.objects FOR ALL TO authenticated
+USING ( bucket_id = 'avatars' AND owner = auth.uid() );
+
+CREATE POLICY "Allow public read access to avatars"
+ON storage.objects FOR SELECT
+USING ( bucket_id = 'avatars' );
