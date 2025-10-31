@@ -6,7 +6,7 @@ export type User = {
   name: string;
   email: string;
   // The 'role' in the frontend app is a string, but is stored as a SMALLINT in the DB.
-  // See `auth.tsx` for the mapping logic.
+  // The auth provider handles mapping between the two.
   role: UserRole; 
   avatar_url: string;
   created_at: string;
@@ -58,3 +58,11 @@ export type Delivery = {
   status: 'Pending' | 'Delivered';
   delivered_at: string | null;
 };
+
+// For the new user creation form
+export type UserFormData = {
+  name: string;
+  email: string;
+  password: string;
+  role: UserRole;
+}
