@@ -13,7 +13,7 @@ export type User = {
 export type Outlet = {
   id: string;
   name: string;
-  type: 'Retail' | 'Distributor' | 'Warehouse';
+  type: string;
   address: string;
   lat: number;
   lng: number;
