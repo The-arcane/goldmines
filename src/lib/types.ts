@@ -1,5 +1,4 @@
 
-
 export type UserRole = 'admin' | 'sales_executive' | 'distributor_admin' | 'delivery_partner';
 
 export type User = {
@@ -12,7 +11,6 @@ export type User = {
   role: UserRole; 
   avatar_url: string;
   created_at: string;
-  assigned_outlet_ids?: string[];
 };
 
 export type Distributor = {
@@ -74,4 +72,5 @@ export type UserFormData = {
   email: string;
   password: string;
   role: UserRole;
+  distributorId?: string;
 }

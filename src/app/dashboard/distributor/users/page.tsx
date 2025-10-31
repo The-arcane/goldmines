@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -39,7 +40,7 @@ export default function DistributorUsersPage() {
         }
         setDistributor(adminDistributor);
 
-        // 2. Find all users linked to this distributor organization.
+        // 2. Find all user IDs linked to this distributor organization.
         const { data: memberLinks, error: linkError } = await supabase
             .from('distributor_users')
             .select('user_id')
@@ -70,10 +71,13 @@ export default function DistributorUsersPage() {
     }, [user]);
 
     useEffect(() => {
-        fetchDistributorData();
-    }, [fetchDistributorData]);
+        if(user) {
+            fetchDistributorData();
+        }
+    }, [user, fetchDistributorData]);
 
     const getInitials = (name: string) => {
+        if (!name) return '??';
         const names = name.split(' ');
         if (names.length > 1) {
             return `${names[0][0]}${names[names.length - 1][0]}`;
@@ -81,25 +85,9 @@ export default function DistributorUsersPage() {
         return names[0].substring(0, 2);
     };
     
-    const mapRoleToString = (role: number | string) => {
-         const roleMap: { [key: number]: string } = {
-            1: 'Admin',
-            2: 'Sales Executive',
-            3: 'Distributor Admin',
-            4: 'Delivery Partner'
-        };
-
-        if (typeof role === 'number' && roleMap[role]) {
-            return roleMap[role];
-        }
-        
-        if (typeof role === 'string') {
-            return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        }
-        
-        return 'Unknown';
+    const mapRoleToString = (role: UserRole) => {
+        return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     };
-
 
     return (
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -112,12 +100,15 @@ export default function DistributorUsersPage() {
                         </CardDescription>
                     </div>
                     <div className="ml-auto">
-                        <AddUserDialog 
-                            onUserAdded={fetchDistributorData} 
-                            allowedRoles={distributorAllowedRoles}
-                            defaultRole="delivery_partner"
-                            distributors={distributor ? [distributor] : []}
-                        />
+                        {distributor && (
+                            <AddUserDialog 
+                                onUserAdded={fetchDistributorData} 
+                                allowedRoles={distributorAllowedRoles}
+                                defaultRole="delivery_partner"
+                                // Pass the specific distributor this user belongs to
+                                distributorId={distributor.id} 
+                            />
+                        )}
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -145,7 +136,7 @@ export default function DistributorUsersPage() {
                                         </TableCell>
                                         <TableCell>{member.email}</TableCell>
                                         <TableCell>
-                                            <Badge variant="secondary">{mapRoleToString(member.role as any)}</Badge>
+                                            <Badge variant="secondary">{mapRoleToString(member.role)}</Badge>
                                         </TableCell>
                                         <TableCell className="text-right">{format(new Date(member.created_at), 'MMM d, yyyy')}</TableCell>
                                     </TableRow>

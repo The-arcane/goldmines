@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -30,7 +31,7 @@ const navItems = {
   distributor_admin: [
     { href: "/dashboard/distributor", icon: Home, label: "Dashboard" },
     { href: "/dashboard/distributor/users", icon: Users, label: "Manage Team" },
-    { href: "/dashboard/orders", icon: Package, label: "Orders" },
+    // { href: "/dashboard/orders", icon: Package, label: "Orders" },
   ],
   delivery_partner: [
     { href: "/dashboard/delivery", icon: Truck, label: "My Deliveries" },

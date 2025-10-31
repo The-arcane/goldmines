@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -47,10 +48,11 @@ type AddUserDialogProps = {
   onUserAdded: () => void;
   allowedRoles: { value: UserRole, label: string }[];
   defaultRole: UserRole;
-  distributors?: Distributor[]; // Optional list of distributors for admin view
+  distributors?: Distributor[]; // For admin view, to assign a delivery partner
+  distributorId?: string; // For distributor view, their own org ID
 };
 
-export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, distributors }: AddUserDialogProps) {
+export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, distributors, distributorId }: AddUserDialogProps) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const { toast } = useToast();
@@ -83,9 +85,11 @@ export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, distribu
     const onSubmit: SubmitHandler<z.infer<typeof formSchema>> = async (data) => {
         setLoading(true);
         
-        let distributorIdForUser = data.distributorId;
+        // If the distributor admin is creating a user, the distributorId is passed as a prop.
+        // If the site admin is creating a delivery partner, it's selected from the form.
+        const finalDistributorId = distributorId || data.distributorId;
        
-        const result = await createNewUser(data, distributorIdForUser);
+        const result = await createNewUser(data, finalDistributorId);
 
         if (result.success) {
             toast({
@@ -94,12 +98,11 @@ export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, distribu
             });
             onUserAdded();
             setOpen(false);
-            form.reset();
         } else {
             toast({
                 variant: "destructive",
                 title: "Error Creating User",
-                description: result.error,
+                description: result.error || "An unknown error occurred.",
             });
         }
         setLoading(false);
@@ -188,7 +191,7 @@ export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, distribu
                             )}
                         />
 
-                        {/* Conditional field for selecting distributor */}
+                        {/* Conditional field for ADMIN to select distributor */}
                         {distributors && watchedRole === 'delivery_partner' && (
                             <FormField
                                 control={form.control}

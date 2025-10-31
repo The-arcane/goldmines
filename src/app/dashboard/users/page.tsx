@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -11,10 +12,10 @@ import { format } from "date-fns";
 import { AddUserDialog } from "@/components/dashboard/users/add-user-dialog";
 
 const adminAllowedRoles: { value: UserRole, label: string }[] = [
+    { value: 'admin', label: 'Admin' },
     { value: 'sales_executive', label: 'Sales Executive' },
     { value: 'distributor_admin', label: 'Distributor Admin' },
     { value: 'delivery_partner', label: 'Delivery Partner' },
-    { value: 'admin', label: 'Admin' },
 ];
 
 export default function UsersPage() {
@@ -22,7 +23,7 @@ export default function UsersPage() {
     const [distributors, setDistributors] = useState<Distributor[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const fetchUsers = async () => {
+    const fetchData = async () => {
         setLoading(true);
         // Admin sees all users
         const usersPromise = supabase.from("users").select("*").order("created_at", { ascending: false });
@@ -41,10 +42,11 @@ export default function UsersPage() {
     }
 
     useEffect(() => {
-        fetchUsers();
+        fetchData();
     }, []);
 
     const getInitials = (name: string) => {
+        if(!name) return '??';
         const names = name.split(' ');
         if (names.length > 1) {
             return `${names[0][0]}${names[names.length - 1][0]}`;
@@ -52,23 +54,9 @@ export default function UsersPage() {
         return names[0].substring(0, 2);
     };
     
-    const mapRoleToString = (role: number | string) => {
-        const roleMap: { [key: number]: string } = {
-            1: 'Admin',
-            2: 'Sales Executive',
-            3: 'Distributor Admin',
-            4: 'Delivery Partner'
-        };
-
-        if (typeof role === 'number' && roleMap[role]) {
-            return roleMap[role];
-        }
-        
-        if (typeof role === 'string') {
-            return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        }
-        
-        return 'Unknown';
+    const mapRoleToString = (role: UserRole) => {
+        if (!role) return 'Unknown';
+        return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     };
 
 
@@ -84,10 +72,10 @@ export default function UsersPage() {
                     </div>
                     <div className="ml-auto">
                         <AddUserDialog 
-                            onUserAdded={fetchUsers} 
+                            onUserAdded={fetchData} 
                             allowedRoles={adminAllowedRoles}
                             defaultRole="sales_executive"
-                            distributors={distributors}
+                            distributors={distributors} // Pass distributors to the dialog
                         />
                     </div>
                 </CardHeader>
@@ -116,7 +104,7 @@ export default function UsersPage() {
                                         </TableCell>
                                         <TableCell>{user.email}</TableCell>
                                         <TableCell>
-                                            <Badge variant="secondary">{mapRoleToString(user.role as any)}</Badge>
+                                            <Badge variant="secondary">{mapRoleToString(user.role)}</Badge>
                                         </TableCell>
                                         <TableCell className="text-right">{format(new Date(user.created_at), 'MMM d, yyyy')}</TableCell>
                                     </TableRow>

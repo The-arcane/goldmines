@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect } from "react";
@@ -9,7 +10,9 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && user) {
+    if (loading) return; // Wait until loading is false
+    
+    if (user) {
       switch (user.role) {
         case "admin":
           router.replace("/dashboard/admin");
@@ -25,9 +28,12 @@ export default function DashboardPage() {
           break;
         default:
           // Fallback to a generic dashboard or home if role has no specific page
-          router.replace("/dashboard/admin"); 
+          router.replace("/login"); 
           break;
       }
+    } else {
+      // If no user and not loading, redirect to login
+      router.replace("/login");
     }
   }, [user, loading, router]);
 

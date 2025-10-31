@@ -1,10 +1,10 @@
+
 "use server";
 
 import { flagAnomalousVisit } from "@/ai/flows/flag-anomalous-visits";
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import type { UserFormData, UserRole } from "./types";
-import { supabase } from "./supabaseClient";
+import type { UserFormData } from "./types";
 
 export async function checkVisitAnomaly(visitDetails: string, criteria: string) {
   try {
@@ -15,7 +15,6 @@ export async function checkVisitAnomaly(visitDetails: string, criteria: string) 
     return { error: "Failed to communicate with the AI service." };
   }
 }
-
 
 export async function createNewUser(formData: UserFormData, distributorId?: string) {
   const cookieStore = cookies()
@@ -60,34 +59,40 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
       userMetadata.distributor_id = distributorData.id;
   }
 
+  // If a delivery partner is being created (by anyone), they must be linked to a distributor.
   if (formData.role === 'delivery_partner' && distributorId) {
     userMetadata.distributor_id = distributorId;
+  } else if (formData.role === 'delivery_partner' && !distributorId) {
+    return { success: false, error: "A distributor must be selected to create a delivery partner."}
   }
 
-  const { data, error } = await supabaseAdmin.auth.admin.createUser({
+  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email: formData.email,
     password: formData.password,
     email_confirm: true, // Auto-confirm the user
     user_metadata: userMetadata
   });
 
-  if (error) {
-    console.error('Error creating user:', error);
-    return { success: false, error: error.message };
+  if (authError) {
+    console.error('Error creating user:', authError);
+    return { success: false, error: authError.message };
   }
 
-  // If a distributor_admin was created, link them to their new organization
+  // The database trigger 'on_auth_user_created' handles inserting into the public.users table and the linking table.
+  // But we still need to link the distributor admin back to the organization they own.
   if (userMetadata.distributor_id && formData.role === 'distributor_admin') {
+      // Wait a moment for the trigger to fire and create the user profile
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       const { data: newUserProfile, error: profileError } = await supabaseAdmin
         .from('users')
         .select('id')
-        .eq('auth_id', data.user.id)
+        .eq('auth_id', authData.user.id)
         .single();
 
       if(profileError || !newUserProfile) {
-        // This is a problem, but the auth user was already created.
         console.error('Could not find new user profile to link to distributor', profileError);
-        return { success: false, error: 'User was created but could not be linked to the distributor organization.' };
+        return { success: false, error: 'User was created but could not be linked as admin to the distributor organization.' };
       }
 
       // Link the new admin user to the distributor entry
@@ -98,19 +103,9 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
 
       if (updateError) {
         console.error('Error linking admin to distributor:', updateError);
-      }
-
-      // Also add them to the distributor_users link table
-      const { error: linkError } = await supabaseAdmin
-        .from('distributor_users')
-        .insert({ distributor_id: userMetadata.distributor_id, user_id: newUserProfile.id });
-      
-      if (linkError) {
-        console.error('Error adding admin to distributor_users table:', linkError);
+        // This is not a fatal error, the user and org exist, just the link is missing. Can be fixed manually.
       }
   }
 
-
-  // The database trigger 'on_auth_user_created' will handle inserting into the public.users table.
-  return { success: true, user: data.user };
+  return { success: true, user: authData.user };
 }
