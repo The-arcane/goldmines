@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 const navItems = {
   admin: [
     { href: "/dashboard/admin", icon: Home, label: "Dashboard" },
-    { href: "/dashboard/outlets", icon: Warehouse, label: "Outlets", badge: 3 },
+    { href: "/dashboard/outlets", icon: Warehouse, label: "Outlets" },
     { href: "/dashboard/visits", icon: BarChart, label: "Visits Log" },
     { href: "/dashboard/users", icon: Users, label: "Users" },
   ],
@@ -36,8 +36,10 @@ const navItems = {
   ],
 };
 
-export function Sidebar({ userRole }: { userRole: UserRole }) {
+export function Sidebar({ userRole }: { userRole: UserRole | undefined }) {
   const pathname = usePathname();
+  if (!userRole) return null;
+  
   const items = navItems[userRole] || [];
 
   return (

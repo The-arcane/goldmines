@@ -1,4 +1,4 @@
-import { LoginForm } from '@/components/auth/login-form';
+import { AuthForm } from '@/components/auth/auth-form';
 import { Package } from 'lucide-react';
 
 export default function LoginPage() {
@@ -14,7 +14,7 @@ export default function LoginPage() {
             Location-Aware Sales & Outlet Management
           </p>
         </div>
-        <LoginForm />
+        <AuthForm />
       </div>
     </div>
   );

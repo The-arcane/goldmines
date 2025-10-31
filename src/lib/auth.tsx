@@ -1,15 +1,15 @@
 "use client";
 
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { User, UserRole } from './types';
-import { users } from './data';
+import type { User } from './types';
+import { supabase } from './supabaseClient';
+import type { AuthChangeEvent, Session, User as SupabaseUser } from '@supabase/supabase-js';
 import { usePathname, useRouter } from 'next/navigation';
 
 interface AuthContextType {
   user: User | null;
-  login: (role: UserRole) => void;
-  logout: () => void;
   loading: boolean;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,73 +20,90 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  useEffect(() => {
-    const storedUserRole = localStorage.getItem('userRole');
-    if (storedUserRole) {
-      const loggedInUser = users.find(u => u.role === storedUserRole);
-      setUser(loggedInUser || null);
+  const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser) => {
+    const { data: profile, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('auth_id', supabaseUser.id)
+      .single();
+
+    if (error) {
+      console.error("Error fetching user profile:", error);
+      return null;
     }
-    setLoading(false);
+    return profile;
   }, []);
 
-  const handleRedirect = useCallback((user: User | null) => {
-    if (!user && pathname.startsWith('/dashboard')) {
-      router.push('/login');
-    } else if (user && pathname === '/login') {
-        switch(user.role) {
-            case 'admin':
-                router.push('/dashboard/admin');
-                break;
-            case 'sales_executive':
-                router.push('/dashboard/sales');
-                break;
-            case 'distributor':
-                router.push('/dashboard/distributor');
-                break;
-            case 'delivery_partner':
-                router.push('/dashboard/delivery');
-                break;
-            default:
+  useEffect(() => {
+    const getActiveSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error("Error getting session:", error);
+        setLoading(false);
+        return;
+      }
+
+      if (session) {
+        const profile = await fetchUserProfile(session.user);
+        setUser(profile);
+      }
+      setLoading(false);
+    };
+
+    getActiveSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event: AuthChangeEvent, session: Session | null) => {
+        if (session) {
+            const profile = await fetchUserProfile(session.user);
+            setUser(profile);
+            if (event === 'SIGNED_IN') {
                 router.push('/dashboard');
+            }
+        } else {
+          setUser(null);
+          router.push('/login');
         }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [fetchUserProfile, router]);
+
+
+  const handleRedirect = useCallback((currentUser: User | null) => {
+    if (!loading) {
+      if (!currentUser && pathname.startsWith('/dashboard')) {
+        router.push('/login');
+      } else if (currentUser && (pathname === '/login' || pathname === '/')) {
+        router.push('/dashboard');
+      }
     }
-  }, [pathname, router]);
+  }, [pathname, router, loading]);
 
   useEffect(() => {
-    if (!loading) {
-      handleRedirect(user);
-    }
-  }, [user, loading, handleRedirect]);
+    handleRedirect(user);
+  }, [user, handleRedirect]);
 
 
-  const login = (role: UserRole) => {
-    const userToLogin = users.find(u => u.role === role);
-    if (userToLogin) {
-      setUser(userToLogin);
-      localStorage.setItem('userRole', userToLogin.role);
-      handleRedirect(userToLogin);
-    }
-  };
-
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('userRole');
     router.push('/login');
   };
 
-  const value = { user, login, logout, loading };
 
-  if (loading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-      </div>
-    );
-  }
+  const value = { user, loading, logout };
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {loading ? (
+         <div className="flex h-screen items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+         </div>
+      ) : children}
     </AuthContext.Provider>
   );
 }

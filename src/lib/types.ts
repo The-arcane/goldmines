@@ -1,12 +1,13 @@
 export type UserRole = 'admin' | 'sales_executive' | 'distributor' | 'delivery_partner';
 
 export type User = {
-  id: string;
+  id: string; // uuid from public.users table
+  auth_id: string; // uuid from auth.users table
   name: string;
   email: string;
   role: UserRole;
-  avatarUrl: string;
-  assigned_outlet_ids?: string[];
+  avatar_url: string;
+  created_at: string;
 };
 
 export type Outlet = {
@@ -16,7 +17,6 @@ export type Outlet = {
   address: string;
   lat: number;
   lng: number;
-  geofence_id: string;
   created_at: string;
 };
 
@@ -36,7 +36,7 @@ export type Visit = {
   entry_time: string;
   exit_time: string | null;
   within_radius: boolean;
-  duration: number | null; // in minutes
+  duration_minutes: number | null; // in minutes
   created_at: string;
 };
 

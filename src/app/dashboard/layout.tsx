@@ -3,6 +3,7 @@
 import { useAuth } from "@/lib/auth";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { Header } from "@/components/dashboard/header";
+import { useRouter } from "next/navigation";
 
 export default function DashboardLayout({
   children,
@@ -10,14 +11,20 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { user, loading } = useAuth();
+  const router = useRouter();
 
-  if (loading || !user) {
-    // AuthProvider handles redirects, this is a fallback state
+  if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
+  }
+
+  if (!user) {
+    // This should be handled by the AuthProvider, but as a fallback:
+    router.replace("/login");
+    return null;
   }
 
   return (

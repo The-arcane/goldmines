@@ -24,8 +24,8 @@ export default function DashboardPage() {
           router.replace("/dashboard/delivery");
           break;
         default:
-          // Fallback, though should not be reached if roles are handled
-          router.replace("/login");
+          // Fallback to a generic dashboard or home if role has no specific page
+          router.replace("/dashboard/admin"); 
           break;
       }
     }
