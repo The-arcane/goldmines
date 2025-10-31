@@ -13,20 +13,29 @@ import { AddUserDialog } from "@/components/dashboard/users/add-user-dialog";
 const adminAllowedRoles: { value: UserRole, label: string }[] = [
     { value: 'sales_executive', label: 'Sales Executive' },
     { value: 'distributor', label: 'Distributor' },
+    { value: 'delivery_partner', label: 'Delivery Partner' },
     { value: 'admin', label: 'Admin' },
 ];
 
 export default function UsersPage() {
     const [users, setUsers] = useState<User[]>([]);
+    const [distributors, setDistributors] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchUsers = async () => {
         setLoading(true);
         // Admin sees all users
-        const { data, error } = await supabase.from("users").select("*").order("created_at", { ascending: false });
+        const usersPromise = supabase.from("users").select("*").order("created_at", { ascending: false });
+        // Also fetch all distributors to pass to the AddUserDialog
+        const distributorsPromise = supabase.from("users").select("*").eq('role', 'distributor');
 
-        if (data) {
-            setUsers(data);
+        const [usersRes, distributorsRes] = await Promise.all([usersPromise, distributorsPromise]);
+
+        if (usersRes.data) {
+            setUsers(usersRes.data);
+        }
+         if (distributorsRes.data) {
+            setDistributors(distributorsRes.data);
         }
         setLoading(false);
     }
@@ -78,6 +87,7 @@ export default function UsersPage() {
                             onUserAdded={fetchUsers} 
                             allowedRoles={adminAllowedRoles}
                             defaultRole="sales_executive"
+                            distributors={distributors}
                         />
                     </div>
                 </CardHeader>

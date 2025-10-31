@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -34,13 +34,13 @@ import { useToast } from "@/hooks/use-toast";
 import { PlusCircle } from "lucide-react";
 import { createNewUser } from "@/lib/actions";
 import type { UserFormData, UserRole, User } from "@/lib/types";
-import { useAuth } from "@/lib/auth";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   email: z.string().email("Invalid email address."),
   password: z.string().min(6, "Password must be at least 6 characters."),
   role: z.enum(['admin', 'sales_executive', 'distributor', 'delivery_partner']),
+  distributorId: z.string().optional(),
 });
 
 type AddUserDialogProps = {
@@ -48,14 +48,15 @@ type AddUserDialogProps = {
   allowedRoles: { value: UserRole, label: string }[];
   defaultRole: UserRole;
   creator?: User | null;
+  distributors?: User[]; // Optional list of distributors for admin view
 };
 
-export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, creator }: AddUserDialogProps) {
+export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, creator, distributors }: AddUserDialogProps) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const { toast } = useToast();
 
-    const form = useForm<UserFormData>({
+    const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
             name: "",
@@ -65,21 +66,31 @@ export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, creator 
         },
     });
 
+    const watchedRole = form.watch("role");
+
     // Reset form when dialog opens/closes
-    useState(() => {
+    useEffect(() => {
         if (!open) {
             form.reset({
                 name: "",
                 email: "",
                 password: "",
                 role: defaultRole,
+                distributorId: undefined,
             });
         }
-    }, [open, form, defaultRole])
+    }, [open, form, defaultRole]);
 
-    const onSubmit: SubmitHandler<UserFormData> = async (data) => {
+    const onSubmit: SubmitHandler<z.infer<typeof formSchema>> = async (data) => {
         setLoading(true);
-        const result = await createNewUser(data, creator?.id);
+        
+        let parentId = creator?.id;
+        if (data.role === 'delivery_partner' && data.distributorId) {
+            // Admin is creating a delivery partner for a distributor
+            parentId = data.distributorId;
+        }
+
+        const result = await createNewUser(data, parentId);
 
         if (result.success) {
             toast({
@@ -181,6 +192,36 @@ export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, creator 
                                 </FormItem>
                             )}
                         />
+
+                        {/* Conditional field for selecting distributor */}
+                        {distributors && watchedRole === 'delivery_partner' && (
+                            <FormField
+                                control={form.control}
+                                name="distributorId"
+                                rules={{ required: 'Please select a distributor for this delivery partner.' }}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Assign to Distributor</FormLabel>
+                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select a distributor" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                {distributors.map(distributor => (
+                                                    <SelectItem key={distributor.id} value={distributor.id}>
+                                                        {distributor.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
+
                         <DialogFooter>
                             <Button type="submit" disabled={loading}>
                                 {loading ? "Creating User..." : "Create User"}
