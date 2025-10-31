@@ -1,3 +1,4 @@
+
 "use client";
 
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -15,13 +16,13 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const mapNumericRoleToString = (role: number): UserRole => {
-    switch (role) {
-        case 1: return 'admin';
-        case 2: return 'sales_executive';
-        case 3: return 'distributor';
-        case 4: return 'delivery_partner';
-        default: return 'sales_executive'; // Fallback role
-    }
+    const roleMap: { [key: number]: UserRole } = {
+        1: 'admin',
+        2: 'sales_executive',
+        3: 'distributor',
+        4: 'delivery_partner',
+    };
+    return roleMap[role] || 'sales_executive'; // Fallback role
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -31,21 +32,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser) => {
+    // This query now directly accesses the table without complex helper functions
+    // and relies on the RLS policy `auth_id = auth.uid()`
     const { data: profile, error } = await supabase
       .from('users')
       .select('*')
-      .eq('auth_id', supabaseUser.id)
+      .eq('id', supabaseUser.id) // Querying the public.users table directly
       .single();
 
     if (error) {
-      console.error("Error fetching user profile:", error);
+      // The PostgREST error for "zero rows" is not very descriptive.
+      // We provide a more helpful error message in this case.
+      if (error.code === 'PGRST116') {
+        console.error("Error fetching user profile: No profile found for the authenticated user. Ensure a corresponding row exists in the 'public.users' table.");
+      } else {
+        console.error("Error fetching user profile:", error);
+      }
       return null;
     }
     
-    // Map the numeric role from DB to string role for the app
+    // The role is numeric in the DB, so we map it to a string for the app
     const appProfile: User = {
-        ...profile,
-        role: mapNumericRoleToString(profile.role)
+        id: profile.id,
+        auth_id: supabaseUser.id, // Use the auth_id from the session user
+        name: profile.name,
+        email: profile.email,
+        role: mapNumericRoleToString(profile.role),
+        avatar_url: profile.avatar_url,
+        created_at: profile.created_at,
+        parent_user_id: profile.parent_user_id
     };
 
     return appProfile;
@@ -79,30 +94,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
         } else {
           setUser(null);
-          router.push('/login');
+          if (pathname !== '/login') {
+            router.push('/login');
+          }
         }
+        setLoading(false);
       }
     );
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchUserProfile, router]);
+  }, [fetchUserProfile, router, pathname]);
 
 
-  const handleRedirect = useCallback((currentUser: User | null) => {
+  const handleRedirect = useCallback((currentUser: User | null, currentPath: string) => {
     if (!loading) {
-      if (!currentUser && pathname.startsWith('/dashboard')) {
+      if (!currentUser && currentPath !== '/login') {
         router.push('/login');
-      } else if (currentUser && (pathname === '/login' || pathname === '/')) {
+      } else if (currentUser && (currentPath === '/login' || currentPath === '/')) {
         router.push('/dashboard');
       }
     }
-  }, [pathname, router, loading]);
+  }, [router, loading]);
 
   useEffect(() => {
-    handleRedirect(user);
-  }, [user, handleRedirect]);
+    // This effect runs only when loading transitions from true to false
+    if (!loading) {
+      handleRedirect(user, pathname);
+    }
+  }, [user, loading, pathname, handleRedirect]);
 
 
   const logout = async () => {
@@ -116,11 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {loading ? (
-         <div className="flex h-screen items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-         </div>
-      ) : children}
+      {children}
     </AuthContext.Provider>
   );
 }

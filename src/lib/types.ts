@@ -1,8 +1,9 @@
+
 export type UserRole = 'admin' | 'sales_executive' | 'distributor' | 'delivery_partner';
 
 export type User = {
-  id: string; // uuid from public.users table
-  auth_id: string; // uuid from auth.users table
+  id: string; // This is the primary key from the public.users table.
+  auth_id: string; // This is the uuid from the auth.users table.
   name: string;
   email: string;
   // The 'role' in the frontend app is a string, but is stored as a SMALLINT in the DB.
