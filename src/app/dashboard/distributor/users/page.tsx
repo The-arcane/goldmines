@@ -9,31 +9,38 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { AddUserDialog } from "@/components/dashboard/users/add-user-dialog";
+import { useAuth } from "@/lib/auth";
 
-const adminAllowedRoles: { value: UserRole, label: string }[] = [
-    { value: 'sales_executive', label: 'Sales Executive' },
-    { value: 'distributor', label: 'Distributor' },
-    { value: 'admin', label: 'Admin' },
+const distributorAllowedRoles: { value: UserRole, label: string }[] = [
+    { value: 'delivery_partner', label: 'Delivery Partner' },
 ];
 
-export default function UsersPage() {
+export default function DistributorUsersPage() {
+    const { user } = useAuth();
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchUsers = async () => {
+        if (!user) return;
         setLoading(true);
-        // Admin sees all users
-        const { data, error } = await supabase.from("users").select("*").order("created_at", { ascending: false });
+        // Distributor sees only users they have created
+        const { data, error } = await supabase
+            .from("users")
+            .select("*")
+            .eq('parent_user_id', user.id)
+            .order("created_at", { ascending: false });
 
         if (data) {
             setUsers(data);
+        } else if (error) {
+            console.error("Error fetching users:", error);
         }
         setLoading(false);
     }
 
     useEffect(() => {
         fetchUsers();
-    }, []);
+    }, [user]);
 
     const getInitials = (name: string) => {
         const names = name.split(' ');
@@ -68,16 +75,17 @@ export default function UsersPage() {
             <Card>
                 <CardHeader className="flex flex-row items-center">
                     <div className="grid gap-2">
-                        <CardTitle>User Management</CardTitle>
+                        <CardTitle>Manage Delivery Partners</CardTitle>
                         <CardDescription>
-                            An overview of all users in the system.
+                           A list of all delivery partners you have created.
                         </CardDescription>
                     </div>
                     <div className="ml-auto">
                         <AddUserDialog 
                             onUserAdded={fetchUsers} 
-                            allowedRoles={adminAllowedRoles}
-                            defaultRole="sales_executive"
+                            allowedRoles={distributorAllowedRoles}
+                            defaultRole="delivery_partner"
+                            creator={user}
                         />
                     </div>
                 </CardHeader>

@@ -29,6 +29,7 @@ const navItems = {
   ],
   distributor: [
     { href: "/dashboard/distributor", icon: Home, label: "Dashboard" },
+    { href: "/dashboard/distributor/users", icon: Users, label: "Manage Users" },
     { href: "/dashboard/orders", icon: Package, label: "Orders" },
   ],
   delivery_partner: [

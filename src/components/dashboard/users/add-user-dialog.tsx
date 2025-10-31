@@ -33,7 +33,8 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle } from "lucide-react";
 import { createNewUser } from "@/lib/actions";
-import type { UserFormData, UserRole } from "@/lib/types";
+import type { UserFormData, UserRole, User } from "@/lib/types";
+import { useAuth } from "@/lib/auth";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
@@ -42,12 +43,14 @@ const formSchema = z.object({
   role: z.enum(['admin', 'sales_executive', 'distributor', 'delivery_partner']),
 });
 
-
 type AddUserDialogProps = {
   onUserAdded: () => void;
+  allowedRoles: { value: UserRole, label: string }[];
+  defaultRole: UserRole;
+  creator?: User | null;
 };
 
-export function AddUserDialog({ onUserAdded }: AddUserDialogProps) {
+export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, creator }: AddUserDialogProps) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const { toast } = useToast();
@@ -58,13 +61,25 @@ export function AddUserDialog({ onUserAdded }: AddUserDialogProps) {
             name: "",
             email: "",
             password: "",
-            role: "sales_executive",
+            role: defaultRole,
         },
     });
 
+    // Reset form when dialog opens/closes
+    useState(() => {
+        if (!open) {
+            form.reset({
+                name: "",
+                email: "",
+                password: "",
+                role: defaultRole,
+            });
+        }
+    }, [open, form, defaultRole])
+
     const onSubmit: SubmitHandler<UserFormData> = async (data) => {
         setLoading(true);
-        const result = await createNewUser(data);
+        const result = await createNewUser(data, creator?.id);
 
         if (result.success) {
             toast({
@@ -98,7 +113,7 @@ export function AddUserDialog({ onUserAdded }: AddUserDialogProps) {
                 <DialogHeader>
                     <DialogTitle>Add New User</DialogTitle>
                     <DialogDescription>
-                        Create a new user and assign them a role. An email will not be sent, and their account will be active immediately.
+                        Create a new user and assign them a role. Their account will be active immediately.
                     </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
@@ -155,10 +170,11 @@ export function AddUserDialog({ onUserAdded }: AddUserDialogProps) {
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            <SelectItem value="sales_executive">Sales Executive</SelectItem>
-                                            <SelectItem value="distributor">Distributor</SelectItem>
-                                            <SelectItem value="delivery_partner">Delivery Partner</SelectItem>
-                                            <SelectItem value="admin">Admin</SelectItem>
+                                            {allowedRoles.map(role => (
+                                                <SelectItem key={role.value} value={role.value}>
+                                                    {role.label}
+                                                </SelectItem>
+                                            ))}
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />

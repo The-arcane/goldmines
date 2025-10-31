@@ -3,7 +3,8 @@
 import { flagAnomalousVisit } from "@/ai/flows/flag-anomalous-visits";
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import type { UserFormData } from "./types";
+import type { UserFormData, UserRole } from "./types";
+import { supabase } from "./supabaseClient";
 
 export async function checkVisitAnomaly(visitDetails: string, criteria: string) {
   try {
@@ -16,7 +17,7 @@ export async function checkVisitAnomaly(visitDetails: string, criteria: string) 
 }
 
 
-export async function createNewUser(formData: UserFormData) {
+export async function createNewUser(formData: UserFormData, parentUserId?: string) {
   const cookieStore = cookies()
 
   // Note: This uses the service_role key, which should only be done in a secure server environment.
@@ -37,16 +38,22 @@ export async function createNewUser(formData: UserFormData) {
       },
     }
   )
+  
+  const userMetadata: {[key: string]: any} = {
+      name: formData.name,
+      role: formData.role,
+      avatar_url: `https://picsum.photos/seed/${formData.email}/100/100`,
+  };
+
+  if (parentUserId) {
+    userMetadata.parent_user_id = parentUserId;
+  }
 
   const { data, error } = await supabaseAdmin.auth.admin.createUser({
     email: formData.email,
     password: formData.password,
     email_confirm: true, // Auto-confirm the user
-    user_metadata: {
-      name: formData.name,
-      role: formData.role, // This should be a string like 'sales_executive'
-      avatar_url: `https://picsum.photos/seed/${formData.email}/100/100`,
-    }
+    user_metadata: userMetadata
   });
 
   if (error) {

@@ -11,6 +11,7 @@ export type User = {
   avatar_url: string;
   created_at: string;
   assigned_outlet_ids?: string[];
+  parent_user_id?: string | null;
 };
 
 export type Outlet = {
