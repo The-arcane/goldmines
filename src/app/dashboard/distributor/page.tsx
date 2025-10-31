@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Package } from "lucide-react";
 
@@ -10,7 +11,7 @@ export default function DistributorDashboardPage() {
           Distributor Dashboard
         </h3>
         <p className="text-sm text-muted-foreground">
-          Manage orders, inventory, and outlet details.
+          Manage your team and view organization-specific data.
         </p>
       </div>
     </div>

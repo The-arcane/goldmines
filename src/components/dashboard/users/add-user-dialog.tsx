@@ -33,13 +33,13 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { PlusCircle } from "lucide-react";
 import { createNewUser } from "@/lib/actions";
-import type { UserFormData, UserRole, User } from "@/lib/types";
+import type { UserRole, Distributor } from "@/lib/types";
 
 const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   email: z.string().email("Invalid email address."),
   password: z.string().min(6, "Password must be at least 6 characters."),
-  role: z.enum(['admin', 'sales_executive', 'distributor', 'delivery_partner']),
+  role: z.enum(['admin', 'sales_executive', 'distributor_admin', 'delivery_partner']),
   distributorId: z.string().optional(),
 });
 
@@ -47,11 +47,10 @@ type AddUserDialogProps = {
   onUserAdded: () => void;
   allowedRoles: { value: UserRole, label: string }[];
   defaultRole: UserRole;
-  creator?: User | null;
-  distributors?: User[]; // Optional list of distributors for admin view
+  distributors?: Distributor[]; // Optional list of distributors for admin view
 };
 
-export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, creator, distributors }: AddUserDialogProps) {
+export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, distributors }: AddUserDialogProps) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const { toast } = useToast();
@@ -84,13 +83,9 @@ export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, creator,
     const onSubmit: SubmitHandler<z.infer<typeof formSchema>> = async (data) => {
         setLoading(true);
         
-        let parentId = creator?.id;
-        if (data.role === 'delivery_partner' && data.distributorId) {
-            // Admin is creating a delivery partner for a distributor
-            parentId = data.distributorId;
-        }
-
-        const result = await createNewUser(data, parentId);
+        let distributorIdForUser = data.distributorId;
+       
+        const result = await createNewUser(data, distributorIdForUser);
 
         if (result.success) {
             toast({

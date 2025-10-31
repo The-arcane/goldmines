@@ -1,4 +1,3 @@
-
 "use client";
 
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -19,7 +18,7 @@ const mapNumericRoleToString = (role: number): UserRole => {
     const roleMap: { [key: number]: UserRole } = {
         1: 'admin',
         2: 'sales_executive',
-        3: 'distributor',
+        3: 'distributor_admin',
         4: 'delivery_partner',
     };
     return roleMap[role] || 'sales_executive'; // Fallback role
@@ -36,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: profile, error } = await supabase
       .from('users')
       .select('*')
-      .eq('auth_id', supabaseUser.id) // Corrected from 'id' to 'auth_id'
+      .eq('auth_id', supabaseUser.id)
       .single();
 
     if (error) {
@@ -53,14 +52,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role: mapNumericRoleToString(profile.role),
             avatar_url: profile.avatar_url,
             created_at: profile.created_at,
-            parent_user_id: profile.parent_user_id
         };
     }
     return null;
   }, []);
 
   useEffect(() => {
-    setLoading(true);
     const getInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const profile = await fetchUserProfile(session?.user ?? null);
@@ -71,12 +68,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     getInitialSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        setLoading(true);
         const profile = await fetchUserProfile(session?.user ?? null);
         setUser(profile);
         setLoading(false);
 
         if (event === 'SIGNED_OUT') {
             router.push('/login');
+        } else if (event === 'SIGNED_IN') {
+            router.push('/dashboard');
         }
     });
 

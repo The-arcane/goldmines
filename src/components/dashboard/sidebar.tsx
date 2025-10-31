@@ -27,9 +27,9 @@ const navItems = {
     { href: "/dashboard/sales", icon: Map, label: "My Route" },
     { href: "/dashboard/my-visits", icon: BarChart, label: "Visit History" },
   ],
-  distributor: [
+  distributor_admin: [
     { href: "/dashboard/distributor", icon: Home, label: "Dashboard" },
-    { href: "/dashboard/distributor/users", icon: Users, label: "Manage Users" },
+    { href: "/dashboard/distributor/users", icon: Users, label: "Manage Team" },
     { href: "/dashboard/orders", icon: Package, label: "Orders" },
   ],
   delivery_partner: [
@@ -41,7 +41,7 @@ export function Sidebar({ userRole }: { userRole: UserRole | undefined }) {
   const pathname = usePathname();
   if (!userRole) return null;
   
-  const items = navItems[userRole] || [];
+  const items = navItems[userRole as keyof typeof navItems] || [];
 
   return (
     <div className="hidden border-r bg-card md:block">

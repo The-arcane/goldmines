@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import type { User, UserRole } from "@/lib/types";
+import type { User, UserRole, Distributor } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,30 +17,61 @@ const distributorAllowedRoles: { value: UserRole, label: string }[] = [
 
 export default function DistributorUsersPage() {
     const { user } = useAuth();
-    const [users, setUsers] = useState<User[]>([]);
+    const [teamMembers, setTeamMembers] = useState<User[]>([]);
+    const [distributor, setDistributor] = useState<Distributor | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const fetchUsers = async () => {
+    const fetchDistributorData = useCallback(async () => {
         if (!user) return;
         setLoading(true);
-        // Distributor sees only users they have created
-        const { data, error } = await supabase
-            .from("users")
-            .select("*")
-            .eq('parent_user_id', user.id)
+
+        // 1. Find the distributor organization this admin user belongs to.
+        const { data: adminDistributor, error: adminError } = await supabase
+            .from('distributors')
+            .select('*')
+            .eq('admin_user_id', user.id)
+            .single();
+
+        if (adminError || !adminDistributor) {
+            console.error("Could not find distributor for this admin:", adminError);
+            setLoading(false);
+            return;
+        }
+        setDistributor(adminDistributor);
+
+        // 2. Find all users linked to this distributor organization.
+        const { data: memberLinks, error: linkError } = await supabase
+            .from('distributor_users')
+            .select('user_id')
+            .eq('distributor_id', adminDistributor.id);
+
+        if (linkError) {
+            console.error("Error fetching team members:", linkError);
+            setLoading(false);
+            return;
+        }
+
+        const memberIds = memberLinks.map(link => link.user_id);
+
+        // 3. Fetch the full profiles of those users.
+        const { data: members, error: membersError } = await supabase
+            .from('users')
+            .select('*')
+            .in('id', memberIds)
             .order("created_at", { ascending: false });
 
-        if (data) {
-            setUsers(data);
-        } else if (error) {
-            console.error("Error fetching users:", error);
+        if (members) {
+            setTeamMembers(members);
+        } else {
+            console.error("Error fetching team member profiles:", membersError);
         }
+
         setLoading(false);
-    }
+    }, [user]);
 
     useEffect(() => {
-        fetchUsers();
-    }, [user]);
+        fetchDistributorData();
+    }, [fetchDistributorData]);
 
     const getInitials = (name: string) => {
         const names = name.split(' ');
@@ -51,10 +82,10 @@ export default function DistributorUsersPage() {
     };
     
     const mapRoleToString = (role: number | string) => {
-        const roleMap: { [key: number]: string } = {
+         const roleMap: { [key: number]: string } = {
             1: 'Admin',
             2: 'Sales Executive',
-            3: 'Distributor',
+            3: 'Distributor Admin',
             4: 'Delivery Partner'
         };
 
@@ -75,23 +106,23 @@ export default function DistributorUsersPage() {
             <Card>
                 <CardHeader className="flex flex-row items-center">
                     <div className="grid gap-2">
-                        <CardTitle>Manage Delivery Partners</CardTitle>
+                        <CardTitle>Manage Your Team</CardTitle>
                         <CardDescription>
-                           A list of all delivery partners you have created.
+                           A list of all team members in your organization.
                         </CardDescription>
                     </div>
                     <div className="ml-auto">
                         <AddUserDialog 
-                            onUserAdded={fetchUsers} 
+                            onUserAdded={fetchDistributorData} 
                             allowedRoles={distributorAllowedRoles}
                             defaultRole="delivery_partner"
-                            creator={user}
+                            distributors={distributor ? [distributor] : []}
                         />
                     </div>
                 </CardHeader>
                 <CardContent>
                     {loading ? (
-                        <div className="text-center p-8">Loading users...</div>
+                        <div className="text-center p-8">Loading team members...</div>
                     ) : (
                         <Table>
                             <TableHeader>
@@ -103,20 +134,20 @@ export default function DistributorUsersPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {users.map((user) => (
-                                    <TableRow key={user.id}>
+                                {teamMembers.map((member) => (
+                                    <TableRow key={member.id}>
                                         <TableCell className="font-medium flex items-center gap-3">
                                             <Avatar className="h-9 w-9">
-                                                <AvatarImage src={user.avatar_url} alt={user.name} />
-                                                <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                                                <AvatarImage src={member.avatar_url} alt={member.name} />
+                                                <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
                                             </Avatar>
-                                            {user.name}
+                                            {member.name}
                                         </TableCell>
-                                        <TableCell>{user.email}</TableCell>
+                                        <TableCell>{member.email}</TableCell>
                                         <TableCell>
-                                            <Badge variant="secondary">{mapRoleToString(user.role as any)}</Badge>
+                                            <Badge variant="secondary">{mapRoleToString(member.role as any)}</Badge>
                                         </TableCell>
-                                        <TableCell className="text-right">{format(new Date(user.created_at), 'MMM d, yyyy')}</TableCell>
+                                        <TableCell className="text-right">{format(new Date(member.created_at), 'MMM d, yyyy')}</TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>

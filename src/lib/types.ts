@@ -1,5 +1,6 @@
 
-export type UserRole = 'admin' | 'sales_executive' | 'distributor' | 'delivery_partner';
+
+export type UserRole = 'admin' | 'sales_executive' | 'distributor_admin' | 'delivery_partner';
 
 export type User = {
   id: string; // This is the primary key from the public.users table.
@@ -12,8 +13,14 @@ export type User = {
   avatar_url: string;
   created_at: string;
   assigned_outlet_ids?: string[];
-  parent_user_id?: string | null;
 };
+
+export type Distributor = {
+    id: string;
+    name: string;
+    created_at: string;
+    admin_user_id: string | null;
+}
 
 export type Outlet = {
   id: string;

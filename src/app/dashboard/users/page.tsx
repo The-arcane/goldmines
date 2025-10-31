@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import type { User, UserRole } from "@/lib/types";
+import type { User, UserRole, Distributor } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,14 +12,14 @@ import { AddUserDialog } from "@/components/dashboard/users/add-user-dialog";
 
 const adminAllowedRoles: { value: UserRole, label: string }[] = [
     { value: 'sales_executive', label: 'Sales Executive' },
-    { value: 'distributor', label: 'Distributor' },
+    { value: 'distributor_admin', label: 'Distributor Admin' },
     { value: 'delivery_partner', label: 'Delivery Partner' },
     { value: 'admin', label: 'Admin' },
 ];
 
 export default function UsersPage() {
     const [users, setUsers] = useState<User[]>([]);
-    const [distributors, setDistributors] = useState<User[]>([]);
+    const [distributors, setDistributors] = useState<Distributor[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchUsers = async () => {
@@ -27,7 +27,7 @@ export default function UsersPage() {
         // Admin sees all users
         const usersPromise = supabase.from("users").select("*").order("created_at", { ascending: false });
         // Also fetch all distributors to pass to the AddUserDialog
-        const distributorsPromise = supabase.from("users").select("*").eq('role', 'distributor');
+        const distributorsPromise = supabase.from("distributors").select("*");
 
         const [usersRes, distributorsRes] = await Promise.all([usersPromise, distributorsPromise]);
 
@@ -56,7 +56,7 @@ export default function UsersPage() {
         const roleMap: { [key: number]: string } = {
             1: 'Admin',
             2: 'Sales Executive',
-            3: 'Distributor',
+            3: 'Distributor Admin',
             4: 'Delivery Partner'
         };
 

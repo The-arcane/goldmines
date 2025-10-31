@@ -17,7 +17,7 @@ export default function DashboardPage() {
         case "sales_executive":
           router.replace("/dashboard/sales");
           break;
-        case "distributor":
+        case "distributor_admin":
           router.replace("/dashboard/distributor");
           break;
         case "delivery_partner":
