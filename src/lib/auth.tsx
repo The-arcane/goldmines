@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: profile, error } = await supabase
       .from('users')
       .select('*')
-      .eq('id', supabaseUser.id)
+      .eq('auth_id', supabaseUser.id) // Corrected from 'id' to 'auth_id'
       .single();
 
     if (error) {
@@ -60,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    setLoading(true);
     const getInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const profile = await fetchUserProfile(session?.user ?? null);
@@ -72,6 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
         const profile = await fetchUserProfile(session?.user ?? null);
         setUser(profile);
+        setLoading(false);
 
         if (event === 'SIGNED_OUT') {
             router.push('/login');
@@ -93,11 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={value}>
-      {loading ? (
-         <div className="flex h-screen items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-         </div>
-      ) : children}
+      {children}
     </AuthContext.Provider>
   );
 }
