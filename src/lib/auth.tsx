@@ -29,9 +29,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  const pathname = usePathname();
 
-  const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser) => {
+  const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
+    if (!supabaseUser) return null;
+
     const { data: profile, error } = await supabase
       .from('users')
       .select('*')
@@ -39,84 +40,64 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .single();
 
     if (error) {
-        if (error.code === 'PGRST116') {
-            console.error("Error fetching user profile: No profile found for the authenticated user. Ensure a corresponding row exists in the 'public.users' table.");
-        } else {
-            console.error("Error fetching user profile:", error);
-        }
-        return null;
+      console.error("Error fetching user profile:", error);
+      return null;
     }
     
-    const appProfile: User = {
-        id: profile.id,
-        auth_id: supabaseUser.id,
-        name: profile.name,
-        email: profile.email,
-        role: mapNumericRoleToString(profile.role),
-        avatar_url: profile.avatar_url,
-        created_at: profile.created_at,
-        parent_user_id: profile.parent_user_id
-    };
-
-    return appProfile;
+    if (profile) {
+        return {
+            id: profile.id,
+            auth_id: supabaseUser.id,
+            name: profile.name,
+            email: profile.email,
+            role: mapNumericRoleToString(profile.role),
+            avatar_url: profile.avatar_url,
+            created_at: profile.created_at,
+            parent_user_id: profile.parent_user_id
+        };
+    }
+    return null;
   }, []);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session) {
-          const profile = await fetchUserProfile(session.user);
-          setUser(profile);
-          // Redirect on sign-in if not already on a dashboard page
-          if (event === 'SIGNED_IN' && !pathname.startsWith('/dashboard')) {
-            router.push('/dashboard');
-          }
-        } else {
-          setUser(null);
-          // Redirect to login if there's no session and not already on the login page
-          if (pathname !== '/login') {
-            router.push('/login');
-          }
-        }
-        setLoading(false);
-      }
-    );
-
-    // This handles the initial page load check
-    const checkInitialSession = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-            const profile = await fetchUserProfile(session.user);
-            setUser(profile);
-            if (pathname === '/login' || pathname === '/') {
-                router.replace('/dashboard');
-            }
-        } else {
-            if (pathname !== '/login') {
-                router.replace('/login');
-            }
-        }
-        setLoading(false);
+    const getInitialSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const profile = await fetchUserProfile(session?.user ?? null);
+      setUser(profile);
+      setLoading(false);
     };
 
-    checkInitialSession();
+    getInitialSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+        const profile = await fetchUserProfile(session?.user ?? null);
+        setUser(profile);
+
+        if (event === 'SIGNED_OUT') {
+            router.push('/login');
+        }
+    });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchUserProfile, router, pathname]);
+  }, [fetchUserProfile, router]);
 
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
     router.push('/login');
   };
-
+  
   const value = { user, loading, logout };
 
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {loading ? (
+         <div className="flex h-screen items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+         </div>
+      ) : children}
     </AuthContext.Provider>
   );
 }
