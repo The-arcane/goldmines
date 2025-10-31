@@ -1,6 +1,6 @@
 "use client";
 
-import { Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps";
+import { Map, AdvancedMarker, Pin, useApiIsLoaded } from "@vis.gl/react-google-maps";
 import { Circle } from "@/components/map/circle";
 import type { Outlet, Visit } from "@/lib/types";
 import { useGeolocation } from "@/hooks/use-geolocation";
@@ -10,12 +10,14 @@ import { haversineDistance } from "@/lib/utils";
 import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInMinutes } from "date-fns";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function SalesLiveMap({ outlets }: { outlets: Outlet[] }) {
   const { user } = useAuth();
   const { coords } = useGeolocation({ enableHighAccuracy: true });
   const [center, setCenter] = useState({ lat: 34.0522, lng: -118.2437 });
   const { toast } = useToast();
+  const isLoaded = useApiIsLoaded();
   
   // Use a ref to track the user's status within each geofence
   const geofenceStatus = useRef<Record<string, boolean>>({});
@@ -99,7 +101,10 @@ export function SalesLiveMap({ outlets }: { outlets: Outlet[] }) {
     checkGeofences();
 
   }, [coords, user, outlets, toast]);
-
+  
+  if (!isLoaded) {
+    return <Skeleton className="h-[500px] w-full" />
+  }
 
   return (
     <div className="h-[500px] w-full rounded-lg overflow-hidden border">

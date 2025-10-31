@@ -1,14 +1,20 @@
 "use client";
 
-import { Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps";
+import { Map, AdvancedMarker, Pin, useApiIsLoaded } from "@vis.gl/react-google-maps";
 import type { Outlet } from "@/lib/types";
 import { Circle } from "@/components/map/circle";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function OutletsMap({ outlets }: { outlets: Outlet[] }) {
+  const isLoaded = useApiIsLoaded();
   
   const mapCenter = outlets.length > 0 
     ? { lat: outlets[0].lat, lng: outlets[0].lng } 
     : { lat: 34.0522, lng: -118.2437 };
+    
+  if (!isLoaded) {
+    return <Skeleton className="h-[350px] w-full" />
+  }
 
   return (
     <div className="h-[350px] w-full rounded-lg overflow-hidden border">
