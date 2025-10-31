@@ -44,7 +44,7 @@ export async function createNewUser(formData: UserFormData) {
     email_confirm: true, // Auto-confirm the user
     user_metadata: {
       name: formData.name,
-      role: formData.role,
+      role: formData.role, // This should be a string like 'sales_executive'
       avatar_url: `https://picsum.photos/seed/${formData.email}/100/100`,
     }
   });
