@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Table,
   TableBody,
@@ -8,17 +10,22 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { AnomalyDetector } from "./anomaly-detector";
-import type { Visit } from "@/lib/types";
-import { users, outlets } from "@/lib/data";
-import { formatDistanceToNow, parseISO } from 'date-fns';
+import type { Visit, User, Outlet } from "@/lib/types";
+import { formatDistanceToNow, parseISO, format } from 'date-fns';
 
 type VisitsTableProps = {
   visits: Visit[];
+  users: User[];
+  outlets: Outlet[];
 };
 
-export function VisitsTable({ visits }: VisitsTableProps) {
+export function VisitsTable({ visits, users, outlets }: VisitsTableProps) {
   const getUserName = (userId: string) => users.find(u => u.id === userId)?.name || 'Unknown User';
   const getOutletName = (outletId: string) => outlets.find(o => o.id === outletId)?.name || 'Unknown Outlet';
+  
+  if (visits.length === 0) {
+    return <div className="text-center p-4 text-muted-foreground">No visits recorded yet.</div>;
+  }
   
   return (
     <Table>
@@ -27,8 +34,8 @@ export function VisitsTable({ visits }: VisitsTableProps) {
           <TableHead>Executive</TableHead>
           <TableHead className="hidden sm:table-cell">Outlet</TableHead>
           <TableHead className="hidden sm:table-cell">Duration</TableHead>
-          <TableHead className="text-right">Time</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
+          <TableHead className="hidden md:table-cell">Entry Time</TableHead>
+          <TableHead className="text-right">Check</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -36,20 +43,21 @@ export function VisitsTable({ visits }: VisitsTableProps) {
           <TableRow key={visit.id}>
             <TableCell>
               <div className="font-medium">{getUserName(visit.user_id)}</div>
+              <div className="text-xs text-muted-foreground">{visit.user_id}</div>
             </TableCell>
             <TableCell className="hidden sm:table-cell">{getOutletName(visit.outlet_id)}</TableCell>
             <TableCell className="hidden sm:table-cell">
-              {visit.duration ? (
-                <Badge variant={visit.duration > 120 ? 'destructive' : 'secondary'}>
-                  {visit.duration} mins
+              {visit.duration_minutes ? (
+                <Badge variant={visit.duration_minutes > 120 ? 'destructive' : 'secondary'}>
+                  {visit.duration_minutes} mins
                 </Badge>
               ) : (
                 <Badge variant="outline">In Progress</Badge>
               )}
             </TableCell>
-            <TableCell className="text-right">{formatDistanceToNow(parseISO(visit.entry_time), { addSuffix: true })}</TableCell>
+            <TableCell className="hidden md:table-cell">{format(parseISO(visit.entry_time), 'MMM d, h:mm a')}</TableCell>
             <TableCell className="text-right">
-              <AnomalyDetector visit={visit} />
+              <AnomalyDetector visit={visit} users={users} outlets={outlets} />
             </TableCell>
           </TableRow>
         ))}

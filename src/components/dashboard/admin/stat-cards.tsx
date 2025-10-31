@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Card,
   CardContent,
@@ -5,14 +7,66 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Users, Warehouse, Route, CheckCircle } from "lucide-react";
-import { outlets, users, visits } from "@/lib/data";
+import { supabase } from "@/lib/supabaseClient";
+import { useEffect, useState } from "react";
+
+type StatData = {
+  totalOutlets: number;
+  activeUsers: number;
+  visitsToday: number;
+  successfulVisits: number;
+};
 
 export function StatCards() {
-  const totalOutlets = outlets.length;
-  const activeUsers = users.filter(u => u.role === 'sales_executive' || u.role === 'delivery_partner').length;
-  const visitsToday = visits.filter(v => new Date(v.created_at).toDateString() === new Date().toDateString()).length;
-  const successfulVisits = visits.filter(v => v.duration && v.duration > 5).length;
-  
+  const [stats, setStats] = useState<StatData>({
+    totalOutlets: 0,
+    activeUsers: 0,
+    visitsToday: 0,
+    successfulVisits: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      setLoading(true);
+      const today = new Date().toISOString().split('T')[0];
+
+      const { count: outletsCount } = await supabase.from("outlets").select('*', { count: 'exact', head: true });
+      const { count: usersCount } = await supabase.from("users").select('*', { count: 'exact', head: true }).in('role', ['sales_executive', 'delivery_partner']);
+      const { count: visitsTodayCount } = await supabase.from("visits").select('*', { count: 'exact', head: true }).gte('entry_time', `${today}T00:00:00.000Z`);
+      const { count: successfulVisitsCount } = await supabase.from("visits").select('*', { count: 'exact', head: true }).gt('duration_minutes', 5);
+
+      setStats({
+        totalOutlets: outletsCount ?? 0,
+        activeUsers: usersCount ?? 0,
+        visitsToday: visitsTodayCount ?? 0,
+        successfulVisits: successfulVisitsCount ?? 0,
+      });
+
+      setLoading(false);
+    };
+
+    fetchStats();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
+          <Card key={i}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="h-4 w-2/4 rounded bg-muted"></div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-7 w-1/4 rounded bg-muted mb-2"></div>
+              <div className="h-3 w-3/4 rounded bg-muted"></div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
       <Card>
@@ -23,10 +77,7 @@ export function StatCards() {
           <Warehouse className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{totalOutlets}</div>
-          <p className="text-xs text-muted-foreground">
-            +2 since last month
-          </p>
+          <div className="text-2xl font-bold">{stats.totalOutlets}</div>
         </CardContent>
       </Card>
       <Card>
@@ -37,7 +88,7 @@ export function StatCards() {
           <Users className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">+{activeUsers}</div>
+          <div className="text-2xl font-bold">+{stats.activeUsers}</div>
           <p className="text-xs text-muted-foreground">
             Sales & Delivery Teams
           </p>
@@ -49,7 +100,7 @@ export function StatCards() {
           <Route className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">+{visitsToday}</div>
+          <div className="text-2xl font-bold">+{stats.visitsToday}</div>
           <p className="text-xs text-muted-foreground">
             Across all outlets
           </p>
@@ -63,7 +114,7 @@ export function StatCards() {
           <CheckCircle className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{successfulVisits}</div>
+          <div className="text-2xl font-bold">{stats.successfulVisits}</div>
           <p className="text-xs text-muted-foreground">
             Total visits over 5 minutes
           </p>

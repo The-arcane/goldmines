@@ -14,15 +14,14 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, ShieldAlert, ShieldCheck, Bot } from "lucide-react";
+import { Bot, ShieldAlert, ShieldCheck } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import type { Visit } from "@/lib/types";
-import { users, outlets } from "@/lib/data";
+import type { Visit, User, Outlet } from "@/lib/types";
 import { checkVisitAnomaly } from "@/lib/actions";
 
-export function AnomalyDetector({ visit }: { visit: Visit }) {
+export function AnomalyDetector({ visit, users, outlets }: { visit: Visit, users: User[], outlets: Outlet[] }) {
   const [open, setOpen] = useState(false);
-  const [criteria, setCriteria] = useState("duration exceeds 2 hours");
+  const [criteria, setCriteria] = useState("duration_minutes exceeds 120");
   const [result, setResult] = useState<{ isAnomalous: boolean; reason: string } | null>(null);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
@@ -30,7 +29,11 @@ export function AnomalyDetector({ visit }: { visit: Visit }) {
   const handleCheck = async () => {
     startTransition(async () => {
       setResult(null);
-      const visitDetails = `Visit by ${users.find(u => u.id === visit.user_id)?.name} at ${outlets.find(o => o.id === visit.outlet_id)?.name}. Entry: ${visit.entry_time}, Exit: ${visit.exit_time}, Duration: ${visit.duration} minutes.`;
+      
+      const userName = users.find(u => u.id === visit.user_id)?.name || 'Unknown User';
+      const outletName = outlets.find(o => o.id === visit.outlet_id)?.name || 'Unknown Outlet';
+      
+      const visitDetails = `Visit by ${userName} at ${outletName}. Entry: ${visit.entry_time}, Exit: ${visit.exit_time}, Duration: ${visit.duration_minutes} minutes.`;
       
       const response = await checkVisitAnomaly(visitDetails, criteria);
 
@@ -73,12 +76,12 @@ export function AnomalyDetector({ visit }: { visit: Visit }) {
             <Label htmlFor="criteria">Criteria</Label>
             <Textarea
               id="criteria"
-              placeholder="e.g., duration exceeds 2 hours"
+              placeholder="e.g., duration_minutes exceeds 120"
               value={criteria}
               onChange={(e) => setCriteria(e.target.value)}
             />
              <p className="text-sm text-muted-foreground">
-                Describe the rule to check for.
+                Describe the rule to check for. The AI can check against any detail from the visit.
             </p>
           </div>
 

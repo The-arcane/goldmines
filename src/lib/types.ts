@@ -8,6 +8,7 @@ export type User = {
   role: UserRole;
   avatar_url: string;
   created_at: string;
+  assigned_outlet_ids?: string[];
 };
 
 export type Outlet = {

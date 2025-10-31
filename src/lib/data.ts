@@ -1,14 +1,15 @@
 import type { User, Outlet, Geofence, Visit } from './types';
 import { subMinutes, subHours, formatISO } from 'date-fns';
 
-// This data is now for demonstration purposes.
-// The user data will be managed by Supabase.
+// This mock data is for demonstration and fallback purposes.
+// The application primarily fetches live data from Supabase.
+
 export const users: User[] = [
   { id: 'user-1', auth_id: 'auth-id-1', name: 'Admin User', email: 'admin@successarrow.com', role: 'admin', avatar_url: 'https://picsum.photos/seed/user1/100/100', created_at: formatISO(new Date()) },
-  { id: 'user-2', auth_id: 'auth-id-2', name: 'Sales Executive 1', email: 'sales1@successarrow.com', role: 'sales_executive', avatar_url: 'https://picsum.photos/seed/user2/100/100', created_at: formatISO(new Date()) },
+  { id: 'user-2', auth_id: 'auth-id-2', name: 'Sales Executive 1', email: 'sales1@successarrow.com', role: 'sales_executive', avatar_url: 'https://picsum.photos/seed/user2/100/100', created_at: formatISO(new Date()), assigned_outlet_ids: ['outlet-1', 'outlet-2'] },
   { id: 'user-3', auth_id: 'auth-id-3', name: 'Distributor 1', email: 'dist1@successarrow.com', role: 'distributor', avatar_url: 'https://picsum.photos/seed/user3/100/100', created_at: formatISO(new Date()) },
   { id: 'user-4', auth_id: 'auth-id-4', name: 'Delivery Partner 1', email: 'delivery1@successarrow.com', role: 'delivery_partner', avatar_url: 'https://picsum.photos/seed/user4/100/100', created_at: formatISO(new Date()) },
-  { id: 'user-5', auth_id: 'auth-id-5', name: 'Sales Executive 2', email: 'sales2@successarrow.com', role: 'sales_executive', avatar_url: 'https://picsum.photos/seed/user5/100/100', created_at: formatISO(new Date()) },
+  { id: 'user-5', auth_id: 'auth-id-5', name: 'Sales Executive 2', email: 'sales2@successarrow.com', role: 'sales_executive', avatar_url: 'https://picsum.photos/seed/user5/100/100', created_at: formatISO(new Date()), assigned_outlet_ids: ['outlet-3'] },
 ];
 
 export const outlets: Outlet[] = [

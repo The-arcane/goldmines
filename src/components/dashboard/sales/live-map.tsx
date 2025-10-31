@@ -2,13 +2,23 @@
 
 import { Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps";
 import { Circle } from "@/components/map/circle";
-import type { Outlet } from "@/lib/types";
+import type { Outlet, Visit } from "@/lib/types";
 import { useGeolocation } from "@/hooks/use-geolocation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { useAuth } from "@/lib/auth";
+import { haversineDistance } from "@/lib/utils";
+import { supabase } from "@/lib/supabaseClient";
+import { useToast } from "@/hooks/use-toast";
+import { differenceInMinutes } from "date-fns";
 
 export function SalesLiveMap({ outlets }: { outlets: Outlet[] }) {
-  const { coords } = useGeolocation();
+  const { user } = useAuth();
+  const { coords } = useGeolocation({ enableHighAccuracy: true });
   const [center, setCenter] = useState({ lat: 34.0522, lng: -118.2437 });
+  const { toast } = useToast();
+  
+  // Use a ref to track the user's status within each geofence
+  const geofenceStatus = useRef<Record<string, boolean>>({});
 
   useEffect(() => {
     if (coords) {
@@ -17,6 +27,79 @@ export function SalesLiveMap({ outlets }: { outlets: Outlet[] }) {
       setCenter({ lat: outlets[0].lat, lng: outlets[0].lng });
     }
   }, [coords, outlets]);
+
+  useEffect(() => {
+    if (!coords || !user || outlets.length === 0) return;
+
+    const checkGeofences = async () => {
+      for (const outlet of outlets) {
+        const distance = haversineDistance(coords, { lat: outlet.lat, lng: outlet.lng });
+        const isInside = distance <= 150; // 150m radius
+        const wasInside = geofenceStatus.current[outlet.id] || false;
+
+        if (isInside && !wasInside) {
+          // User just entered the geofence
+          geofenceStatus.current[outlet.id] = true;
+          console.log(`Entering geofence for ${outlet.name}`);
+          
+          const { error } = await supabase.from("visits").insert({
+            user_id: user.id,
+            outlet_id: outlet.id,
+            entry_time: new Date().toISOString(),
+            within_radius: true,
+          });
+
+          if (error) {
+            toast({ variant: "destructive", title: "Failed to log visit entry", description: error.message });
+          } else {
+            toast({ title: "Geofence Entered", description: `You have entered the zone for ${outlet.name}. Your visit has started.` });
+          }
+
+        } else if (!isInside && wasInside) {
+          // User just exited the geofence
+          geofenceStatus.current[outlet.id] = false;
+          console.log(`Exiting geofence for ${outlet.name}`);
+
+          const { data: visitData, error: visitError } = await supabase
+            .from("visits")
+            .select("id, entry_time")
+            .eq("user_id", user.id)
+            .eq("outlet_id", outlet.id)
+            .is("exit_time", null)
+            .order("entry_time", { ascending: false })
+            .limit(1)
+            .single();
+
+          if (visitError || !visitData) {
+            console.error("Could not find open visit to close.");
+            continue; // Move to the next outlet
+          }
+
+          const exitTime = new Date();
+          const entryTime = new Date(visitData.entry_time);
+          const duration = differenceInMinutes(exitTime, entryTime);
+
+          const { error: updateError } = await supabase
+            .from("visits")
+            .update({
+              exit_time: exitTime.toISOString(),
+              duration_minutes: duration,
+            })
+            .eq("id", visitData.id);
+          
+          if (updateError) {
+             toast({ variant: "destructive", title: "Failed to log visit exit", description: updateError.message });
+          } else {
+             toast({ title: "Geofence Exited", description: `Visit to ${outlet.name} ended. Duration: ${duration} minutes.` });
+          }
+        }
+      }
+    };
+
+    checkGeofences();
+
+  }, [coords, user, outlets, toast]);
+
 
   return (
     <div className="h-[500px] w-full rounded-lg overflow-hidden border">
@@ -36,9 +119,9 @@ export function SalesLiveMap({ outlets }: { outlets: Outlet[] }) {
           <Circle
             key={`circle-${outlet.id}`}
             center={{ lat: outlet.lat, lng: outlet.lng }}
-            radius={150}
+            radius={150} // 150m radius
             strokeColor="#2E3192"
-            strokeOpacity={0.3}
+            strokeOpacity={0.4}
             strokeWeight={1}
             fillColor="#2E3192"
             fillOpacity={0.1}
