@@ -1,22 +1,24 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { Outlet } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, MoreHorizontal } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AddOutletDialog } from "@/components/dashboard/outlets/add-outlet-dialog";
 import { OutletsMap } from "@/components/dashboard/outlets/outlets-map";
 import { useToast } from "@/hooks/use-toast";
+import { EditOutletDialog } from "@/components/dashboard/outlets/edit-outlet-dialog";
+import { DeleteOutletAlert } from "@/components/dashboard/outlets/delete-outlet-alert";
 
 export default function OutletsPage() {
     const [outlets, setOutlets] = useState<Outlet[]>([]);
     const [loading, setLoading] = useState(true);
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
     const { toast } = useToast();
 
     const fetchOutlets = async () => {
@@ -40,7 +42,7 @@ export default function OutletsPage() {
         fetchOutlets();
     }, []);
 
-    const handleOutletAdded = () => {
+    const handleDataChange = () => {
         fetchOutlets();
     };
 
@@ -50,7 +52,7 @@ export default function OutletsPage() {
                 <div className="flex items-center">
                     <h1 className="font-headline text-lg font-semibold md:text-2xl">Outlets</h1>
                     <div className="ml-auto flex items-center gap-2">
-                        <AddOutletDialog onOutletAdded={handleOutletAdded} />
+                        <AddOutletDialog onOutletAdded={handleDataChange} />
                     </div>
                 </div>
 
@@ -63,7 +65,7 @@ export default function OutletsPage() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <OutletsTable outlets={outlets} loading={loading} />
+                            <OutletsTable outlets={outlets} loading={loading} onDataChange={handleDataChange} />
                         </CardContent>
                     </Card>
                     <Card>
@@ -83,13 +85,19 @@ export default function OutletsPage() {
     );
 }
 
-function OutletsTable({ outlets, loading }: { outlets: Outlet[]; loading: boolean }) {
+type OutletsTableProps = {
+    outlets: Outlet[];
+    loading: boolean;
+    onDataChange: () => void;
+};
+
+function OutletsTable({ outlets, loading, onDataChange }: OutletsTableProps) {
     if (loading) {
-        return <div className="text-center">Loading outlets...</div>;
+        return <div className="text-center p-4">Loading outlets...</div>;
     }
 
     if (outlets.length === 0) {
-        return <div className="text-center text-muted-foreground">No outlets found. Add one to get started.</div>;
+        return <div className="text-center text-muted-foreground p-4">No outlets found. Add one to get started.</div>;
     }
 
     return (
@@ -122,8 +130,17 @@ function OutletsTable({ outlets, loading }: { outlets: Outlet[]; loading: boolea
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                    <DropdownMenuItem>Edit</DropdownMenuItem>
-                                    <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                     <EditOutletDialog outlet={outlet} onOutletUpdated={onDataChange}>
+                                        <button className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full text-left">
+                                            Edit
+                                        </button>
+                                    </EditOutletDialog>
+                                    <DeleteOutletAlert outlet={outlet} onOutletDeleted={onDataChange}>
+                                        <button className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full text-left text-destructive">
+                                            Delete
+                                        </button>
+                                    </DeleteOutletAlert>
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </TableCell>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useRef, useEffect, useState } from "react";
@@ -9,9 +10,10 @@ type PlaceAutocompleteProps = {
     className?: string;
     placeholder?: string;
     id?: string;
+    defaultValue?: string;
 };
 
-export const PlaceAutocomplete = ({ onPlaceSelect, ...rest }: PlaceAutocompleteProps) => {
+export const PlaceAutocomplete = ({ onPlaceSelect, defaultValue, ...rest }: PlaceAutocompleteProps) => {
     const [placeAutocomplete, setPlaceAutocomplete] = useState<google.maps.places.Autocomplete | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const places = useMapsLibrary("places");
@@ -22,30 +24,28 @@ export const PlaceAutocomplete = ({ onPlaceSelect, ...rest }: PlaceAutocompleteP
         const autocomplete = new places.Autocomplete(inputRef.current, {
             fields: ["geometry", "name", "formatted_address"],
         });
-
+        
         setPlaceAutocomplete(autocomplete);
 
-        return () => {
-            if (autocomplete) {
-                google.maps.event.clearInstanceListeners(autocomplete);
-            }
-        };
     }, [places]);
 
     useEffect(() => {
-        if (!placeAutocomplete) return;
-
-        const listener = placeAutocomplete.addListener("place_changed", () => {
-            onPlaceSelect(placeAutocomplete.getPlace());
-        });
-
-        return () => {
-            if (listener) {
+        if (placeAutocomplete) {
+            const listener = placeAutocomplete.addListener("place_changed", () => {
+                onPlaceSelect(placeAutocomplete.getPlace());
+            });
+             return () => {
                 listener.remove();
-            }
-        };
-
+            };
+        }
     }, [placeAutocomplete, onPlaceSelect]);
+    
+    // Set default value if provided
+    useEffect(() => {
+        if (inputRef.current && defaultValue) {
+            inputRef.current.value = defaultValue;
+        }
+    }, [defaultValue]);
 
     return (
         <div className="autocomplete-container">
