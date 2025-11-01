@@ -106,7 +106,7 @@ export default function DistributorUsersPage() {
                                 allowedRoles={distributorAllowedRoles}
                                 defaultRole="delivery_partner"
                                 // Pass the specific distributor this user belongs to
-                                distributorId={distributor.id} 
+                                distributorId={String(distributor.id)} 
                             />
                         )}
                     </div>

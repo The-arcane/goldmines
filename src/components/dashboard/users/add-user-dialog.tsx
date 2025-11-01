@@ -208,7 +208,7 @@ export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, distribu
                                             </FormControl>
                                             <SelectContent>
                                                 {distributors.map(distributor => (
-                                                    <SelectItem key={distributor.id} value={distributor.id}>
+                                                    <SelectItem key={distributor.id} value={String(distributor.id)}>
                                                         {distributor.name}
                                                     </SelectItem>
                                                 ))}

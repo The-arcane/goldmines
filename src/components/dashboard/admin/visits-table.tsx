@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -20,7 +21,7 @@ type VisitsTableProps = {
 };
 
 export function VisitsTable({ visits, users, outlets }: VisitsTableProps) {
-  const getUserName = (userId: string) => users.find(u => u.id === userId)?.name || 'Unknown User';
+  const getUserName = (userId: number) => users.find(u => u.id === userId)?.name || 'Unknown User';
   const getOutletName = (outletId: string) => outlets.find(o => o.id === outletId)?.name || 'Unknown Outlet';
   
   if (visits.length === 0) {
@@ -43,7 +44,6 @@ export function VisitsTable({ visits, users, outlets }: VisitsTableProps) {
           <TableRow key={visit.id}>
             <TableCell>
               <div className="font-medium">{getUserName(visit.user_id)}</div>
-              <div className="text-xs text-muted-foreground">{visit.user_id}</div>
             </TableCell>
             <TableCell className="hidden sm:table-cell">{getOutletName(visit.outlet_id)}</TableCell>
             <TableCell className="hidden sm:table-cell">

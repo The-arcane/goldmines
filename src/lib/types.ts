@@ -3,7 +3,7 @@
 export type UserRole = 'admin' | 'sales_executive' | 'distributor_admin' | 'delivery_partner';
 
 export type User = {
-  id: string; // This is the primary key from the public.users table.
+  id: number; // This is the primary key from the public.users table.
   auth_id: string; // This is the uuid from the auth.users table.
   name: string;
   email: string;
@@ -15,10 +15,10 @@ export type User = {
 };
 
 export type Distributor = {
-    id: string;
+    id: number;
     name: string;
     created_at: string;
-    admin_user_id: string | null;
+    admin_user_id: number | null;
 }
 
 export type Outlet = {
@@ -41,8 +41,8 @@ export type Geofence = {
 };
 
 export type Visit = {
-  id: string;
-  user_id: string;
+  id: number;
+  user_id: number;
   outlet_id: string;
   entry_time: string;
   exit_time: string | null;

@@ -30,7 +30,7 @@ export default function DistributorsPage() {
         fetchData();
     }, [fetchData]);
 
-    const getAdminName = (adminUserId: string | null) => {
+    const getAdminName = (adminUserId: number | null) => {
         if (!adminUserId) return <span className="text-muted-foreground">Not Assigned</span>;
         return users.find(u => u.id === adminUserId)?.name || "Unknown Admin";
     };
