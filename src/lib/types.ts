@@ -90,6 +90,21 @@ export type OrderItem = {
   skus?: { name: string, product_code: string }; // For joins
 };
 
+export type Attendance = {
+    id: string;
+    user_id: number;
+    checkin_time: string;
+    checkin_lat?: number;
+    checkin_lng?: number;
+    checkin_photo_url?: string;
+    checkout_time?: string;
+    checkout_lat?: number;
+    checkout_lng?: number;
+    checkout_photo_url?: string;
+    status: 'Online' | 'Offline';
+    created_at: string;
+}
+
 
 // For the generic new user creation form
 export type UserFormData = {
@@ -131,3 +146,13 @@ export type OrderFormData = {
     total_price: number;
   }[];
 };
+
+// For marking attendance
+export type AttendanceData = {
+    type: 'checkin' | 'checkout';
+    coords: {
+        latitude: number;
+        longitude: number;
+    };
+    selfie: string; // base64 data URI
+}

@@ -4,7 +4,7 @@
 import { flagAnomalousVisit } from "@/ai/flows/flag-anomalous-visits";
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import type { UserFormData, DistributorFormData, SkuFormData, OrderFormData } from "./types";
+import type { UserFormData, DistributorFormData, SkuFormData, OrderFormData, AttendanceData } from "./types";
 import { revalidatePath } from "next/cache";
 
 export async function checkVisitAnomaly(visitDetails: string, criteria: string) {
@@ -372,4 +372,99 @@ export async function recordOrderPayment(orderId: number, paymentAmount: number)
     revalidatePath('/dashboard/distributor/payments');
     revalidatePath('/dashboard/outlets');
     return { success: true };
+}
+
+export async function markAttendance(data: AttendanceData) {
+    const cookieStore = cookies();
+    const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { cookies: { get: (name: string) => cookieStore.get(name)?.value } }
+    );
+    
+    // The user's ID needs to be fetched server-side from their session
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        return { success: false, error: "User not authenticated." };
+    }
+
+    // A user belongs to one record in public.users
+    const { data: userProfile, error: profileError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('auth_id', user.id)
+        .single();
+
+    if (profileError || !userProfile) {
+         return { success: false, error: "Could not find user profile." };
+    }
+
+    const userId = userProfile.id;
+
+    // Check for an existing "Online" record for today
+    const today = new Date().toISOString().slice(0, 10);
+    const { data: existingRecord, error: fetchError } = await supabase
+        .from('attendance')
+        .select('id, status')
+        .eq('user_id', userId)
+        .gte('checkin_time', `${today}T00:00:00.000Z`)
+        .lte('checkin_time', `${today}T23:59:59.999Z`)
+        .in('status', ['Online', 'Offline'])
+        .single();
+
+    let selfieUrl = '';
+    if (data.selfie) {
+        // The data URI is expected to be 'data:image/jpeg;base64,....'
+        // We need to extract the base64 part
+        const base64 = data.selfie.split(',')[1];
+        const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('selfies')
+            .upload(`attendance/${userId}-${Date.now()}.jpg`, Buffer.from(base64, 'base64'), {
+                contentType: 'image/jpeg',
+                upsert: true,
+            });
+
+        if (uploadError) {
+            console.error("Selfie upload failed:", uploadError);
+            return { success: false, error: "Could not save selfie." };
+        }
+        
+        // Get the public URL for the uploaded file
+        const { data: { publicUrl } } = supabase.storage.from('selfies').getPublicUrl(uploadData.path);
+        selfieUrl = publicUrl;
+    }
+
+
+    if (data.type === 'checkin') {
+        if (existingRecord) {
+             return { success: false, error: "You have already started your day." };
+        }
+        const { error } = await supabase.from('attendance').insert({
+            user_id: userId,
+            checkin_time: new Date().toISOString(),
+            checkin_lat: data.coords.latitude,
+            checkin_lng: data.coords.longitude,
+            checkin_photo_url: selfieUrl,
+            status: 'Online',
+        });
+        if (error) return { success: false, error: error.message };
+        revalidatePath('/salesperson/dashboard');
+        return { success: true, message: 'Day started successfully!' };
+
+    } else { // checkout
+        if (!existingRecord || existingRecord.status === 'Offline') {
+            return { success: false, error: "You have not started your day or have already ended it." };
+        }
+         const { error } = await supabase.from('attendance').update({
+            checkout_time: new Date().toISOString(),
+            checkout_lat: data.coords.latitude,
+            checkout_lng: data.coords.longitude,
+            checkout_photo_url: selfieUrl,
+            status: 'Offline',
+        }).eq('id', existingRecord.id);
+
+        if (error) return { success: false, error: error.message };
+        revalidatePath('/salesperson/dashboard');
+        return { success: true, message: 'Day ended successfully!' };
+    }
 }
