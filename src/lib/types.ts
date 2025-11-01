@@ -70,6 +70,8 @@ export type Order = {
   order_date: string;
   total_value: number;
   status: string;
+  amount_paid: number;
+  payment_status: string;
   created_at: string;
   order_items?: OrderItem[];
   outlets?: { name: string }; // For joins

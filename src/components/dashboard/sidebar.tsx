@@ -16,6 +16,8 @@ import {
   ShoppingCart,
   Box,
   PlusCircle,
+  Banknote,
+  LineChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/types";
@@ -24,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 const navItems = {
   admin: [
     { href: "/dashboard/admin", icon: Home, label: "Dashboard" },
+    { href: "/dashboard/analytics", icon: LineChart, label: "Analytics" },
     { href: "/dashboard/distributors", icon: Building, label: "Distributors" },
     { href: "/dashboard/outlets", icon: Warehouse, label: "Outlets" },
     { href: "/dashboard/visits", icon: BarChart, label: "Visits Log" },
@@ -37,6 +40,7 @@ const navItems = {
   distributor_admin: [
     { href: "/dashboard/distributor", icon: Home, label: "Dashboard" },
     { href: "/dashboard/distributor/orders", icon: ShoppingCart, label: "Orders" },
+    { href: "/dashboard/distributor/payments", icon: Banknote, label: "Payments" },
     { href: "/dashboard/distributor/skus", icon: Box, label: "SKU Management" },
     { href: "/dashboard/distributor/users", icon: Users, label: "Manage Team" },
   ],
@@ -53,17 +57,12 @@ export function Sidebar({ userRole }: { userRole: UserRole | undefined }) {
   const items = navItems[userRole as keyof typeof navItems] || [];
 
   const isCurrentPage = (href: string) => {
-    // Exact match for parent dashboard pages
-    if (href === '/dashboard/admin' && pathname === href) return true;
-    if (href === '/dashboard/distributor' && pathname === href) return true;
-    if (href === '/dashboard/sales' && pathname === href) return true;
-    if (href === '/dashboard/delivery' && pathname === href) return true;
-    
-    // For all other links, check if the path starts with the href, as long as it's not a parent dashboard
-    if (href !== '/dashboard/admin' && href !== '/dashboard/distributor' && href !== '/dashboard/sales' && href !== '/dashboard/delivery') {
+    // Exact match or if the current path starts with the link's href,
+    // but the link is not a "parent" dashboard that could wrongly match child pages.
+    if (pathname === href) return true;
+    if (href.split('/').length > 3) {
       return pathname.startsWith(href);
     }
-    
     return false;
   };
   
@@ -102,5 +101,3 @@ export function Sidebar({ userRole }: { userRole: UserRole | undefined }) {
     </div>
   );
 }
-
-    

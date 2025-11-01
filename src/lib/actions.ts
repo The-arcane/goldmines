@@ -269,3 +269,48 @@ export async function updateOrderStatus(orderId: number, status: string) {
     revalidatePath(`/dashboard/distributor/orders/${orderId}`);
     return { success: true };
 }
+
+export async function recordOrderPayment(orderId: number, paymentAmount: number) {
+    const cookieStore = cookies();
+    const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { cookies: { get: (name: string) => cookieStore.get(name)?.value } }
+    );
+
+    // 1. Get the current order details
+    const { data: order, error: fetchError } = await supabase
+        .from('orders')
+        .select('total_value, amount_paid')
+        .eq('id', orderId)
+        .single();
+
+    if (fetchError || !order) {
+        console.error(`Error fetching order ${orderId} for payment:`, fetchError);
+        return { success: false, error: `Could not find order to record payment.` };
+    }
+    
+    // 2. Calculate new payment status
+    const newAmountPaid = (order.amount_paid || 0) + paymentAmount;
+    let paymentStatus = 'Partially Paid';
+    if (newAmountPaid >= order.total_value) {
+        paymentStatus = 'Paid';
+    }
+
+    // 3. Update the order
+    const { error: updateError } = await supabase
+        .from('orders')
+        .update({ 
+            amount_paid: newAmountPaid,
+            payment_status: paymentStatus,
+         })
+        .eq('id', orderId);
+
+    if (updateError) {
+        console.error(`Error recording payment for order ${orderId}:`, updateError);
+        return { success: false, error: updateError.message };
+    }
+
+    revalidatePath('/dashboard/distributor/payments');
+    return { success: true };
+}
