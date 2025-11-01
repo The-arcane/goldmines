@@ -48,7 +48,7 @@ export default function OutletsPage() {
 
     return (
         <div className="flex min-h-screen w-full flex-col">
-            <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+            <main className="flex flex-1 flex-col gap-4 md:gap-8">
                 <div className="flex items-center">
                     <h1 className="font-headline text-lg font-semibold md:text-2xl">Outlets</h1>
                     <div className="ml-auto flex items-center gap-2">
@@ -56,7 +56,7 @@ export default function OutletsPage() {
                     </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
+                <div className="grid gap-4 md:gap-8 lg:grid-cols-3">
                      <Card className="lg:col-span-2">
                         <CardHeader>
                             <CardTitle>All Outlets</CardTitle>
@@ -105,10 +105,9 @@ function OutletsTable({ outlets, loading, onDataChange }: OutletsTableProps) {
             <TableHeader>
                 <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="text-right">Credit Limit</TableHead>
+                    <TableHead className="hidden sm:table-cell">Type</TableHead>
+                    <TableHead className="hidden md:table-cell text-right">Credit Limit</TableHead>
                     <TableHead className="text-right">Current Due</TableHead>
-                    <TableHead className="hidden md:table-cell">Address</TableHead>
                     <TableHead>
                         <span className="sr-only">Actions</span>
                     </TableHead>
@@ -118,12 +117,11 @@ function OutletsTable({ outlets, loading, onDataChange }: OutletsTableProps) {
                 {outlets.map((outlet) => (
                     <TableRow key={outlet.id}>
                         <TableCell className="font-medium">{outlet.name}</TableCell>
-                        <TableCell>
+                        <TableCell className="hidden sm:table-cell">
                             <Badge variant="outline">{outlet.type}</Badge>
                         </TableCell>
-                        <TableCell className="text-right font-mono">₹{outlet.credit_limit?.toFixed(2)}</TableCell>
+                        <TableCell className="hidden md:table-cell text-right font-mono">₹{outlet.credit_limit?.toFixed(2)}</TableCell>
                          <TableCell className="text-right font-mono">₹{outlet.current_due?.toFixed(2)}</TableCell>
-                        <TableCell className="hidden md:table-cell">{outlet.address}</TableCell>
                         <TableCell>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>

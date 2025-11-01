@@ -34,7 +34,7 @@ export function VisitsTable({ visits, users, outlets }: VisitsTableProps) {
         <TableRow>
           <TableHead>Executive</TableHead>
           <TableHead className="hidden sm:table-cell">Outlet</TableHead>
-          <TableHead className="hidden sm:table-cell">Duration</TableHead>
+          <TableHead className="text-right md:text-left">Duration</TableHead>
           <TableHead className="hidden md:table-cell">Entry Time</TableHead>
           <TableHead className="text-right">AI Check</TableHead>
         </TableRow>
@@ -46,7 +46,7 @@ export function VisitsTable({ visits, users, outlets }: VisitsTableProps) {
               <div className="font-medium">{getUserName(visit.user_id)}</div>
             </TableCell>
             <TableCell className="hidden sm:table-cell">{getOutletName(visit.outlet_id)}</TableCell>
-            <TableCell className="hidden sm:table-cell">
+            <TableCell className="text-right md:text-left">
               {visit.duration_minutes ? (
                 <Badge variant={visit.duration_minutes > 120 ? 'destructive' : 'secondary'}>
                   {visit.duration_minutes} mins

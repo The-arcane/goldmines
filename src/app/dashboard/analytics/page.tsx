@@ -140,8 +140,8 @@ export default function AnalyticsPage() {
     };
 
     return (
-        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-            <div className="flex items-center justify-between">
+        <main className="flex flex-1 flex-col gap-4 md:gap-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h1 className="font-headline text-3xl font-bold">Reports & Analytics</h1>
                     <p className="text-muted-foreground">Insights into your team's performance and operations.</p>
@@ -171,8 +171,8 @@ export default function AnalyticsPage() {
                 </CardContent>
             </Card>
 
-            <div className="grid gap-8 md:grid-cols-2">
-                <Card>
+            <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
+                <Card className="xl:col-span-1">
                     <CardHeader>
                         <CardTitle>SKU-wise Sales Report</CardTitle>
                         <CardDescription>Performance of each product SKU across all orders.</CardDescription>
@@ -203,7 +203,7 @@ export default function AnalyticsPage() {
                     </CardContent>
                 </Card>
 
-                <div className="grid gap-8 auto-rows-min">
+                <div className="grid gap-8 auto-rows-min xl:col-span-2">
                     <Card>
                         <CardHeader>
                             <CardTitle>Sales Representative Performance</CardTitle>

@@ -73,7 +73,7 @@ export default function PaymentsPage() {
     };
 
     return (
-        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+        <main className="flex flex-1 flex-col gap-4 md:gap-8">
             <Card>
                 <CardHeader className="flex flex-row items-center">
                     <div className="grid gap-2">
@@ -92,11 +92,11 @@ export default function PaymentsPage() {
                                 <TableRow>
                                     <TableHead>Order ID</TableHead>
                                     <TableHead>Outlet</TableHead>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>Payment Status</TableHead>
-                                    <TableHead className="text-right">Total Value</TableHead>
-                                    <TableHead className="text-right">Amount Paid</TableHead>
-                                    <TableHead className="text-right">Balance Due</TableHead>
+                                    <TableHead className="hidden sm:table-cell">Date</TableHead>
+                                    <TableHead className="hidden md:table-cell">Payment Status</TableHead>
+                                    <TableHead className="text-right">Total</TableHead>
+                                    <TableHead className="text-right">Paid</TableHead>
+                                    <TableHead className="text-right">Due</TableHead>
                                     <TableHead className="w-[100px] text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -105,10 +105,10 @@ export default function PaymentsPage() {
                                     const balanceDue = order.total_value - (order.amount_paid || 0);
                                     return (
                                         <TableRow key={order.id}>
-                                            <TableCell className="font-mono">#{order.id}</TableCell>
+                                            <TableCell className="font-mono text-xs">#{order.id}</TableCell>
                                             <TableCell>{(order as any).outlets?.name || 'N/A'}</TableCell>
-                                            <TableCell>{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
-                                            <TableCell><Badge variant={getPaymentStatusVariant(order.payment_status)}>{order.payment_status}</Badge></TableCell>
+                                            <TableCell className="hidden sm:table-cell">{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
+                                            <TableCell className="hidden md:table-cell"><Badge variant={getPaymentStatusVariant(order.payment_status)}>{order.payment_status}</Badge></TableCell>
                                             <TableCell className="text-right">₹{order.total_value?.toFixed(2) || '0.00'}</TableCell>
                                             <TableCell className="text-right">₹{order.amount_paid?.toFixed(2) || '0.00'}</TableCell>
                                             <TableCell className="text-right font-medium">₹{balanceDue.toFixed(2)}</TableCell>
@@ -128,7 +128,7 @@ export default function PaymentsPage() {
                         </Table>
                     )}
                 </CardContent>
-                <CardFooter className="flex justify-end items-center gap-4 border-t bg-muted/50 px-6 py-4">
+                <CardFooter className="flex flex-col sm:flex-row justify-end items-center gap-4 border-t bg-muted/50 px-6 py-4">
                     <div className="text-lg font-semibold">Total Outstanding Dues:</div>
                     <div className="text-2xl font-bold text-destructive">₹{totalDues.toFixed(2)}</div>
                 </CardFooter>

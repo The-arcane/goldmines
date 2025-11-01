@@ -68,7 +68,7 @@ export default function OrdersPage() {
 
 
     return (
-        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+        <main className="flex flex-1 flex-col gap-4 md:gap-8">
             <Card>
                 <CardHeader className="flex flex-row items-center">
                     <div className="grid gap-2">
@@ -85,10 +85,10 @@ export default function OrdersPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Order ID</TableHead>
+                                    <TableHead className="w-[80px]">Order ID</TableHead>
                                     <TableHead>Outlet</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Date</TableHead>
+                                    <TableHead className="hidden md:table-cell">Status</TableHead>
+                                    <TableHead className="hidden sm:table-cell">Date</TableHead>
                                     <TableHead className="text-right">Value</TableHead>
                                     <TableHead className="w-[100px] text-right">Actions</TableHead>
                                 </TableRow>
@@ -98,8 +98,8 @@ export default function OrdersPage() {
                                     <TableRow key={order.id}>
                                         <TableCell className="font-mono">#{order.id}</TableCell>
                                         <TableCell>{(order as any).outlets?.name || 'N/A'}</TableCell>
-                                        <TableCell><Badge variant={getStatusVariant(order.status)}>{order.status}</Badge></TableCell>
-                                        <TableCell>{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
+                                        <TableCell className="hidden md:table-cell"><Badge variant={getStatusVariant(order.status)}>{order.status}</Badge></TableCell>
+                                        <TableCell className="hidden sm:table-cell">{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
                                         <TableCell className="text-right">₹{order.total_value?.toFixed(2) || '0.00'}</TableCell>
                                         <TableCell className="text-right">
                                             <Button asChild variant="outline" size="sm">
