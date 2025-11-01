@@ -36,53 +36,68 @@ export default function DistributorUsersPage() {
         if (!user) return;
         setLoading(true);
 
-        // 1. Find the distributor organization this admin user belongs to.
-        const { data: adminDistributor, error: adminError } = await supabase
-            .from('distributors')
-            .select('*')
-            .eq('admin_user_id', user.id)
-            .single();
+        try {
+            // 1. Find the distributor organization this admin user belongs to.
+            const { data: adminDistributor, error: adminError } = await supabase
+                .from('distributors')
+                .select('*')
+                .eq('admin_user_id', user.id)
+                .single();
 
-        if (adminError || !adminDistributor) {
-            console.error("Could not find distributor for this admin:", adminError);
+            if (adminError || !adminDistributor) {
+                console.error("Could not find distributor for this admin:", adminError);
+                setLoading(false);
+                return;
+            }
+            setDistributor(adminDistributor);
+
+            // 2. Find all user IDs linked to this distributor organization.
+            const { data: memberLinks, error: linkError } = await supabase
+                .from('distributor_users')
+                .select('user_id')
+                .eq('distributor_id', adminDistributor.id);
+
+            if (linkError) {
+                console.error("Error fetching team members:", linkError);
+                setTeamMembers([]);
+                setLoading(false);
+                return;
+            }
+
+            const memberIds = memberLinks.map(link => link.user_id);
+
+            if (memberIds.length === 0) {
+                 setTeamMembers([]);
+                 setLoading(false);
+                 return;
+            }
+
+            // 3. Fetch the full profiles of those users.
+            const { data: members, error: membersError } = await supabase
+                .from('users')
+                .select('*')
+                .in('id', memberIds)
+                .order("created_at", { ascending: false });
+
+            if (membersError) {
+                 console.error("Error fetching team member profiles:", membersError);
+                 setTeamMembers([]);
+            } else {
+                 setTeamMembers(members as User[]);
+            }
+        } catch (error) {
+            console.error("An error occurred fetching distributor user data:", error);
+            setTeamMembers([]);
+        } finally {
             setLoading(false);
-            return;
         }
-        setDistributor(adminDistributor);
-
-        // 2. Find all user IDs linked to this distributor organization.
-        const { data: memberLinks, error: linkError } = await supabase
-            .from('distributor_users')
-            .select('user_id')
-            .eq('distributor_id', adminDistributor.id);
-
-        if (linkError) {
-            console.error("Error fetching team members:", linkError);
-            setLoading(false);
-            return;
-        }
-
-        const memberIds = memberLinks.map(link => link.user_id);
-
-        // 3. Fetch the full profiles of those users.
-        const { data: members, error: membersError } = await supabase
-            .from('users')
-            .select('*')
-            .in('id', memberIds)
-            .order("created_at", { ascending: false });
-
-        if (members) {
-            setTeamMembers(members as User[]);
-        } else {
-            console.error("Error fetching team member profiles:", membersError);
-        }
-
-        setLoading(false);
     }, [user]);
 
     useEffect(() => {
         if(user) {
             fetchDistributorData();
+        } else {
+            setLoading(false);
         }
     }, [user, fetchDistributorData]);
 
@@ -142,7 +157,7 @@ export default function DistributorUsersPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {teamMembers.map((member) => (
+                                {teamMembers.length > 0 ? teamMembers.map((member) => (
                                     <TableRow key={member.id}>
                                         <TableCell className="font-medium flex items-center gap-3">
                                             <Avatar className="h-9 w-9">
@@ -157,7 +172,13 @@ export default function DistributorUsersPage() {
                                         </TableCell>
                                         <TableCell className="text-right">{format(new Date(member.created_at), 'MMM d, yyyy')}</TableCell>
                                     </TableRow>
-                                ))}
+                                )) : (
+                                     <TableRow>
+                                        <TableCell colSpan={4} className="text-center text-muted-foreground p-8">
+                                            No team members found. Add one to get started.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
                             </TableBody>
                         </Table>
                     )}

@@ -31,48 +31,50 @@ export default function DistributorDashboardPage() {
     if (!user) return;
     setLoading(true);
 
-    // Get distributor for current user
-    const { data: distributorData, error: distributorError } = await supabase
-      .from('distributors')
-      .select('*')
-      .eq('admin_user_id', user.id)
-      .single();
+    try {
+      // 1. Get distributor for current user
+      const { data: distributorData, error: distributorError } = await supabase
+        .from('distributors')
+        .select('*')
+        .eq('admin_user_id', user.id)
+        .single();
 
-    if (distributorError) {
-      console.error("Could not find distributor for this admin.", distributorError);
-      setLoading(false);
-      return;
-    }
-    setDistributor(distributorData);
-    const currentDistributorId = distributorData.id;
-    
-    // Fetch team members
-    const { data: memberLinks } = await supabase
-      .from("distributor_users")
-      .select("users(*)")
-      .eq("distributor_id", currentDistributorId);
+      if (distributorError || !distributorData) {
+        console.error("Could not find distributor for this admin.", distributorError);
+        setLoading(false);
+        return;
+      }
+      setDistributor(distributorData);
+      const currentDistributorId = distributorData.id;
 
-    if (memberLinks) {
-        const members = memberLinks.map((link : any) => link.users).filter(member => member && member.id !== user.id) as User[];
+      // 2. Fetch team members, outlets, and orders in parallel
+      const [memberLinksRes, outletsRes, ordersRes] = await Promise.all([
+        supabase.from("distributor_users").select("users(*)").eq("distributor_id", currentDistributorId),
+        supabase.from("outlets").select("*").limit(10), // Placeholder logic for assigned outlets
+        supabase.from("orders").select("*, outlets(name)").eq("distributor_id", currentDistributorId).order("created_at", { ascending: false }).limit(5)
+      ]);
+
+      // Process team members
+      if (memberLinksRes.data) {
+        const members = memberLinksRes.data.map((link : any) => link.users).filter(member => member && member.id !== user.id) as User[];
         setTeamMembers(members);
+      }
+
+      // Process assigned outlets
+      if (outletsRes.data) {
+        setAssignedOutlets(outletsRes.data);
+      }
+
+      // Process recent orders
+      if (ordersRes.data) {
+        setRecentOrders(ordersRes.data as Order[]);
+      }
+
+    } catch (error) {
+        console.error("Error fetching distributor dashboard data:", error);
+    } finally {
+        setLoading(false);
     }
-    
-    // Fetch assigned outlets (placeholder logic)
-    // In a real app, this might be a many-to-many relationship
-    const { data: outlets } = await supabase.from("outlets").select("*").limit(10);
-    setAssignedOutlets(outlets || []);
-
-    // Fetch recent orders for this distributor
-    const { data: orders } = await supabase
-      .from("orders")
-      .select("*, outlets(name)") // Join with outlets to get the name
-      .eq("distributor_id", currentDistributorId)
-      .order("created_at", { ascending: false })
-      .limit(5);
-
-    setRecentOrders(orders as Order[] || []);
-
-    setLoading(false);
   }, [user]);
 
   useEffect(() => {
@@ -89,6 +91,16 @@ export default function DistributorDashboardPage() {
     }
     return names[0].substring(0, 2);
   };
+  
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+        case 'Delivered': return 'default';
+        case 'Pending': return 'destructive';
+        case 'Dispatched': return 'outline';
+        default: return 'secondary';
+    }
+  }
+
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -172,7 +184,7 @@ export default function DistributorDashboardPage() {
               </div>
             </CardHeader>
             <CardContent>
-                 {loading ? <p>Loading orders...</p> : (
+                 {loading ? <p className="text-center text-muted-foreground p-4">Loading orders...</p> : (
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -183,17 +195,16 @@ export default function DistributorDashboardPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {recentOrders.map(order => (
+                            {recentOrders.length > 0 ? recentOrders.map(order => (
                                 <TableRow key={order.id}>
                                     <TableCell>{(order as any).outlets?.name || 'N/A'}</TableCell>
-                                    <TableCell><Badge variant={order.status === 'Delivered' ? 'default' : 'secondary'}>{order.status}</Badge></TableCell>
+                                    <TableCell><Badge variant={getStatusVariant(order.status)}>{order.status}</Badge></TableCell>
                                     <TableCell>{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
                                     <TableCell className="text-right">₹{order.total_value?.toFixed(2) || '0.00'}</TableCell>
                                 </TableRow>
-                            ))}
-                             {recentOrders.length === 0 && (
+                            )) : (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                    <TableCell colSpan={4} className="text-center text-muted-foreground p-8">
                                         No recent orders found.
                                     </TableCell>
                                 </TableRow>
@@ -209,9 +220,9 @@ export default function DistributorDashboardPage() {
                 <CardDescription>Your assigned delivery partners.</CardDescription>
             </CardHeader>
             <CardContent className="pl-2">
-                {loading ? <p>Loading team...</p> : (
+                {loading ? <p className="text-center text-muted-foreground p-4">Loading team...</p> : (
                     <div className="space-y-4">
-                        {teamMembers.map(member => (
+                        {teamMembers.length > 0 ? teamMembers.map(member => (
                             <div key={member.id} className="flex items-center gap-4">
                                 <Avatar className="h-9 w-9">
                                     <AvatarImage src={member.avatar_url} alt={member.name} />
@@ -222,9 +233,8 @@ export default function DistributorDashboardPage() {
                                     <p className="text-sm text-muted-foreground">{member.email}</p>
                                 </div>
                             </div>
-                        ))}
-                         {teamMembers.length === 0 && (
-                            <p className="text-center text-muted-foreground">No team members found.</p>
+                        )) : (
+                            <p className="text-center text-muted-foreground p-8">No team members found.</p>
                          )}
                     </div>
                 )}
