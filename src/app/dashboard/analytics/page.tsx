@@ -59,7 +59,7 @@ export default function AnalyticsPage() {
                 salesRepsPromise, 
                 deliveryBoysPromise, 
                 visitsPromise, 
-                ordersRes,
+                ordersPromise,
                 orderItemsPromise,
                 skusPromise,
             ]);
@@ -282,5 +282,3 @@ export default function AnalyticsPage() {
         </main>
     );
 }
-
-    
