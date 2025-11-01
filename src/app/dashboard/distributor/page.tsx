@@ -1,8 +1,9 @@
+
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import type { User, Outlet, Distributor } from "@/lib/types";
+import type { User, Outlet, Distributor, Order } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import {
   Card,
@@ -12,21 +13,25 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Users, Warehouse, PackagePlus } from "lucide-react";
+import { PlusCircle, Users, Warehouse, Package, FileText } from "lucide-react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
 
 export default function DistributorDashboardPage() {
   const { user } = useAuth();
   const [teamMembers, setTeamMembers] = useState<User[]>([]);
   const [assignedOutlets, setAssignedOutlets] = useState<Outlet[]>([]);
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [distributorId, setDistributorId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchDistributorData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
 
-    // 1. Find the distributor organization this admin user belongs to.
     const { data: adminDistributorLink } = await supabase
       .from("distributor_users")
       .select("distributor_id")
@@ -38,30 +43,32 @@ export default function DistributorDashboardPage() {
       setLoading(false);
       return;
     }
-    const distributorId = adminDistributorLink.distributor_id;
+    const currentDistributorId = adminDistributorLink.distributor_id;
+    setDistributorId(currentDistributorId);
 
-    // 2. Fetch all team members (delivery partners) for this distributor
+    // Fetch team members
     const { data: memberLinks } = await supabase
       .from("distributor_users")
-      .select("user_id")
-      .eq("distributor_id", distributorId);
+      .select("users(*)")
+      .eq("distributor_id", currentDistributorId);
 
     if (memberLinks) {
-      const memberIds = memberLinks.map((link) => link.user_id);
-      const { data: members } = await supabase
-        .from("users")
-        .select("*")
-        .in("id", memberIds)
-        .neq("id", user.id); // Exclude the admin themselves
-
-      if (members) setTeamMembers(members as User[]);
+        const members = memberLinks.map(link => link.users).filter(member => member && member.id !== user.id) as User[];
+        setTeamMembers(members);
     }
     
-    // For now, we assume outlets can be assigned to distributors.
-    // This is a placeholder for a more complex outlet assignment logic.
+    // Fetch assigned outlets (placeholder logic)
     const { data: outlets } = await supabase.from("outlets").select("*").limit(10);
     setAssignedOutlets(outlets || []);
 
+    // Fetch recent orders for this distributor
+    const { data: orders } = await supabase
+      .from("orders")
+      .select("*, outlets(name)") // Join with outlets to get the name
+      .eq("distributor_id", currentDistributorId)
+      .order("created_at", { ascending: false })
+      .limit(5);
+    setRecentOrders(orders as Order[] || []);
 
     setLoading(false);
   }, [user]);
@@ -93,18 +100,38 @@ export default function DistributorDashboardPage() {
           </p>
         </div>
         <div className="flex gap-2">
-           <Button variant="outline">
-                <PackagePlus className="mr-2 h-4 w-4" /> Place Order
+           <Button>
+                <PlusCircle className="mr-2 h-4 w-4" /> Create Order
             </Button>
-            <Button asChild>
+            <Button asChild variant="outline">
                 <Link href="/dashboard/distributor/users">
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Team Member
+                    <Users className="mr-2 h-4 w-4" /> Manage Team
                 </Link>
             </Button>
         </div>
       </div>
       
       <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Recent Orders</CardTitle>
+                <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                {loading ? <div className="h-8 w-1/4 rounded bg-muted animate-pulse"></div> : <div className="text-2xl font-bold">{recentOrders.length}</div>}
+                <p className="text-xs text-muted-foreground">In the last 7 days</p>
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Assigned Outlets</CardTitle>
+                <Warehouse className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                 {loading ? <div className="h-8 w-1/4 rounded bg-muted animate-pulse"></div> : <div className="text-2xl font-bold">{assignedOutlets.length}</div>}
+                <p className="text-xs text-muted-foreground">In your distribution network</p>
+            </CardContent>
+        </Card>
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Team Members</CardTitle>
@@ -115,20 +142,50 @@ export default function DistributorDashboardPage() {
                 <p className="text-xs text-muted-foreground">Delivery partners in your team</p>
             </CardContent>
         </Card>
-        <Card>
+         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Assigned Outlets</CardTitle>
-                <Warehouse className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Pending Dues</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                 {loading ? <div className="h-8 w-1/4 rounded bg-muted animate-pulse"></div> : <div className="text-2xl font-bold">{assignedOutlets.length}</div>}
-                <p className="text-xs text-muted-foreground">Outlets in your distribution network</p>
+                 {loading ? <div className="h-8 w-1/4 rounded bg-muted animate-pulse"></div> : <div className="text-2xl font-bold">$0.00</div>}
+                <p className="text-xs text-muted-foreground">Total outstanding payments</p>
             </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-full lg:col-span-4">
+            <CardHeader>
+                <CardTitle>Recent Orders</CardTitle>
+                <CardDescription>A list of your 5 most recent orders.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                 {loading ? <p>Loading orders...</p> : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Outlet</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead>Date</TableHead>
+                                <TableHead className="text-right">Value</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {recentOrders.map(order => (
+                                <TableRow key={order.id}>
+                                    <TableCell>{order.outlets?.name || 'N/A'}</TableCell>
+                                    <TableCell><Badge variant={order.status === 'Delivered' ? 'default' : 'secondary'}>{order.status}</Badge></TableCell>
+                                    <TableCell>{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
+                                    <TableCell className="text-right">${order.total_value?.toFixed(2) || '0.00'}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
+            </CardContent>
+        </Card>
+         <Card className="col-span-full lg:col-span-3">
             <CardHeader>
                 <CardTitle>Team Members</CardTitle>
                 <CardDescription>Your assigned delivery partners.</CardDescription>

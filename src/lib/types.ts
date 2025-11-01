@@ -7,9 +7,7 @@ export type User = {
   auth_id: string; // This is the uuid from the auth.users table.
   name: string;
   email: string;
-  // The 'role' in the frontend app is a string, but is stored as a SMALLINT in the DB.
-  // The auth provider handles mapping between the two.
-  role: UserRole; 
+  role: UserRole | number; 
   avatar_url: string;
   created_at: string;
 };
@@ -51,21 +49,41 @@ export type Visit = {
   created_at: string;
 };
 
-export type Order = {
+export type Sku = {
   id: number;
-  outlet_id: string; // UUID
-  order_date: string;
-  total_amount: number;
-  status: 'Pending' | 'In Transit' | 'Delivered';
+  name: string;
+  product_code?: string;
+  unit_type?: string;
+  units_per_case?: number;
+  case_price?: number;
+  mrp?: number;
+  ptr?: number;
+  stock_quantity: number;
+  distributor_id: number;
+  created_at: string;
 };
 
-export type Delivery = {
+export type Order = {
+  id: number;
+  distributor_id: number;
+  outlet_id: string;
+  order_date: string;
+  total_value?: number;
+  status: string;
+  created_at: string;
+  order_items: OrderItem[]; // This can be populated via a join
+  outlets?: { name: string }; // To get outlet name
+};
+
+export type OrderItem = {
   id: number;
   order_id: number;
-  delivery_person_id: number;
-  status: 'Pending' | 'Delivered';
-  delivered_at: string | null;
+  sku_id: number;
+  quantity: number;
+  unit_price?: number;
+  total_price?: number;
 };
+
 
 // For the generic new user creation form
 export type UserFormData = {
