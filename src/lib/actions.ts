@@ -271,7 +271,7 @@ export async function updateOrderStatus(orderId: number, status: string) {
     const cookieStore = cookies();
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
         { cookies: { get: (name: string) => cookieStore.get(name)?.value } }
     );
     
@@ -327,7 +327,7 @@ export async function recordOrderPayment(orderId: number, paymentAmount: number)
     const cookieStore = cookies();
     const supabase = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
         { cookies: { get: (name: string) => cookieStore.get(name)?.value } }
     );
 
@@ -382,17 +382,15 @@ export async function markAttendance(data: AttendanceData) {
     const cookieStore = cookies();
     const supabaseAdmin = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
         { cookies: { get: (name: string) => cookieStore.get(name)?.value } }
     );
     
-    // The user's ID needs to be fetched server-side from their session
     const { data: { user } } = await supabaseAdmin.auth.getUser();
     if (!user) {
         return { success: false, error: "User not authenticated." };
     }
 
-    // A user belongs to one record in public.users
     const { data: userProfile, error: profileError } = await supabaseAdmin
         .from('users')
         .select('id')
@@ -404,10 +402,10 @@ export async function markAttendance(data: AttendanceData) {
     }
 
     const userId = userProfile.id;
+    const userAuthId = user.id;
 
-    // Check for an existing "Online" record for today
     const today = new Date().toISOString().slice(0, 10);
-    const { data: existingRecord, error: fetchError } = await supabaseAdmin
+    const { data: existingRecord } = await supabaseAdmin
         .from('attendance')
         .select('id, status')
         .eq('user_id', userId)
@@ -417,21 +415,20 @@ export async function markAttendance(data: AttendanceData) {
         .limit(1)
         .maybeSingle();
 
-
     let selfieUrl = '';
     if (data.selfie) {
         const base64 = data.selfie.split(',')[1];
         if (!base64) return { success: false, error: 'Invalid selfie format.' };
         
-        // Use Buffer.from for server-side
         const imageBuffer = Buffer.from(base64, 'base64');
-        const filePath = `attendance/${userId}-${Date.now()}.jpg`;
+        // Use the user's auth_id for the folder path to align with RLS policies
+        const filePath = `attendance/${userAuthId}/${Date.now()}.jpg`;
 
         const { error: uploadError } = await supabaseAdmin.storage
             .from('selfies')
             .upload(filePath, imageBuffer, {
                 contentType: 'image/jpeg',
-                upsert: true,
+                upsert: false,
             });
 
         if (uploadError) {
@@ -442,7 +439,6 @@ export async function markAttendance(data: AttendanceData) {
         const { data: { publicUrl } } = supabaseAdmin.storage.from('selfies').getPublicUrl(filePath);
         selfieUrl = publicUrl;
     }
-
 
     if (data.type === 'checkin') {
         if (existingRecord && existingRecord.status === 'Online') {
@@ -477,5 +473,4 @@ export async function markAttendance(data: AttendanceData) {
         return { success: true, message: 'Day ended successfully!' };
     }
 }
-
-    
+ 
