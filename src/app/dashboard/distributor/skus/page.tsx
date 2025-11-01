@@ -36,7 +36,7 @@ export default function SkusPage() {
         const { data, error } = await supabase
             .from("skus")
             .select("*")
-            .eq('distributor_id', distributorData.id)
+            .or(`distributor_id.eq.${distributorData.id},distributor_id.is.null`)
             .order("created_at", { ascending: false });
 
         if (error) {

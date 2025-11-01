@@ -58,7 +58,7 @@ export default function CreateOrderPage() {
         if (distributorData) {
             setDistributor(distributorData);
             const outletsPromise = supabase.from("outlets").select("*"); // Simplified for now
-            const skusPromise = supabase.from("skus").select("*").eq("distributor_id", distributorData.id);
+            const skusPromise = supabase.from("skus").select("*").or(`distributor_id.eq.${distributorData.id},distributor_id.is.null`);
             const [outletsRes, skusRes] = await Promise.all([outletsPromise, skusPromise]);
             if(outletsRes.data) setOutlets(outletsRes.data);
             if(skusRes.data) setSkus(skusRes.data);
