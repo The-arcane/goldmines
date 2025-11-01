@@ -57,12 +57,11 @@ export function Sidebar({ userRole }: { userRole: UserRole | undefined }) {
   const items = navItems[userRole as keyof typeof navItems] || [];
 
   const isCurrentPage = (href: string) => {
-    // Exact match or if the current path starts with the link's href,
-    // but the link is not a "parent" dashboard that could wrongly match child pages.
+    // Exact match
     if (pathname === href) return true;
-    if (href.split('/').length > 3) {
-      return pathname.startsWith(href);
-    }
+    // Handle nested routes: if the link is not a base dashboard and the path starts with it
+    if (href.split('/').length > 2 && pathname.startsWith(href)) return true;
+    // Don't match parent dashboard if we're on a sub-page of another main item
     return false;
   };
   
@@ -101,3 +100,5 @@ export function Sidebar({ userRole }: { userRole: UserRole | undefined }) {
     </div>
   );
 }
+
+    
