@@ -86,7 +86,7 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
              <div className="flex items-center gap-4">
                 <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
-                    <ArrowLeft className="h-4 w-4" />
+                    <ArrowLeft className="mr-2 h-4 w-4" />
                     <span className="sr-only">Back</span>
                 </Button>
                 <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-semibold tracking-tight sm:grow-0">
@@ -107,7 +107,7 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
                         </>
                     )}
                     {order.status === 'Approved' && (
-                        <Button variant="outline" size="sm">Generate Bill</Button>
+                        <Button variant="outline" size="sm"><FileText className="mr-2 h-4 w-4" />Generate Bill</Button>
                     )}
                 </div>
             </div>
@@ -178,3 +178,5 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
         </main>
     );
 }
+
+    

@@ -14,6 +14,7 @@ import { useAuth } from "@/lib/auth";
 
 const distributorAllowedRoles: { value: UserRole, label: string }[] = [
     { value: 'delivery_partner', label: 'Delivery Partner' },
+    { value: 'sales_executive', label: 'Sales Executive' },
 ];
 
 const mapNumericRoleToString = (role: number): UserRole => {
@@ -187,3 +188,5 @@ export default function DistributorUsersPage() {
         </main>
     );
 }
+
+    

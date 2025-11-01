@@ -53,11 +53,18 @@ export function Sidebar({ userRole }: { userRole: UserRole | undefined }) {
   const items = navItems[userRole as keyof typeof navItems] || [];
 
   const isCurrentPage = (href: string) => {
-    if (href === '/dashboard/distributor' && pathname.startsWith('/dashboard/distributor/')) {
-        // Don't highlight parent "Dashboard" if a child is active
-        return false;
+    // Exact match for parent dashboard pages
+    if (href === '/dashboard/admin' && pathname === href) return true;
+    if (href === '/dashboard/distributor' && pathname === href) return true;
+    if (href === '/dashboard/sales' && pathname === href) return true;
+    if (href === '/dashboard/delivery' && pathname === href) return true;
+    
+    // For all other links, check if the path starts with the href, as long as it's not a parent dashboard
+    if (href !== '/dashboard/admin' && href !== '/dashboard/distributor' && href !== '/dashboard/sales' && href !== '/dashboard/delivery') {
+      return pathname.startsWith(href);
     }
-    return pathname.startsWith(href);
+    
+    return false;
   };
   
   return (
@@ -95,3 +102,5 @@ export function Sidebar({ userRole }: { userRole: UserRole | undefined }) {
     </div>
   );
 }
+
+    

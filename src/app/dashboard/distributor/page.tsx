@@ -98,6 +98,7 @@ export default function DistributorDashboardPage() {
         case 'Delivered': return 'default';
         case 'Pending': return 'destructive';
         case 'Dispatched': return 'outline';
+        case 'Approved': return 'secondary';
         default: return 'secondary';
     }
   }
@@ -127,7 +128,7 @@ export default function DistributorDashboardPage() {
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Recent Orders</CardTitle>
-                <Package className="h-4 w-4 text-muted-foreground" />
+                <Package className="mr-2 h-4 w-4" />
             </CardHeader>
             <CardContent>
                 {loading ? <div className="h-8 w-1/4 rounded bg-muted animate-pulse"></div> : <div className="text-2xl font-bold">{recentOrders.length}</div>}
@@ -240,3 +241,5 @@ export default function DistributorDashboardPage() {
     </div>
   );
 }
+
+    
