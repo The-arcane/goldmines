@@ -2,8 +2,6 @@
 "use server";
 
 import { flagAnomalousVisit } from "@/ai/flows/flag-anomalous-visits";
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
 import type { UserFormData, DistributorFormData, SkuFormData, OrderFormData, AttendanceData } from "./types";
 import { revalidatePath } from "next/cache";
 import { createServerActionClient } from "./supabaseServer";
@@ -22,7 +20,7 @@ export async function checkVisitAnomaly(visitDetails: string, criteria: string) 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function createNewUser(formData: UserFormData, distributorId?: string) {
-  const supabaseAdmin = createServerActionClient();
+  const supabaseAdmin = createServerActionClient({ isAdmin: true });
 
   const userMetadata: {[key: string]: any} = {
       name: formData.name,
@@ -110,7 +108,7 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
 
 
 export async function createDistributorWithAdmin(formData: DistributorFormData) {
-    const supabaseAdmin = createServerActionClient();
+    const supabaseAdmin = createServerActionClient({ isAdmin: true });
 
     // 1. Create the distributor organization first
     const { data: distributorData, error: distributorError } = await supabaseAdmin
@@ -167,7 +165,7 @@ export async function createDistributorWithAdmin(formData: DistributorFormData) 
 }
 
 export async function createNewSku(formData: SkuFormData, distributorId: number) {
-  const supabase = createServerActionClient();
+  const supabase = createServerActionClient({ isAdmin: true });
 
   const { error } = await supabase.from("skus").insert({
     ...formData,
@@ -184,7 +182,7 @@ export async function createNewSku(formData: SkuFormData, distributorId: number)
 }
 
 export async function createNewOrder(formData: OrderFormData, distributorId: number) {
-  const supabase = createServerActionClient();
+  const supabase = createServerActionClient({ isAdmin: true });
 
   // 1. Check outlet credit limit
   const { data: outlet, error: outletError } = await supabase
@@ -244,7 +242,7 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
 }
 
 export async function updateOrderStatus(orderId: number, status: string) {
-    const supabase = createServerActionClient();
+    const supabase = createServerActionClient({ isAdmin: true });
     
     // Get order details to update outlet due
     const { data: order, error: fetchError } = await supabase
@@ -295,7 +293,7 @@ export async function updateOrderStatus(orderId: number, status: string) {
 }
 
 export async function recordOrderPayment(orderId: number, paymentAmount: number) {
-    const supabase = createServerActionClient();
+    const supabase = createServerActionClient({ isAdmin: true });
 
     // 1. Get the current order details
     const { data: order, error: fetchError } = await supabase
@@ -345,24 +343,7 @@ export async function recordOrderPayment(orderId: number, paymentAmount: number)
 }
 
 export async function markAttendance(data: AttendanceData) {
-    const cookieStore = cookies()
-    const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-            cookies: {
-                get(name: string) {
-                    return cookieStore.get(name)?.value
-                },
-                set(name: string, value: string, options) {
-                    cookieStore.set({ name, value, ...options })
-                },
-                remove(name: string, options) {
-                    cookieStore.set({ name, value: '', ...options })
-                },
-            },
-        }
-    )
+    const supabase = createServerActionClient();
     
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -451,3 +432,4 @@ export async function markAttendance(data: AttendanceData) {
     }
 }
  
+    
