@@ -18,7 +18,7 @@ export default function DashboardPage() {
           router.replace("/dashboard/admin");
           break;
         case "sales_executive":
-          router.replace("/dashboard/sales");
+          router.replace("/salesperson/dashboard");
           break;
         case "distributor_admin":
           router.replace("/dashboard/distributor");
@@ -43,4 +43,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

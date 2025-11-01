@@ -33,9 +33,12 @@ const navItems = {
     { href: "/dashboard/users", icon: Users, label: "Users" },
   ],
   sales_executive: [
-    { href: "/dashboard/sales", icon: Map, label: "My Route" },
-    { href: "/dashboard/orders/create", icon: PlusCircle, label: "Create Order" },
-    { href: "/dashboard/my-visits", icon: BarChart, label: "Visit History" },
+    { href: "/salesperson/dashboard", icon: Home, label: "Dashboard" },
+    { href: "/salesperson/outlets", icon: Warehouse, label: "My Outlets" },
+    { href: "/salesperson/orders/create", icon: PlusCircle, label: "Create Order" },
+    { href: "/salesperson/visits", icon: BarChart, label: "Visit History" },
+    { href: "/salesperson/route", icon: Map, label: "Route Plan" },
+    { href: "/salesperson/reports", icon: BarChart, label: "My Reports" },
   ],
   distributor_admin: [
     { href: "/dashboard/distributor", icon: Home, label: "Dashboard" },
@@ -101,5 +104,3 @@ export function Sidebar({ userRole }: { userRole: UserRole | undefined }) {
     </div>
   );
 }
-
-    
