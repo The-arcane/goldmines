@@ -53,24 +53,11 @@ export function Sidebar({ userRole }: { userRole: UserRole | undefined }) {
   const items = navItems[userRole as keyof typeof navItems] || [];
 
   const isCurrentPage = (href: string) => {
-    // Exact match
-    if (pathname === href) return true;
-    // Handle nested routes, e.g., /dashboard/distributor/orders should match /dashboard/distributor
-    // but only if it's not a more specific match elsewhere.
-    if (pathname.startsWith(href) && href !== '/dashboard') {
-       // Avoids matching a parent route when a more specific child route is active
-      const isMoreSpecificMatch = items.some(item => item.href.length > href.length && pathname.startsWith(item.href));
-      if (!isMoreSpecificMatch) {
-        if(href.split('/').length < pathname.split('/').length) {
-            return true;
-        }
-      }
+    if (href === '/dashboard/distributor' && pathname.startsWith('/dashboard/distributor/')) {
+        // Don't highlight parent "Dashboard" if a child is active
+        return false;
     }
-    // Special check for root dashboard pages
-    if ((pathname === '/dashboard/admin' || pathname === '/dashboard/distributor' || pathname === '/dashboard/sales' || pathname === '/dashboard/delivery') && href.includes(userRole)) {
-        return true;
-    }
-    return false;
+    return pathname.startsWith(href);
   };
   
   return (
@@ -90,8 +77,7 @@ export function Sidebar({ userRole }: { userRole: UserRole | undefined }) {
                 href={href}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                   pathname.startsWith(href) && href.length > 15 ? "bg-muted text-primary" : "",
-                   pathname === href && "bg-muted text-primary"
+                  isCurrentPage(href) ? "bg-muted text-primary" : ""
                 )}
               >
                 <Icon className="h-4 w-4" />
