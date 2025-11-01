@@ -17,6 +17,9 @@ export async function checkVisitAnomaly(visitDetails: string, criteria: string) 
   }
 }
 
+// Helper function to introduce a delay
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export async function createNewUser(formData: UserFormData, distributorId?: string) {
   const cookieStore = cookies()
 
@@ -34,16 +37,26 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
       avatar_url: `https://picsum.photos/seed/${formData.email}/100/100`,
   };
   
-  if ((formData.role === 'delivery_partner' || formData.role === 'distributor_admin' || formData.role === 'sales_executive') && distributorId) {
-    userMetadata.distributor_id = distributorId;
-  }
+  const roleInt = (() => {
+    switch (formData.role) {
+      case 'admin': return 1;
+      case 'sales_executive': return 2;
+      case 'distributor_admin': return 3;
+      case 'delivery_partner': return 4;
+      default: return 2;
+    }
+  })();
   
-  // Step 1: Create the user in auth.users
+  // Step 1: Create the user in auth.users. The database trigger should handle creating the public.users profile.
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email: formData.email,
     password: formData.password,
     email_confirm: true, // Auto-confirm email
-    user_metadata: userMetadata,
+    user_metadata: {
+      name: formData.name,
+      role: roleInt,
+      avatar_url: userMetadata.avatar_url,
+    }
   });
 
   if (authError) {
@@ -56,37 +69,28 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
     return { success: false, error: "Auth user was not created." };
   }
 
-  const roleInt = (() => {
-    switch (formData.role) {
-      case 'admin': return 1;
-      case 'sales_executive': return 2;
-      case 'distributor_admin': return 3;
-      case 'delivery_partner': return 4;
-      default: return 2;
+  // Step 2: Fetch the user profile from public.users that was created by the trigger.
+  // We'll retry a few times in case of replication delay.
+  let newUserId: number | null = null;
+  for (let i = 0; i < 3; i++) {
+    const { data: profileData, error: profileError } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('auth_id', authUser.id)
+      .single();
+
+    if (profileData) {
+      newUserId = profileData.id;
+      break;
     }
-  })();
-
-  // Step 2: Manually create the user profile in public.users
-  const { data: profileData, error: profileError } = await supabaseAdmin
-    .from('users')
-    .insert({
-      auth_id: authUser.id,
-      name: formData.name,
-      email: formData.email,
-      role: roleInt,
-      avatar_url: userMetadata.avatar_url,
-    })
-    .select('id')
-    .single();
-
-  if (profileError) {
-    console.error('Error creating user profile:', profileError);
-    // Attempt to clean up the auth user if profile creation fails
-    await supabaseAdmin.auth.admin.deleteUser(authUser.id);
-    return { success: false, error: `Failed to create user profile: ${profileError.message}` };
+    await sleep(500); // Wait for half a second before retrying
   }
-  
-  const newUserId = profileData.id;
+
+  if (!newUserId) {
+    console.error('Could not find user profile after creation.');
+    await supabaseAdmin.auth.admin.deleteUser(authUser.id); // Clean up auth user
+    return { success: false, error: 'User profile was not created automatically. Could not complete user setup.' };
+  }
 
   // Step 3: If it's a distributor user, link them in the junction table
   if ((formData.role === 'delivery_partner' || formData.role === 'distributor_admin' || formData.role === 'sales_executive') && distributorId) {
