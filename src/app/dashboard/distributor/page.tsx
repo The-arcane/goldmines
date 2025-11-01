@@ -152,7 +152,7 @@ export default function DistributorDashboardPage() {
                 <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                 {loading ? <div className="h-8 w-1/4 rounded bg-muted animate-pulse"></div> : <div className="text-2xl font-bold">$0.00</div>}
+                 {loading ? <div className="h-8 w-1/4 rounded bg-muted animate-pulse"></div> : <div className="text-2xl font-bold">₹0.00</div>}
                 <p className="text-xs text-muted-foreground">Total outstanding payments</p>
             </CardContent>
         </Card>
@@ -188,7 +188,7 @@ export default function DistributorDashboardPage() {
                                     <TableCell>{(order as any).outlets?.name || 'N/A'}</TableCell>
                                     <TableCell><Badge variant={order.status === 'Delivered' ? 'default' : 'secondary'}>{order.status}</Badge></TableCell>
                                     <TableCell>{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
-                                    <TableCell className="text-right">${order.total_value?.toFixed(2) || '0.00'}</TableCell>
+                                    <TableCell className="text-right">₹{order.total_value?.toFixed(2) || '0.00'}</TableCell>
                                 </TableRow>
                             ))}
                              {recentOrders.length === 0 && (

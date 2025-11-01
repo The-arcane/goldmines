@@ -157,7 +157,7 @@ export function AddSkuDialog({ onSkuAdded, distributorId }: AddSkuDialogProps) {
                                 name="case_price"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Case Price ($)</FormLabel>
+                                        <FormLabel>Case Price (₹)</FormLabel>
                                         <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -168,7 +168,7 @@ export function AddSkuDialog({ onSkuAdded, distributorId }: AddSkuDialogProps) {
                                 name="mrp"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>MRP ($)</FormLabel>
+                                        <FormLabel>MRP (₹)</FormLabel>
                                         <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -179,7 +179,7 @@ export function AddSkuDialog({ onSkuAdded, distributorId }: AddSkuDialogProps) {
                                 name="ptr"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Price to Retailer ($)</FormLabel>
+                                        <FormLabel>Price to Retailer (₹)</FormLabel>
                                         <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>

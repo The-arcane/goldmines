@@ -187,8 +187,8 @@ export default function CreateOrderPage() {
                                                         )}
                                                      />
                                                 </TableCell>
-                                                <TableCell>${watchedItems[index]?.unit_price.toFixed(2) || '0.00'}</TableCell>
-                                                <TableCell className="text-right">${watchedItems[index]?.total_price.toFixed(2) || '0.00'}</TableCell>
+                                                <TableCell>₹{watchedItems[index]?.unit_price.toFixed(2) || '0.00'}</TableCell>
+                                                <TableCell className="text-right">₹{watchedItems[index]?.total_price.toFixed(2) || '0.00'}</TableCell>
                                                 <TableCell>
                                                     <Button variant="ghost" size="icon" onClick={() => remove(index)}>
                                                         <Trash2 className="h-4 w-4 text-destructive" />
@@ -208,7 +208,7 @@ export default function CreateOrderPage() {
                         <div className="flex items-center justify-end gap-4">
                            <div className="text-right">
                                 <p className="text-muted-foreground">Total Order Value</p>
-                                <p className="text-2xl font-bold">${totalValue.toFixed(2)}</p>
+                                <p className="text-2xl font-bold">₹{totalValue.toFixed(2)}</p>
                             </div>
                             <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
                                 {form.formState.isSubmitting ? "Placing Order..." : "Place Order"}

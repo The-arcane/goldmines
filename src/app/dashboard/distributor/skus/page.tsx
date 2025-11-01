@@ -96,8 +96,8 @@ export default function SkusPage() {
                                                 {sku.stock_quantity} {sku.unit_type || 'units'}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="text-right">${sku.case_price?.toFixed(2) || '0.00'}</TableCell>
-                                        <TableCell className="text-right">${sku.mrp?.toFixed(2) || '0.00'}</TableCell>
+                                        <TableCell className="text-right">₹{sku.case_price?.toFixed(2) || '0.00'}</TableCell>
+                                        <TableCell className="text-right">₹{sku.mrp?.toFixed(2) || '0.00'}</TableCell>
                                     </TableRow>
                                 )) : (
                                     <TableRow>
