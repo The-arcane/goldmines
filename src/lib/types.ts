@@ -74,6 +74,7 @@ export type Order = {
   status: string;
   amount_paid: number;
   payment_status: string;
+  delivery_partner_id: number | null;
   created_at: string;
   order_items?: OrderItem[];
   outlets?: { name: string; address: string; }; // For joins
