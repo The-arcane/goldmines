@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PlaceAutocomplete } from "@/components/map/autocomplete";
 import { useToast } from "@/hooks/use-toast";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, MapPin } from "lucide-react";
+import { useGeolocation } from "@/hooks/use-geolocation";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 type AddSalespersonOutletDialogProps = {
   onOutletAdded: () => void;
@@ -29,12 +32,43 @@ export function AddSalespersonOutletDialog({ onOutletAdded }: AddSalespersonOutl
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [outletName, setOutletName] = useState("");
+    const [outletType, setOutletType] = useState("Retail");
+    const [ownerName, setOwnerName] = useState("");
+    const [contactNumber, setContactNumber] = useState("");
+    const [address, setAddress] = useState("");
     const [selectedPlace, setSelectedPlace] = useState<google.maps.places.PlaceResult | null>(null);
+    const { coords } = useGeolocation();
     const { toast } = useToast();
 
     const handlePlaceSelect = (place: google.maps.places.PlaceResult | null) => {
         setSelectedPlace(place);
+        if (place) {
+            setAddress(place.formatted_address || "");
+            setOutletName(place.name || "");
+        }
     };
+
+    const handleUseCurrentLocation = useCallback(() => {
+        if (coords) {
+            const geocoder = new window.google.maps.Geocoder();
+            geocoder.geocode({ location: { lat: coords.latitude, lng: coords.longitude } }, (results, status) => {
+                if (status === 'OK' && results && results[0]) {
+                    setAddress(results[0].formatted_address);
+                    // Mock a place object for submission
+                    setSelectedPlace({
+                        formatted_address: results[0].formatted_address,
+                        geometry: {
+                            location: new window.google.maps.LatLng(coords.latitude, coords.longitude)
+                        }
+                    } as google.maps.places.PlaceResult);
+                } else {
+                    toast({ variant: 'destructive', title: 'Could not find address', description: 'Unable to reverse geocode your current location.' });
+                }
+            });
+        } else {
+            toast({ variant: 'destructive', title: 'Location not available', description: 'Please enable location services.' });
+        }
+    }, [coords, toast]);
 
     const handleSubmit = async () => {
         if (!user) return;
@@ -56,17 +90,20 @@ export function AddSalespersonOutletDialog({ onOutletAdded }: AddSalespersonOutl
 
         const lat = selectedPlace.geometry.location.lat();
         const lng = selectedPlace.geometry.location.lng();
-        const address = selectedPlace.formatted_address || "";
+        const finalAddress = selectedPlace.formatted_address || address;
 
         const { data: outletData, error: outletError } = await supabase
             .from("outlets")
             .insert({ 
                 name: outletName, 
-                type: "Retail", // Salespeople add retail outlets by default
-                address, 
+                type: outletType, 
+                address: finalAddress, 
                 lat, 
                 lng, 
-                created_by: user.id
+                created_by: user.id,
+                // These are not in the schema yet, but good practice to have them
+                // owner_name: ownerName,
+                // contact_number: contactNumber,
             })
             .select()
             .single();
@@ -95,6 +132,10 @@ export function AddSalespersonOutletDialog({ onOutletAdded }: AddSalespersonOutl
         setLoading(false);
         setOpen(false);
         setOutletName("");
+        setOutletType("Retail");
+        setOwnerName("");
+        setContactNumber("");
+        setAddress("");
         setSelectedPlace(null);
         onOutletAdded();
     };
@@ -107,7 +148,7 @@ export function AddSalespersonOutletDialog({ onOutletAdded }: AddSalespersonOutl
                     Add Outlet
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                     <DialogTitle>Add New Outlet</DialogTitle>
                     <DialogDescription>
@@ -115,26 +156,61 @@ export function AddSalespersonOutletDialog({ onOutletAdded }: AddSalespersonOutl
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="name" className="text-right">
-                            Name
-                        </Label>
-                        <Input
-                            id="name"
-                            value={outletName}
-                            onChange={(e) => setOutletName(e.target.value)}
-                            className="col-span-3"
-                        />
-                    </div>
-                    <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="address" className="text-right">
-                            Address
-                        </Label>
-                        <div className="col-span-3">
+                    <div className="space-y-2">
+                        <Label htmlFor="address">Address</Label>
+                        <div className="flex gap-2">
                             <PlaceAutocomplete
                                 id="address"
-                                placeholder="Start typing address..."
+                                placeholder="Start typing address or place name..."
                                 onPlaceSelect={handlePlaceSelect}
+                                defaultValue={address}
+                            />
+                            <Button type="button" variant="outline" size="icon" onClick={handleUseCurrentLocation} aria-label="Use Current Location">
+                                <MapPin className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="name">Outlet Name</Label>
+                            <Input
+                                id="name"
+                                value={outletName}
+                                onChange={(e) => setOutletName(e.target.value)}
+                            />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="type">Outlet Type</Label>
+                            <Select onValueChange={setOutletType} defaultValue={outletType}>
+                                <SelectTrigger id="type">
+                                    <SelectValue placeholder="Select an outlet type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Retail">Retail</SelectItem>
+                                    <SelectItem value="Distributor">Distributor</SelectItem>
+                                    <SelectItem value="Warehouse">Warehouse</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="owner-name">Owner Name</Label>
+                            <Input
+                                id="owner-name"
+                                value={ownerName}
+                                onChange={(e) => setOwnerName(e.target.value)}
+                                placeholder="e.g., Mr. Sharma"
+                            />
+                        </div>
+                         <div className="space-y-2">
+                            <Label htmlFor="contact-number">Contact Number</Label>
+                            <Input
+                                id="contact-number"
+                                type="tel"
+                                value={contactNumber}
+                                onChange={(e) => setContactNumber(e.target.value)}
+                                placeholder="e.g., 9876543210"
                             />
                         </div>
                     </div>
@@ -148,6 +224,3 @@ export function AddSalespersonOutletDialog({ onOutletAdded }: AddSalespersonOutl
         </Dialog>
     );
 }
-
-
-    
