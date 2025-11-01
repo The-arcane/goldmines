@@ -11,11 +11,12 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { AddUserDialog } from "@/components/dashboard/users/add-user-dialog";
 
+// Admins can create Sales Execs and Delivery Partners directly.
+// Distributor Admins are created via the Distributors page.
 const adminAllowedRoles: { value: UserRole, label: string }[] = [
-    { value: 'admin', label: 'Admin' },
     { value: 'sales_executive', label: 'Sales Executive' },
-    { value: 'distributor_admin', label: 'Distributor Admin' },
     { value: 'delivery_partner', label: 'Delivery Partner' },
+    // Note: 'admin' role is omitted for safety. New admins should be created via Supabase dashboard.
 ];
 
 export default function UsersPage() {
@@ -27,7 +28,7 @@ export default function UsersPage() {
         setLoading(true);
         // Admin sees all users
         const usersPromise = supabase.from("users").select("*").order("created_at", { ascending: false });
-        // Also fetch all distributors to pass to the AddUserDialog
+        // Also fetch all distributors to pass to the AddUserDialog for assigning delivery partners
         const distributorsPromise = supabase.from("distributors").select("*");
 
         const [usersRes, distributorsRes] = await Promise.all([usersPromise, distributorsPromise]);
@@ -67,7 +68,7 @@ export default function UsersPage() {
                     <div className="grid gap-2">
                         <CardTitle>User Management</CardTitle>
                         <CardDescription>
-                            An overview of all users in the system.
+                            An overview of all users in the system. Distributor Admins are managed on the Distributors page.
                         </CardDescription>
                     </div>
                     <div className="ml-auto">
@@ -75,7 +76,7 @@ export default function UsersPage() {
                             onUserAdded={fetchData} 
                             allowedRoles={adminAllowedRoles}
                             defaultRole="sales_executive"
-                            distributors={distributors} // Pass distributors to the dialog
+                            distributors={distributors}
                         />
                     </div>
                 </CardHeader>

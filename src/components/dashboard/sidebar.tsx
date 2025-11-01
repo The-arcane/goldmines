@@ -11,7 +11,8 @@ import {
   BarChart,
   Truck,
   Warehouse,
-  Rocket
+  Rocket,
+  Building,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/types";
@@ -20,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 const navItems = {
   admin: [
     { href: "/dashboard/admin", icon: Home, label: "Dashboard" },
+    { href: "/dashboard/distributors", icon: Building, label: "Distributors" },
     { href: "/dashboard/outlets", icon: Warehouse, label: "Outlets" },
     { href: "/dashboard/visits", icon: BarChart, label: "Visits Log" },
     { href: "/dashboard/users", icon: Users, label: "Users" },
@@ -31,7 +33,6 @@ const navItems = {
   distributor_admin: [
     { href: "/dashboard/distributor", icon: Home, label: "Dashboard" },
     { href: "/dashboard/distributor/users", icon: Users, label: "Manage Team" },
-    // { href: "/dashboard/orders", icon: Package, label: "Orders" },
   ],
   delivery_partner: [
     { href: "/dashboard/delivery", icon: Truck, label: "My Deliveries" },

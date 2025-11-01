@@ -1,4 +1,5 @@
 
+
 export type UserRole = 'admin' | 'sales_executive' | 'distributor_admin' | 'delivery_partner';
 
 export type User = {
@@ -66,11 +67,19 @@ export type Delivery = {
   delivered_at: string | null;
 };
 
-// For the new user creation form
+// For the generic new user creation form
 export type UserFormData = {
   name: string;
   email: string;
   password: string;
   role: UserRole;
   distributorId?: string;
+}
+
+// For creating a new distributor organization and its admin
+export type DistributorFormData = {
+    distributorName: string;
+    adminName: string;
+    adminEmail: string;
+    adminPassword: string;
 }
