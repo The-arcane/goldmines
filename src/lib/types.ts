@@ -27,6 +27,8 @@ export type Outlet = {
   lat: number;
   lng: number;
   created_at: string;
+  credit_limit: number;
+  current_due: number;
 };
 
 export type Geofence = {
@@ -74,7 +76,7 @@ export type Order = {
   payment_status: string;
   created_at: string;
   order_items?: OrderItem[];
-  outlets?: { name: string }; // For joins
+  outlets?: { name: string; address: string; }; // For joins
 };
 
 export type OrderItem = {

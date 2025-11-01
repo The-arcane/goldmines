@@ -206,7 +206,23 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
     { cookies: { get: (name: string) => cookieStore.get(name)?.value } }
   );
 
-  // 1. Create the main order record
+  // 1. Check outlet credit limit
+  const { data: outlet, error: outletError } = await supabase
+    .from('outlets')
+    .select('credit_limit, current_due')
+    .eq('id', formData.outlet_id)
+    .single();
+
+  if (outletError || !outlet) {
+    return { success: false, error: 'Could not find the selected outlet.' };
+  }
+
+  if (outlet.credit_limit > 0 && (outlet.current_due + formData.total_value) > outlet.credit_limit) {
+    return { success: false, error: 'This order exceeds the outlets credit limit.' };
+  }
+
+
+  // 2. Create the main order record
   const { data: orderData, error: orderError } = await supabase
     .from("orders")
     .insert({
@@ -224,7 +240,7 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
     return { success: false, error: orderError.message };
   }
 
-  // 2. Prepare and insert order items
+  // 3. Prepare and insert order items
   const orderItems = formData.items.map(item => ({
     order_id: orderData.id,
     sku_id: item.sku_id,
@@ -254,6 +270,18 @@ export async function updateOrderStatus(orderId: number, status: string) {
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
         { cookies: { get: (name: string) => cookieStore.get(name)?.value } }
     );
+    
+    // Get order details to update outlet due
+    const { data: order, error: fetchError } = await supabase
+        .from('orders')
+        .select('outlet_id, total_value, status')
+        .eq('id', orderId)
+        .single();
+        
+    if (fetchError || !order) {
+         return { success: false, error: "Could not find order to update." };
+    }
+
 
     const { error } = await supabase
         .from('orders')
@@ -265,8 +293,29 @@ export async function updateOrderStatus(orderId: number, status: string) {
         return { success: false, error: error.message };
     }
 
+    // If order is approved, increase the outlet's current_due
+    if (status === 'Approved' && order.status !== 'Approved') {
+        const { error: rpcError } = await supabase.rpc('update_outlet_due', {
+            outlet_uuid: order.outlet_id,
+            amount_change: order.total_value
+        });
+        if (rpcError) {
+             return { success: false, error: `Order status updated, but failed to update outlet due: ${rpcError.message}` };
+        }
+    } else if (status === 'Rejected' && order.status === 'Approved') {
+        // If an approved order is rejected, decrease the outlet's due
+        const { error: rpcError } = await supabase.rpc('update_outlet_due', {
+            outlet_uuid: order.outlet_id,
+            amount_change: -order.total_value
+        });
+         if (rpcError) {
+             return { success: false, error: `Order status updated, but failed to update outlet due: ${rpcError.message}` };
+        }
+    }
+
     revalidatePath('/dashboard/distributor/orders');
     revalidatePath(`/dashboard/distributor/orders/${orderId}`);
+    revalidatePath('/dashboard/outlets');
     return { success: true };
 }
 
@@ -281,7 +330,7 @@ export async function recordOrderPayment(orderId: number, paymentAmount: number)
     // 1. Get the current order details
     const { data: order, error: fetchError } = await supabase
         .from('orders')
-        .select('total_value, amount_paid')
+        .select('total_value, amount_paid, outlet_id')
         .eq('id', orderId)
         .single();
 
@@ -311,6 +360,16 @@ export async function recordOrderPayment(orderId: number, paymentAmount: number)
         return { success: false, error: updateError.message };
     }
 
+     // 4. Decrease the outlet's current_due
+    const { error: rpcError } = await supabase.rpc('update_outlet_due', {
+        outlet_uuid: order.outlet_id,
+        amount_change: -paymentAmount
+    });
+    if (rpcError) {
+        return { success: false, error: `Payment was recorded, but failed to update outlet due: ${rpcError.message}` };
+    }
+
     revalidatePath('/dashboard/distributor/payments');
+    revalidatePath('/dashboard/outlets');
     return { success: true };
 }

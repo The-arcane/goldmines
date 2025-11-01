@@ -29,6 +29,7 @@ export function AddOutletDialog({ onOutletAdded }: AddOutletDialogProps) {
     const [loading, setLoading] = useState(false);
     const [outletName, setOutletName] = useState("");
     const [outletType, setOutletType] = useState("Retail");
+    const [creditLimit, setCreditLimit] = useState("0");
     const [selectedPlace, setSelectedPlace] = useState<google.maps.places.PlaceResult | null>(null);
     const { toast } = useToast();
 
@@ -64,7 +65,14 @@ export function AddOutletDialog({ onOutletAdded }: AddOutletDialogProps) {
         // 1. Insert into outlets table
         const { data: outletData, error: outletError } = await supabase
             .from("outlets")
-            .insert({ name: outletName, type: outletType, address, lat, lng })
+            .insert({ 
+                name: outletName, 
+                type: outletType, 
+                address, 
+                lat, 
+                lng, 
+                credit_limit: parseFloat(creditLimit) || 0 
+            })
             .select()
             .single();
 
@@ -109,6 +117,7 @@ export function AddOutletDialog({ onOutletAdded }: AddOutletDialogProps) {
         setOpen(false);
         setOutletName("");
         setOutletType("Retail");
+        setCreditLimit("0");
         setSelectedPlace(null);
         onOutletAdded(); // Callback to refresh the outlets list
     };
@@ -156,6 +165,19 @@ export function AddOutletDialog({ onOutletAdded }: AddOutletDialogProps) {
                                 <SelectItem value="Warehouse">Warehouse</SelectItem>
                             </SelectContent>
                         </Select>
+                    </div>
+                     <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="credit_limit" className="text-right">
+                            Credit Limit
+                        </Label>
+                        <Input
+                            id="credit_limit"
+                            type="number"
+                            value={creditLimit}
+                            onChange={(e) => setCreditLimit(e.target.value)}
+                            className="col-span-3"
+                            placeholder="e.g., 50000"
+                        />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="address" className="text-right">

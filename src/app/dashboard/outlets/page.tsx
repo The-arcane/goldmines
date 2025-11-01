@@ -61,7 +61,7 @@ export default function OutletsPage() {
                         <CardHeader>
                             <CardTitle>All Outlets</CardTitle>
                             <CardDescription>
-                                A list of all registered outlets.
+                                A list of all registered outlets and their credit status.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -106,6 +106,8 @@ function OutletsTable({ outlets, loading, onDataChange }: OutletsTableProps) {
                 <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Type</TableHead>
+                    <TableHead className="text-right">Credit Limit</TableHead>
+                    <TableHead className="text-right">Current Due</TableHead>
                     <TableHead className="hidden md:table-cell">Address</TableHead>
                     <TableHead>
                         <span className="sr-only">Actions</span>
@@ -119,6 +121,8 @@ function OutletsTable({ outlets, loading, onDataChange }: OutletsTableProps) {
                         <TableCell>
                             <Badge variant="outline">{outlet.type}</Badge>
                         </TableCell>
+                        <TableCell className="text-right font-mono">₹{outlet.credit_limit?.toFixed(2)}</TableCell>
+                         <TableCell className="text-right font-mono">₹{outlet.current_due?.toFixed(2)}</TableCell>
                         <TableCell className="hidden md:table-cell">{outlet.address}</TableCell>
                         <TableCell>
                             <DropdownMenu>
