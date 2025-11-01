@@ -52,8 +52,23 @@ export default function CreateOrderPage() {
         if (!user) return;
         setLoading(true);
 
-        const { data: distributorData } = await supabase
-            .from('distributors').select('*').eq('admin_user_id', user.id).single();
+        // A sales exec or delivery partner belongs to ONE distributor.
+        // We need to fetch the user profile to find which distributor they belong to.
+        const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('distributor_id:distributor_users!inner(distributor_id)')
+            .eq('id', user.id)
+            .single();
+
+        if (userError || !userData || !(userData as any).distributor_id.length) {
+             toast({ variant: "destructive", title: "Cannot create order", description: "You are not assigned to a distributor."});
+             setLoading(false);
+             return;
+        }
+        
+        const distributorId = (userData as any).distributor_id[0].distributor_id;
+        
+        const { data: distributorData } = await supabase.from('distributors').select('*').eq('id', distributorId).single();
 
         if (distributorData) {
             setDistributor(distributorData);
@@ -64,7 +79,7 @@ export default function CreateOrderPage() {
             if(skusRes.data) setSkus(skusRes.data);
         }
         setLoading(false);
-    }, [user]);
+    }, [user, toast]);
 
     useEffect(() => { fetchData() }, [fetchData]);
 
@@ -104,8 +119,8 @@ export default function CreateOrderPage() {
 
         const result = await createNewOrder(orderData, distributor.id);
         if (result.success) {
-            toast({ title: "Order Created!", description: `Order #${result.orderId} has been successfully placed.` });
-            router.push("/dashboard/distributor/orders");
+            toast({ title: "Order Placed!", description: `Order #${result.orderId} has been sent for approval.` });
+            router.push("/dashboard"); // Redirect to their main dashboard after placing order
         } else {
             toast({ variant: "destructive", title: "Failed to create order", description: result.error });
         }
@@ -210,8 +225,8 @@ export default function CreateOrderPage() {
                                 <p className="text-muted-foreground">Total Order Value</p>
                                 <p className="text-2xl font-bold">₹{totalValue.toFixed(2)}</p>
                             </div>
-                            <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
-                                {form.formState.isSubmitting ? "Placing Order..." : "Place Order"}
+                            <Button type="submit" size="lg" disabled={form.formState.isSubmitting || loading}>
+                                {form.formState.isSubmitting ? "Placing Order..." : "Place Order for Approval"}
                             </Button>
                         </div>
                     </div>

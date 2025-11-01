@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -12,7 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Users, Warehouse, Package, FileText } from "lucide-react";
+import { Users, Warehouse, Package, FileText } from "lucide-react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -114,11 +115,6 @@ export default function DistributorDashboardPage() {
           </p>
         </div>
         <div className="flex gap-2">
-           <Button asChild>
-                <Link href="/dashboard/distributor/orders/create">
-                  <PlusCircle className="mr-2 h-4 w-4" /> Create Order
-                </Link>
-            </Button>
             <Button asChild variant="outline">
                 <Link href="/dashboard/distributor/users">
                     <Users className="mr-2 h-4 w-4" /> Manage Team

@@ -15,6 +15,7 @@ import {
   Building,
   ShoppingCart,
   Box,
+  PlusCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/types";
@@ -30,6 +31,7 @@ const navItems = {
   ],
   sales_executive: [
     { href: "/dashboard/sales", icon: Map, label: "My Route" },
+    { href: "/dashboard/orders/create", icon: PlusCircle, label: "Create Order" },
     { href: "/dashboard/my-visits", icon: BarChart, label: "Visit History" },
   ],
   distributor_admin: [
@@ -40,6 +42,7 @@ const navItems = {
   ],
   delivery_partner: [
     { href: "/dashboard/delivery", icon: Truck, label: "My Deliveries" },
+    { href: "/dashboard/orders/create", icon: PlusCircle, label: "Create Order" },
   ],
 };
 
@@ -48,6 +51,8 @@ export function Sidebar({ userRole }: { userRole: UserRole | undefined }) {
   if (!userRole) return null;
   
   const items = navItems[userRole as keyof typeof navItems] || [];
+
+  const isDistributorOrdersPath = pathname.startsWith('/dashboard/distributor/orders');
 
   return (
     <div className="hidden border-r bg-card md:block">
@@ -66,7 +71,9 @@ export function Sidebar({ userRole }: { userRole: UserRole | undefined }) {
                 href={href}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                  (pathname === href || (pathname.startsWith(href) && href !== '/dashboard/distributor')) && "bg-muted text-primary"
+                  (pathname === href || (pathname.startsWith(href) && href !== '/dashboard/distributor' && !isDistributorOrdersPath)) && "bg-muted text-primary",
+                  (isDistributorOrdersPath && href.startsWith('/dashboard/distributor/orders')) && "bg-muted text-primary"
+
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -84,4 +91,3 @@ export function Sidebar({ userRole }: { userRole: UserRole | undefined }) {
     </div>
   );
 }
-

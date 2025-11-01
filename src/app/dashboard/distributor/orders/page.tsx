@@ -9,8 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
-import Link from "next/link";
+import { FileText } from "lucide-react";
 import { format } from "date-fns";
 
 export default function OrdersPage() {
@@ -61,6 +60,7 @@ export default function OrdersPage() {
             case 'Delivered': return 'default';
             case 'Pending': return 'destructive';
             case 'Dispatched': return 'outline';
+            case 'Approved': return 'secondary';
             default: return 'secondary';
         }
     }
@@ -73,15 +73,8 @@ export default function OrdersPage() {
                     <div className="grid gap-2">
                         <CardTitle>Order Management</CardTitle>
                         <CardDescription>
-                           A list of all orders from your outlets.
+                           Review and manage all incoming orders from your team.
                         </CardDescription>
-                    </div>
-                    <div className="ml-auto">
-                       <Button asChild>
-                            <Link href="/dashboard/distributor/orders/create">
-                                <PlusCircle className="mr-2 h-4 w-4" /> Create New Order
-                            </Link>
-                        </Button>
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -96,6 +89,7 @@ export default function OrdersPage() {
                                     <TableHead>Status</TableHead>
                                     <TableHead>Date</TableHead>
                                     <TableHead className="text-right">Value</TableHead>
+                                    <TableHead className="w-[100px] text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -106,11 +100,14 @@ export default function OrdersPage() {
                                         <TableCell><Badge variant={getStatusVariant(order.status)}>{order.status}</Badge></TableCell>
                                         <TableCell>{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
                                         <TableCell className="text-right">₹{order.total_value?.toFixed(2) || '0.00'}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="outline" size="sm">View</Button>
+                                        </TableCell>
                                     </TableRow>
                                 )) : (
                                      <TableRow>
-                                        <TableCell colSpan={5} className="text-center text-muted-foreground p-8">
-                                            No orders found. Create one to get started.
+                                        <TableCell colSpan={6} className="text-center text-muted-foreground p-8">
+                                            No orders found yet.
                                         </TableCell>
                                     </TableRow>
                                 )}
