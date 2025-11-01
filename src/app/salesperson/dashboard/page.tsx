@@ -48,7 +48,9 @@ export default function SalespersonDashboardPage() {
     };
 
     useEffect(() => {
-        fetchDashboardData();
+        if (user) {
+            fetchDashboardData();
+        }
     }, [user]);
 
     const isCheckedIn = attendance?.status === 'Online';
@@ -117,5 +119,3 @@ export default function SalespersonDashboardPage() {
         </div>
     );
 }
-
-    

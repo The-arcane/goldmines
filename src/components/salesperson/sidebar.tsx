@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home,
-  Users,
   Map,
   BarChart,
   Warehouse,
@@ -30,7 +29,7 @@ export function Sidebar() {
     // Exact match
     if (pathname === href) return true;
     // Handle nested routes
-    if (href.split('/').length > 3 && pathname.startsWith(href)) return true;
+    if (href.split('/').length > 2 && pathname.startsWith(href)) return true;
     return false;
   };
   

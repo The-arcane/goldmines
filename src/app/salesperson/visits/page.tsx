@@ -32,8 +32,10 @@ export default function SalespersonVisitsPage() {
     }, [user]);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        if(user) {
+            fetchData();
+        }
+    }, [user, fetchData]);
 
     const getOutletName = (outletId: string) => outlets.find(o => o.id === outletId)?.name || 'Unknown Outlet';
 
@@ -86,5 +88,3 @@ export default function SalespersonVisitsPage() {
         </main>
     );
 }
-
-    
