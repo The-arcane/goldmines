@@ -1,4 +1,3 @@
-
 "use client";
 
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -25,6 +24,9 @@ const mapNumericRoleToString = (role: number): UserRole => {
     return roleMap[role] || 'sales_executive'; // Fallback role
 }
 
+// Helper function to introduce a delay
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -33,33 +35,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
     if (!supabaseUser) return null;
 
-    const { data: profile, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('auth_id', supabaseUser.id)
-      .single();
+    // Retry logic to handle the race condition with the DB trigger
+    for (let i = 0; i < 3; i++) {
+        const { data: profile, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('auth_id', supabaseUser.id)
+            .single();
 
-    if (error) {
-      console.error("Error fetching user profile:", error);
-      return null;
+        if (error && error.code !== 'PGRST116') { // PGRST116 is "exact one row not found"
+            console.error("Error fetching user profile:", error);
+            return null;
+        }
+        
+        if (profile) {
+            return {
+                id: profile.id,
+                auth_id: supabaseUser.id,
+                name: profile.name,
+                email: profile.email,
+                role: mapNumericRoleToString(profile.role),
+                avatar_url: profile.avatar_url,
+                created_at: profile.created_at,
+            };
+        }
+        
+        // If profile not found, wait and retry
+        await sleep(500 * (i + 1)); // Wait 500ms, then 1000ms
     }
-    
-    if (profile) {
-        return {
-            id: profile.id,
-            auth_id: supabaseUser.id,
-            name: profile.name,
-            email: profile.email,
-            role: mapNumericRoleToString(profile.role),
-            avatar_url: profile.avatar_url,
-            created_at: profile.created_at,
-        };
-    }
+
+    console.error("Error fetching user profile: Profile not found after multiple attempts.");
     return null;
   }, []);
 
   useEffect(() => {
-    setLoading(true);
     const getInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const profile = await fetchUserProfile(session?.user ?? null);
@@ -72,10 +81,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
         const profile = await fetchUserProfile(session?.user ?? null);
         setUser(profile);
-        setLoading(false);
+        if (event !== 'INITIAL_SESSION') {
+          setLoading(false);
+        }
 
         if (event === 'SIGNED_OUT') {
             router.push('/login');
+        } else if (event === 'SIGNED_IN') {
+            // This logic can be simplified if redirects are handled on dashboard pages
         }
     });
 
