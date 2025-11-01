@@ -40,18 +40,18 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
   }
   
   if (formData.role === 'distributor_admin' && !distributorId) {
-    return { success: false, error: "This form cannot create a distributor admin without an organization. Please use the Distributors page."}
+     return { success: false, error: "This form cannot create a distributor admin without an organization. Please use the Distributors page."}
   }
+  
 
   // Step 1: Create the user in auth.users
+  // The on_auth_user_created trigger will automatically create the corresponding
+  // profile in public.users and handle linking to the distributor.
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email: formData.email,
     password: formData.password,
-    email_confirm: true,
-    user_metadata: {
-      name: formData.name, // Pass name for trigger
-      avatar_url: `https://picsum.photos/seed/${formData.email}/100/100`
-    }
+    email_confirm: true, // Auto-confirm email
+    user_metadata: userMetadata,
   });
 
   if (authError) {
@@ -64,47 +64,11 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
     return { success: false, error: "Auth user was not created." };
   }
 
-  const roleMap: { [key in UserFormData['role']]: number } = {
-    'admin': 1,
-    'sales_executive': 2,
-    'distributor_admin': 3,
-    'delivery_partner': 4
-  };
+  // The database trigger 'on_auth_user_created' now handles profile creation
+  // and linking. The redundant manual insertion code has been removed to
+  // fix the "duplicate key" error.
 
-  // Step 2: Create the corresponding profile in public.users
-  const { data: profileData, error: profileError } = await supabaseAdmin.from('users').insert({
-    auth_id: authUser.id,
-    name: formData.name,
-    email: formData.email,
-    role: roleMap[formData.role],
-    avatar_url: userMetadata.avatar_url
-  }).select().single();
-
-  if (profileError) {
-    console.error('Error creating user profile:', profileError);
-    // Rollback auth user creation for consistency
-    await supabaseAdmin.auth.admin.deleteUser(authUser.id);
-    return { success: false, error: `Failed to create user profile: ${profileError.message}` };
-  }
-
-  // Step 3: If delivery partner or distributor admin, link them in the junction table
-  if ((formData.role === 'delivery_partner' || formData.role === 'distributor_admin') && distributorId) {
-    const { error: linkError } = await supabaseAdmin.from('distributor_users').insert({
-      distributor_id: distributorId,
-      user_id: profileData.id
-    });
-    
-    if (linkError) {
-       console.error('Error linking user to distributor:', linkError);
-       // Rollback both profile and auth user
-       await supabaseAdmin.from('users').delete().eq('id', profileData.id);
-       await supabaseAdmin.auth.admin.deleteUser(authUser.id);
-       return { success: false, error: `User created, but failed to link to distributor: ${linkError.message}` };
-    }
-  }
-
-
-  return { success: true, user: authData.user };
+  return { success: true, user: authUser };
 }
 
 export async function createDistributorWithAdmin(formData: DistributorFormData) {
@@ -146,6 +110,9 @@ export async function createDistributorWithAdmin(formData: DistributorFormData) 
     }
 
     // 3. Link the new user's profile ID back to the distributor table as the main admin
+    // Add a small delay to ensure the user profile is available via the trigger
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
     const { data: newUserProfile, error: profileError } = await supabaseAdmin
         .from('users')
         .select('id')
