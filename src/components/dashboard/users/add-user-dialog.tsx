@@ -192,11 +192,11 @@ export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, distribu
                         />
 
                         {/* Conditional field for ADMIN to select distributor */}
-                        {distributors && watchedRole === 'delivery_partner' && (
+                        {distributors && (watchedRole === 'delivery_partner' || watchedRole === 'distributor_admin') && (
                             <FormField
                                 control={form.control}
                                 name="distributorId"
-                                rules={{ required: 'Please select a distributor for this delivery partner.' }}
+                                rules={{ required: 'Please select a distributor for this user.' }}
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Assign to Distributor</FormLabel>
