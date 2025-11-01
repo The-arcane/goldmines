@@ -109,7 +109,7 @@ export default function CreateOrderPage() {
          });
     }
 
-    const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    const onSubmit = async (data: z.infer<typeof formSchema>>) => {
         if (!distributor) return;
         
         const orderData = {
