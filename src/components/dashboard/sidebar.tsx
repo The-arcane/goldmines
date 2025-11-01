@@ -53,6 +53,8 @@ export function Sidebar({ userRole }: { userRole: UserRole | undefined }) {
   const items = navItems[userRole as keyof typeof navItems] || [];
 
   const isDistributorOrdersPath = pathname.startsWith('/dashboard/distributor/orders');
+  const isDashboardRoot = pathname === '/dashboard/admin' || pathname === '/dashboard/distributor' || pathname === '/dashboard/sales' || pathname === '/dashboard/delivery';
+
 
   return (
     <div className="hidden border-r bg-card md:block">
@@ -71,9 +73,9 @@ export function Sidebar({ userRole }: { userRole: UserRole | undefined }) {
                 href={href}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                  (pathname === href || (pathname.startsWith(href) && href !== '/dashboard/distributor' && !isDistributorOrdersPath)) && "bg-muted text-primary",
-                  (isDistributorOrdersPath && href.startsWith('/dashboard/distributor/orders')) && "bg-muted text-primary"
-
+                   (pathname.startsWith(href) && href.length > pathname.length) ? "bg-muted text-primary" : "",
+                   pathname === href && "bg-muted text-primary",
+                   isDashboardRoot && href.includes(userRole) && "bg-muted text-primary"
                 )}
               >
                 <Icon className="h-4 w-4" />

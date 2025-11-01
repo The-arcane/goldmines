@@ -61,7 +61,7 @@ export function AnomalyDetector({ visit, users, outlets }: { visit: Visit, users
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm">
+        <Button variant="outline" size="sm">
           Check
         </Button>
       </DialogTrigger>

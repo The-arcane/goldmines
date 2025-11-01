@@ -36,7 +36,7 @@ export function VisitsTable({ visits, users, outlets }: VisitsTableProps) {
           <TableHead className="hidden sm:table-cell">Outlet</TableHead>
           <TableHead className="hidden sm:table-cell">Duration</TableHead>
           <TableHead className="hidden md:table-cell">Entry Time</TableHead>
-          <TableHead className="text-right">Check</TableHead>
+          <TableHead className="text-right">AI Check</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>

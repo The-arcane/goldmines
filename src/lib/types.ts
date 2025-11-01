@@ -59,7 +59,7 @@ export type Sku = {
   mrp?: number;
   ptr?: number;
   stock_quantity: number;
-  distributor_id: number;
+  distributor_id: number | null;
   created_at: string;
 };
 
@@ -124,5 +124,6 @@ export type OrderFormData = {
     total_price: number;
   }[];
 };
+
 
 

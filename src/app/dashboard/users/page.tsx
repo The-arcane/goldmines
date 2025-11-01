@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { User, UserRole, Distributor } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,7 +35,7 @@ export default function UsersPage() {
     const [distributors, setDistributors] = useState<Distributor[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         // Admin sees all users
         const usersPromise = supabase.from("users").select("*").order("created_at", { ascending: false });
@@ -51,11 +51,11 @@ export default function UsersPage() {
             setDistributors(distributorsRes.data as Distributor[]);
         }
         setLoading(false);
-    }
+    }, []);
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [fetchData]);
 
     const getInitials = (name: string) => {
         if(!name) return '??';
@@ -85,7 +85,7 @@ export default function UsersPage() {
                     <div className="grid gap-2">
                         <CardTitle>User Management</CardTitle>
                         <CardDescription>
-                            An overview of all users in the system. Distributor Admins are managed on the Distributors page.
+                            An overview of all users in the system.
                         </CardDescription>
                     </div>
                     <div className="ml-auto">

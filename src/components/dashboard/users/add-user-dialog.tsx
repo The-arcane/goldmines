@@ -48,13 +48,12 @@ type AddUserDialogProps = {
   onUserAdded: () => void;
   allowedRoles: { value: UserRole, label: string }[];
   defaultRole: UserRole;
-  distributors?: Distributor[]; // For admin view, to assign a delivery partner
+  distributors?: Distributor[]; // For admin view, to assign a user
   distributorId?: string; // For distributor view, their own org ID
 };
 
 export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, distributors, distributorId }: AddUserDialogProps) {
     const [open, setOpen] = useState(false);
-    const [loading, setLoading] = useState(false);
     const { toast } = useToast();
 
     const form = useForm<z.infer<typeof formSchema>>({
@@ -83,11 +82,19 @@ export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, distribu
     }, [open, form, defaultRole]);
 
     const onSubmit: SubmitHandler<z.infer<typeof formSchema>> = async (data) => {
-        setLoading(true);
         
         // If the distributor admin is creating a user, the distributorId is passed as a prop.
         // If the site admin is creating a delivery partner, it's selected from the form.
         const finalDistributorId = distributorId || data.distributorId;
+
+        if ((watchedRole === 'distributor_admin' || watchedRole === 'delivery_partner') && !finalDistributorId) {
+             toast({
+                variant: "destructive",
+                title: "Distributor Required",
+                description: "Please assign this user to a distributor.",
+            });
+            return;
+        }
        
         const result = await createNewUser(data, finalDistributorId);
 
@@ -105,7 +112,6 @@ export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, distribu
                 description: result.error || "An unknown error occurred.",
             });
         }
-        setLoading(false);
     };
 
     return (
@@ -196,7 +202,6 @@ export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, distribu
                             <FormField
                                 control={form.control}
                                 name="distributorId"
-                                rules={{ required: 'Please select a distributor for this user.' }}
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Assign to Distributor</FormLabel>
@@ -221,8 +226,8 @@ export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, distribu
                         )}
 
                         <DialogFooter>
-                            <Button type="submit" disabled={loading}>
-                                {loading ? "Creating User..." : "Create User"}
+                            <Button type="submit" disabled={form.formState.isSubmitting}>
+                                {form.formState.isSubmitting ? "Creating User..." : "Create User"}
                             </Button>
                         </DialogFooter>
                     </form>

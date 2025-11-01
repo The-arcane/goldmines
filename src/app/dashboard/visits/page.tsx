@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -21,7 +22,7 @@ export default function VisitsPage() {
 
             const [visitsRes, usersRes, outletsRes] = await Promise.all([visitsPromise, usersPromise, outletsPromise]);
             
-            if(visitsRes.data) setVisits(visitsRes.data);
+            if(visitsRes.data) setVisits(visitsRes.data as Visit[]);
             if(usersRes.data) setUsers(usersRes.data);
             if(outletsRes.data) setOutlets(outletsRes.data);
 

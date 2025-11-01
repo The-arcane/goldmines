@@ -106,7 +106,8 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
     }
   }
 
-
+  revalidatePath('/dashboard/users');
+  revalidatePath('/dashboard/distributor/users');
   return { success: true, user: authUser };
 }
 
@@ -171,6 +172,7 @@ export async function createDistributorWithAdmin(formData: DistributorFormData) 
         return { success: false, error: 'User and Distributor were created, but the admin could not be linked automatically.' };
     }
 
+    revalidatePath('/dashboard/distributors');
     return { success: true };
 }
 
