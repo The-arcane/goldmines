@@ -4,71 +4,51 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/auth";
-import type { Attendance } from "@/lib/types";
+import type { Attendance, Outlet } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, MapPin, Package, IndianRupee } from "lucide-react";
+import { Clock, MapPin, Package, IndianRupee, PlusCircle } from "lucide-react";
 import { AttendanceDialog } from "@/components/salesperson/attendance-dialog";
-import { Map, AdvancedMarker, Pin, useApiIsLoaded } from "@vis.gl/react-google-maps";
-import { useGeolocation } from "@/hooks/use-geolocation";
-import { Skeleton } from "@/components/ui/skeleton";
-
-function SalespersonMap() {
-    const { coords } = useGeolocation({ enableHighAccuracy: true });
-    const isLoaded = useApiIsLoaded();
-
-    if (!isLoaded) return <Skeleton className="h-[400px] w-full" />
-    
-    return (
-         <div className="h-[400px] w-full rounded-lg overflow-hidden border">
-            <Map
-                mapId="salesperson-live-map"
-                defaultCenter={{ lat: 20.5937, lng: 78.9629 }}
-                defaultZoom={coords ? 14 : 5}
-                center={coords ? { lat: coords.latitude, lng: coords.longitude } : undefined}
-                gestureHandling={"greedy"}
-                disableDefaultUI={true}
-            >
-             {coords && (
-                <AdvancedMarker position={{ lat: coords.latitude, lng: coords.longitude }}>
-                    <div className="relative">
-                        <div className="absolute h-6 w-6 rounded-full bg-blue-400 animate-ping"></div>
-                        <div className="relative h-6 w-6 rounded-full bg-blue-500 border-2 border-white shadow-md"></div>
-                    </div>
-                </AdvancedMarker>
-             )}
-            </Map>
-         </div>
-    );
-}
+import { SalespersonMap } from "@/components/salesperson/live-map";
+import { AddSalespersonOutletDialog } from "@/components/salesperson/add-outlet-dialog";
+import Link from "next/link";
 
 
 export default function SalespersonDashboardPage() {
     const { user } = useAuth();
     const [attendance, setAttendance] = useState<Attendance | null>(null);
+    const [outlets, setOutlets] = useState<Outlet[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
+    const fetchDashboardData = async () => {
         if (!user) return;
-        
-        const fetchAttendance = async () => {
-            setLoading(true);
-            const today = new Date().toISOString().slice(0, 10);
-            
-            const { data, error } = await supabase
-                .from('attendance')
-                .select('*')
-                .eq('user_id', user.id)
-                .gte('checkin_time', `${today}T00:00:00.000Z`)
-                .lte('checkin_time', `${today}T23:59:59.999Z`)
-                .single();
+        setLoading(true);
 
-            if (data) {
-                setAttendance(data as Attendance);
-            }
-            setLoading(false);
-        };
-        fetchAttendance();
+        const today = new Date().toISOString().slice(0, 10);
+        
+        const attendancePromise = supabase
+            .from('attendance')
+            .select('*')
+            .eq('user_id', user.id)
+            .gte('checkin_time', `${today}T00:00:00.000Z`)
+            .lte('checkin_time', `${today}T23:59:59.999Z`)
+            .order('checkin_time', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+            
+        const outletsPromise = supabase
+            .from('outlets')
+            .select('*'); // Fetch all for now, can be optimized later
+
+        const [{ data: attendanceData }, { data: outletsData }] = await Promise.all([attendancePromise, outletsPromise]);
+
+        if (attendanceData) setAttendance(attendanceData as Attendance);
+        if (outletsData) setOutlets(outletsData);
+        setLoading(false);
+    };
+
+    useEffect(() => {
+        fetchDashboardData();
     }, [user]);
 
     const isCheckedIn = attendance?.status === 'Online';
@@ -76,22 +56,28 @@ export default function SalespersonDashboardPage() {
 
     return (
         <div className="flex flex-1 flex-col gap-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
                     <h1 className="font-headline text-3xl font-bold">Welcome, {user?.name.split(' ')[0]}</h1>
                     <p className="text-muted-foreground">Here's your overview for the day.</p>
                 </div>
-                <div className="flex gap-2">
-                    <AttendanceDialog type="checkin" onAttendanceMarked={() => window.location.reload()} disabled={isCheckedIn || isCheckedOut}>
+                <div className="flex gap-2 flex-wrap">
+                    <AttendanceDialog type="checkin" onAttendanceMarked={fetchDashboardData} disabled={isCheckedIn || isCheckedOut}>
                         <Button variant={isCheckedIn ? "secondary" : "default"} disabled={isCheckedIn || isCheckedOut}>
                             <Clock className="mr-2 h-4 w-4"/> Start Day
                         </Button>
                     </AttendanceDialog>
-                    <AttendanceDialog type="checkout" onAttendanceMarked={() => window.location.reload()} disabled={!isCheckedIn || isCheckedOut}>
+                    <AttendanceDialog type="checkout" onAttendanceMarked={fetchDashboardData} disabled={!isCheckedIn || isCheckedOut}>
                         <Button variant="destructive" disabled={!isCheckedIn || isCheckedOut}>
                            <Clock className="mr-2 h-4 w-4"/> End Day
                         </Button>
                     </AttendanceDialog>
+                    <AddSalespersonOutletDialog onOutletAdded={fetchDashboardData} />
+                     <Button asChild>
+                        <Link href="/salesperson/orders/create">
+                            <PlusCircle className="mr-2 h-4 w-4"/> Create Order
+                        </Link>
+                    </Button>
                 </div>
             </div>
 
@@ -126,8 +112,10 @@ export default function SalespersonDashboardPage() {
                 </Card>
             </div>
             
-            <SalespersonMap />
+            <SalespersonMap outlets={outlets} loading={loading} />
 
         </div>
     );
 }
+
+    

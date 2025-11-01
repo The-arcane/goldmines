@@ -380,20 +380,20 @@ export async function recordOrderPayment(orderId: number, paymentAmount: number)
 
 export async function markAttendance(data: AttendanceData) {
     const cookieStore = cookies();
-    const supabase = createServerClient(
+    const supabaseAdmin = createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.SUPABASE_SERVICE_ROLE_KEY!,
         { cookies: { get: (name: string) => cookieStore.get(name)?.value } }
     );
     
     // The user's ID needs to be fetched server-side from their session
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user } } = await supabaseAdmin.auth.getUser();
     if (!user) {
         return { success: false, error: "User not authenticated." };
     }
 
     // A user belongs to one record in public.users
-    const { data: userProfile, error: profileError } = await supabase
+    const { data: userProfile, error: profileError } = await supabaseAdmin
         .from('users')
         .select('id')
         .eq('auth_id', user.id)
@@ -407,23 +407,29 @@ export async function markAttendance(data: AttendanceData) {
 
     // Check for an existing "Online" record for today
     const today = new Date().toISOString().slice(0, 10);
-    const { data: existingRecord, error: fetchError } = await supabase
+    const { data: existingRecord, error: fetchError } = await supabaseAdmin
         .from('attendance')
         .select('id, status')
         .eq('user_id', userId)
         .gte('checkin_time', `${today}T00:00:00.000Z`)
         .lte('checkin_time', `${today}T23:59:59.999Z`)
-        .in('status', ['Online', 'Offline'])
-        .single();
+        .order('checkin_time', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
 
     let selfieUrl = '';
     if (data.selfie) {
-        // The data URI is expected to be 'data:image/jpeg;base64,....'
-        // We need to extract the base64 part
         const base64 = data.selfie.split(',')[1];
-        const { data: uploadData, error: uploadError } = await supabase.storage
+        if (!base64) return { success: false, error: 'Invalid selfie format.' };
+        
+        // Use Buffer.from for server-side
+        const imageBuffer = Buffer.from(base64, 'base64');
+        const filePath = `attendance/${userId}-${Date.now()}.jpg`;
+
+        const { error: uploadError } = await supabaseAdmin.storage
             .from('selfies')
-            .upload(`attendance/${userId}-${Date.now()}.jpg`, Buffer.from(base64, 'base64'), {
+            .upload(filePath, imageBuffer, {
                 contentType: 'image/jpeg',
                 upsert: true,
             });
@@ -433,17 +439,16 @@ export async function markAttendance(data: AttendanceData) {
             return { success: false, error: "Could not save selfie." };
         }
         
-        // Get the public URL for the uploaded file
-        const { data: { publicUrl } } = supabase.storage.from('selfies').getPublicUrl(uploadData.path);
+        const { data: { publicUrl } } = supabaseAdmin.storage.from('selfies').getPublicUrl(filePath);
         selfieUrl = publicUrl;
     }
 
 
     if (data.type === 'checkin') {
-        if (existingRecord) {
+        if (existingRecord && existingRecord.status === 'Online') {
              return { success: false, error: "You have already started your day." };
         }
-        const { error } = await supabase.from('attendance').insert({
+        const { error } = await supabaseAdmin.from('attendance').insert({
             user_id: userId,
             checkin_time: new Date().toISOString(),
             checkin_lat: data.coords.latitude,
@@ -459,7 +464,7 @@ export async function markAttendance(data: AttendanceData) {
         if (!existingRecord || existingRecord.status === 'Offline') {
             return { success: false, error: "You have not started your day or have already ended it." };
         }
-         const { error } = await supabase.from('attendance').update({
+         const { error } = await supabaseAdmin.from('attendance').update({
             checkout_time: new Date().toISOString(),
             checkout_lat: data.coords.latitude,
             checkout_lng: data.coords.longitude,
@@ -472,3 +477,5 @@ export async function markAttendance(data: AttendanceData) {
         return { success: true, message: 'Day ended successfully!' };
     }
 }
+
+    
