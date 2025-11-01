@@ -345,14 +345,31 @@ export async function recordOrderPayment(orderId: number, paymentAmount: number)
 }
 
 export async function markAttendance(data: AttendanceData) {
-    const supabaseAdmin = createServerActionClient();
+    const cookieStore = cookies()
+    const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+            cookies: {
+                get(name: string) {
+                    return cookieStore.get(name)?.value
+                },
+                set(name: string, value: string, options) {
+                    cookieStore.set({ name, value, ...options })
+                },
+                remove(name: string, options) {
+                    cookieStore.set({ name, value: '', ...options })
+                },
+            },
+        }
+    )
     
-    const { data: { user } } = await supabaseAdmin.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
         return { success: false, error: "User not authenticated." };
     }
 
-    const { data: userProfile, error: profileError } = await supabaseAdmin
+    const { data: userProfile, error: profileError } = await supabase
         .from('users')
         .select('id')
         .eq('auth_id', user.id)
@@ -366,7 +383,7 @@ export async function markAttendance(data: AttendanceData) {
     const userAuthId = user.id;
 
     const today = new Date().toISOString().slice(0, 10);
-    const { data: existingRecord } = await supabaseAdmin
+    const { data: existingRecord } = await supabase
         .from('attendance')
         .select('id, status')
         .eq('user_id', userId)
@@ -384,7 +401,7 @@ export async function markAttendance(data: AttendanceData) {
         const imageBuffer = Buffer.from(base64, 'base64');
         const filePath = `attendance/${userAuthId}/${Date.now()}.jpg`;
 
-        const { error: uploadError } = await supabaseAdmin.storage
+        const { error: uploadError } = await supabase.storage
             .from('selfies')
             .upload(filePath, imageBuffer, {
                 contentType: 'image/jpeg',
@@ -396,7 +413,7 @@ export async function markAttendance(data: AttendanceData) {
             return { success: false, error: "Could not save selfie." };
         }
         
-        const { data: { publicUrl } } = supabaseAdmin.storage.from('selfies').getPublicUrl(filePath);
+        const { data: { publicUrl } } = supabase.storage.from('selfies').getPublicUrl(filePath);
         selfieUrl = publicUrl;
     }
 
@@ -404,7 +421,7 @@ export async function markAttendance(data: AttendanceData) {
         if (existingRecord && existingRecord.status === 'Online') {
              return { success: false, error: "You have already started your day." };
         }
-        const { error } = await supabaseAdmin.from('attendance').insert({
+        const { error } = await supabase.from('attendance').insert({
             user_id: userId,
             checkin_time: new Date().toISOString(),
             checkin_lat: data.coords.latitude,
@@ -420,7 +437,7 @@ export async function markAttendance(data: AttendanceData) {
         if (!existingRecord || existingRecord.status === 'Offline') {
             return { success: false, error: "You have not started your day or have already ended it." };
         }
-         const { error } = await supabaseAdmin.from('attendance').update({
+         const { error } = await supabase.from('attendance').update({
             checkout_time: new Date().toISOString(),
             checkout_lat: data.coords.latitude,
             checkout_lng: data.coords.longitude,
