@@ -87,7 +87,7 @@ export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, distribu
         // If the site admin is creating a delivery partner, it's selected from the form.
         const finalDistributorId = distributorId || data.distributorId;
 
-        if ((watchedRole === 'distributor_admin' || watchedRole === 'delivery_partner') && !finalDistributorId) {
+        if ((watchedRole === 'distributor_admin' || watchedRole === 'delivery_partner' || watchedRole === 'sales_executive') && !finalDistributorId) {
              toast({
                 variant: "destructive",
                 title: "Distributor Required",
@@ -198,7 +198,7 @@ export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, distribu
                         />
 
                         {/* Conditional field for ADMIN to select distributor */}
-                        {distributors && (watchedRole === 'delivery_partner' || watchedRole === 'distributor_admin') && (
+                        {distributors && (watchedRole === 'delivery_partner' || watchedRole === 'distributor_admin' || watchedRole === 'sales_executive') && (
                             <FormField
                                 control={form.control}
                                 name="distributorId"

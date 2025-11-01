@@ -34,7 +34,7 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
       avatar_url: `https://picsum.photos/seed/${formData.email}/100/100`,
   };
   
-  if ((formData.role === 'delivery_partner' || formData.role === 'distributor_admin') && distributorId) {
+  if ((formData.role === 'delivery_partner' || formData.role === 'distributor_admin' || formData.role === 'sales_executive') && distributorId) {
     userMetadata.distributor_id = distributorId;
   }
   
@@ -89,7 +89,7 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
   const newUserId = profileData.id;
 
   // Step 3: If it's a distributor user, link them in the junction table
-  if ((formData.role === 'delivery_partner' || formData.role === 'distributor_admin') && distributorId) {
+  if ((formData.role === 'delivery_partner' || formData.role === 'distributor_admin' || formData.role === 'sales_executive') && distributorId) {
     const { error: linkError } = await supabaseAdmin
       .from('distributor_users')
       .insert({
