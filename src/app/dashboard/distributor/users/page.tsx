@@ -16,6 +16,16 @@ const distributorAllowedRoles: { value: UserRole, label: string }[] = [
     { value: 'delivery_partner', label: 'Delivery Partner' },
 ];
 
+const mapNumericRoleToString = (role: number): UserRole => {
+    const roleMap: { [key: number]: UserRole } = {
+        1: 'admin',
+        2: 'sales_executive',
+        3: 'distributor_admin',
+        4: 'delivery_partner',
+    };
+    return roleMap[role] || 'sales_executive'; // Fallback role
+}
+
 export default function DistributorUsersPage() {
     const { user } = useAuth();
     const [teamMembers, setTeamMembers] = useState<User[]>([]);
@@ -62,7 +72,7 @@ export default function DistributorUsersPage() {
             .order("created_at", { ascending: false });
 
         if (members) {
-            setTeamMembers(members);
+            setTeamMembers(members as User[]);
         } else {
             console.error("Error fetching team member profiles:", membersError);
         }
@@ -85,8 +95,15 @@ export default function DistributorUsersPage() {
         return names[0].substring(0, 2);
     };
     
-    const mapRoleToString = (role: UserRole) => {
-        return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    const mapRoleToString = (role: UserRole | number) => {
+        let roleString: UserRole;
+        if (typeof role === 'number') {
+            roleString = mapNumericRoleToString(role);
+        } else {
+            roleString = role;
+        }
+        if (!roleString) return 'Unknown';
+        return roleString.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     };
 
     return (

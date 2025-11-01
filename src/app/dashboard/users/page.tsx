@@ -16,8 +16,19 @@ import { AddUserDialog } from "@/components/dashboard/users/add-user-dialog";
 const adminAllowedRoles: { value: UserRole, label: string }[] = [
     { value: 'sales_executive', label: 'Sales Executive' },
     { value: 'delivery_partner', label: 'Delivery Partner' },
+    { value: 'distributor_admin', label: 'Distributor Admin' },
     // Note: 'admin' role is omitted for safety. New admins should be created via Supabase dashboard.
 ];
+
+const mapNumericRoleToString = (role: number): UserRole => {
+    const roleMap: { [key: number]: UserRole } = {
+        1: 'admin',
+        2: 'sales_executive',
+        3: 'distributor_admin',
+        4: 'delivery_partner',
+    };
+    return roleMap[role] || 'sales_executive'; // Fallback role
+}
 
 export default function UsersPage() {
     const [users, setUsers] = useState<User[]>([]);
@@ -34,10 +45,10 @@ export default function UsersPage() {
         const [usersRes, distributorsRes] = await Promise.all([usersPromise, distributorsPromise]);
 
         if (usersRes.data) {
-            setUsers(usersRes.data);
+            setUsers(usersRes.data as User[]);
         }
          if (distributorsRes.data) {
-            setDistributors(distributorsRes.data);
+            setDistributors(distributorsRes.data as Distributor[]);
         }
         setLoading(false);
     }
@@ -55,9 +66,15 @@ export default function UsersPage() {
         return names[0].substring(0, 2);
     };
     
-    const mapRoleToString = (role: UserRole) => {
-        if (!role) return 'Unknown';
-        return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    const mapRoleToString = (role: UserRole | number) => {
+        let roleString: UserRole;
+        if (typeof role === 'number') {
+            roleString = mapNumericRoleToString(role);
+        } else {
+            roleString = role;
+        }
+        if (!roleString) return 'Unknown';
+        return roleString.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
     };
 
 
