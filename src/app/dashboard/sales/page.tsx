@@ -1,3 +1,4 @@
+
 "use client";
 
 import { SalesLiveMap } from "@/components/dashboard/sales/live-map";

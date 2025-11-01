@@ -53,3 +53,4 @@ export const PlaceAutocomplete = ({ onPlaceSelect, defaultValue, ...rest }: Plac
         </div>
     );
 };
+

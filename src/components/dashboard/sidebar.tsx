@@ -84,3 +84,4 @@ export function Sidebar({ userRole }: { userRole: UserRole | undefined }) {
     </div>
   );
 }
+
