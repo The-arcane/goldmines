@@ -246,3 +246,26 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
   revalidatePath("/dashboard/distributor");
   return { success: true, orderId: orderData.id };
 }
+
+export async function updateOrderStatus(orderId: number, status: string) {
+    const cookieStore = cookies();
+    const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { cookies: { get: (name: string) => cookieStore.get(name)?.value } }
+    );
+
+    const { error } = await supabase
+        .from('orders')
+        .update({ status })
+        .eq('id', orderId);
+
+    if (error) {
+        console.error(`Error updating order ${orderId} to ${status}:`, error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/dashboard/distributor/orders');
+    revalidatePath(`/dashboard/distributor/orders/${orderId}`);
+    return { success: true };
+}

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
 import { format } from "date-fns";
+import Link from "next/link";
 
 export default function OrdersPage() {
     const { user } = useAuth();
@@ -101,7 +102,11 @@ export default function OrdersPage() {
                                         <TableCell>{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
                                         <TableCell className="text-right">₹{order.total_value?.toFixed(2) || '0.00'}</TableCell>
                                         <TableCell className="text-right">
-                                            <Button variant="outline" size="sm">View</Button>
+                                            <Button asChild variant="outline" size="sm">
+                                                <Link href={`/dashboard/distributor/orders/${order.id}`}>
+                                                    View
+                                                </Link>
+                                            </Button>
                                         </TableCell>
                                     </TableRow>
                                 )) : (

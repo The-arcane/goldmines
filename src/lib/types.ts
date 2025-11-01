@@ -72,6 +72,7 @@ export type Order = {
   status: string;
   created_at: string;
   order_items?: OrderItem[];
+  outlets?: { name: string }; // For joins
 };
 
 export type OrderItem = {
@@ -81,6 +82,7 @@ export type OrderItem = {
   quantity: number;
   unit_price: number;
   total_price: number;
+  skus?: { name: string, product_code: string }; // For joins
 };
 
 
@@ -124,6 +126,3 @@ export type OrderFormData = {
     total_price: number;
   }[];
 };
-
-
-
