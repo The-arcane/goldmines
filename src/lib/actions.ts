@@ -2,10 +2,11 @@
 "use server";
 
 import { flagAnomalousVisit } from "@/ai/flows/flag-anomalous-visits";
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import type { UserFormData, DistributorFormData, SkuFormData, OrderFormData, AttendanceData } from "./types";
 import { revalidatePath } from "next/cache";
+import { createServerActionClient } from "./supabaseServer";
 
 export async function checkVisitAnomaly(visitDetails: string, criteria: string) {
   try {
@@ -21,15 +22,7 @@ export async function checkVisitAnomaly(visitDetails: string, criteria: string) 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function createNewUser(formData: UserFormData, distributorId?: string) {
-  const cookieStore = cookies()
-
-  const supabaseAdmin = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      cookies: { get: (name: string) => cookieStore.get(name)?.value },
-    }
-  )
+  const supabaseAdmin = createServerActionClient();
 
   const userMetadata: {[key: string]: any} = {
       name: formData.name,
@@ -117,14 +110,7 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
 
 
 export async function createDistributorWithAdmin(formData: DistributorFormData) {
-    const cookieStore = cookies()
-    const supabaseAdmin = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-        {
-          cookies: { get: (name: string) => cookieStore.get(name)?.value },
-        }
-    );
+    const supabaseAdmin = createServerActionClient();
 
     // 1. Create the distributor organization first
     const { data: distributorData, error: distributorError } = await supabaseAdmin
@@ -181,12 +167,7 @@ export async function createDistributorWithAdmin(formData: DistributorFormData) 
 }
 
 export async function createNewSku(formData: SkuFormData, distributorId: number) {
-  const cookieStore = cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { get: (name: string) => cookieStore.get(name)?.value } }
-  );
+  const supabase = createServerActionClient();
 
   const { error } = await supabase.from("skus").insert({
     ...formData,
@@ -203,12 +184,7 @@ export async function createNewSku(formData: SkuFormData, distributorId: number)
 }
 
 export async function createNewOrder(formData: OrderFormData, distributorId: number) {
-  const cookieStore = cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { cookies: { get: (name: string) => cookieStore.get(name)?.value } }
-  );
+  const supabase = createServerActionClient();
 
   // 1. Check outlet credit limit
   const { data: outlet, error: outletError } = await supabase
@@ -268,12 +244,7 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
 }
 
 export async function updateOrderStatus(orderId: number, status: string) {
-    const cookieStore = cookies();
-    const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
-        { cookies: { get: (name: string) => cookieStore.get(name)?.value } }
-    );
+    const supabase = createServerActionClient();
     
     // Get order details to update outlet due
     const { data: order, error: fetchError } = await supabase
@@ -324,12 +295,7 @@ export async function updateOrderStatus(orderId: number, status: string) {
 }
 
 export async function recordOrderPayment(orderId: number, paymentAmount: number) {
-    const cookieStore = cookies();
-    const supabase = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
-        { cookies: { get: (name: string) => cookieStore.get(name)?.value } }
-    );
+    const supabase = createServerActionClient();
 
     // 1. Get the current order details
     const { data: order, error: fetchError } = await supabase
@@ -379,12 +345,7 @@ export async function recordOrderPayment(orderId: number, paymentAmount: number)
 }
 
 export async function markAttendance(data: AttendanceData) {
-    const cookieStore = cookies();
-    const supabaseAdmin = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY!,
-        { cookies: { get: (name: string) => cookieStore.get(name)?.value } }
-    );
+    const supabaseAdmin = createServerActionClient();
     
     const { data: { user } } = await supabaseAdmin.auth.getUser();
     if (!user) {
@@ -421,7 +382,6 @@ export async function markAttendance(data: AttendanceData) {
         if (!base64) return { success: false, error: 'Invalid selfie format.' };
         
         const imageBuffer = Buffer.from(base64, 'base64');
-        // Use the user's auth_id for the folder path to align with RLS policies
         const filePath = `attendance/${userAuthId}/${Date.now()}.jpg`;
 
         const { error: uploadError } = await supabaseAdmin.storage
