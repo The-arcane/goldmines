@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -25,27 +24,28 @@ export default function DistributorDashboardPage() {
   const [teamMembers, setTeamMembers] = useState<User[]>([]);
   const [assignedOutlets, setAssignedOutlets] = useState<Outlet[]>([]);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
-  const [distributorId, setDistributorId] = useState<number | null>(null);
+  const [distributor, setDistributor] = useState<Distributor | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchDistributorData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
 
-    const { data: adminDistributorLink } = await supabase
-      .from("distributor_users")
-      .select("distributor_id")
-      .eq("user_id", user.id)
+    // Get distributor for current user
+    const { data: distributorData, error: distributorError } = await supabase
+      .from('distributors')
+      .select('*')
+      .eq('admin_user_id', user.id)
       .single();
 
-    if (!adminDistributorLink) {
-      console.error("Could not find distributor for this admin.");
+    if (distributorError) {
+      console.error("Could not find distributor for this admin.", distributorError);
       setLoading(false);
       return;
     }
-    const currentDistributorId = adminDistributorLink.distributor_id;
-    setDistributorId(currentDistributorId);
-
+    setDistributor(distributorData);
+    const currentDistributorId = distributorData.id;
+    
     // Fetch team members
     const { data: memberLinks } = await supabase
       .from("distributor_users")
@@ -58,6 +58,7 @@ export default function DistributorDashboardPage() {
     }
     
     // Fetch assigned outlets (placeholder logic)
+    // In a real app, this might be a many-to-many relationship
     const { data: outlets } = await supabase.from("outlets").select("*").limit(10);
     setAssignedOutlets(outlets || []);
 
@@ -94,15 +95,17 @@ export default function DistributorDashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-headline text-3xl font-bold">
-            Distributor Dashboard
+            {distributor?.name || 'Distributor'} Dashboard
           </h1>
           <p className="text-muted-foreground">
             An overview of your organization's operations.
           </p>
         </div>
         <div className="flex gap-2">
-           <Button>
-                <PlusCircle className="mr-2 h-4 w-4" /> Create Order
+           <Button asChild>
+                <Link href="/dashboard/distributor/orders/create">
+                  <PlusCircle className="mr-2 h-4 w-4" /> Create Order
+                </Link>
             </Button>
             <Button asChild variant="outline">
                 <Link href="/dashboard/distributor/users">
@@ -158,8 +161,15 @@ export default function DistributorDashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-full lg:col-span-4">
             <CardHeader>
-                <CardTitle>Recent Orders</CardTitle>
-                <CardDescription>A list of your 5 most recent orders.</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Recent Orders</CardTitle>
+                  <CardDescription>A list of your 5 most recent orders.</CardDescription>
+                </div>
+                 <Button asChild variant="outline" size="sm">
+                  <Link href="/dashboard/distributor/orders">View All</Link>
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
                  {loading ? <p>Loading orders...</p> : (
@@ -175,7 +185,7 @@ export default function DistributorDashboardPage() {
                         <TableBody>
                             {recentOrders.map(order => (
                                 <TableRow key={order.id}>
-                                    <TableCell>{order.outlets?.name || 'N/A'}</TableCell>
+                                    <TableCell>{(order as any).outlets?.name || 'N/A'}</TableCell>
                                     <TableCell><Badge variant={order.status === 'Delivered' ? 'default' : 'secondary'}>{order.status}</Badge></TableCell>
                                     <TableCell>{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
                                     <TableCell className="text-right">${order.total_value?.toFixed(2) || '0.00'}</TableCell>

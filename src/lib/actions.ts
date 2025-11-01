@@ -4,7 +4,8 @@
 import { flagAnomalousVisit } from "@/ai/flows/flag-anomalous-visits";
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import type { UserFormData, DistributorFormData } from "./types";
+import type { UserFormData, DistributorFormData, SkuFormData, OrderFormData } from "./types";
+import { revalidatePath } from "next/cache";
 
 export async function checkVisitAnomaly(visitDetails: string, criteria: string) {
   try {
@@ -35,18 +36,9 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
   
   if ((formData.role === 'delivery_partner' || formData.role === 'distributor_admin') && distributorId) {
     userMetadata.distributor_id = distributorId;
-  } else if (formData.role === 'delivery_partner' && !distributorId) {
-    return { success: false, error: "A distributor must be selected to create a delivery partner."}
   }
   
-  if (formData.role === 'distributor_admin' && !distributorId) {
-     return { success: false, error: "This form cannot create a distributor admin without an organization. Please use the Distributors page."}
-  }
-  
-
   // Step 1: Create the user in auth.users
-  // The on_auth_user_created trigger will automatically create the corresponding
-  // profile in public.users and handle linking to the distributor.
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email: formData.email,
     password: formData.password,
@@ -64,12 +56,60 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
     return { success: false, error: "Auth user was not created." };
   }
 
-  // The database trigger 'on_auth_user_created' now handles profile creation
-  // and linking. The redundant manual insertion code has been removed to
-  // fix the "duplicate key" error.
+  const roleInt = (() => {
+    switch (formData.role) {
+      case 'admin': return 1;
+      case 'sales_executive': return 2;
+      case 'distributor_admin': return 3;
+      case 'delivery_partner': return 4;
+      default: return 2;
+    }
+  })();
+
+  // Step 2: Manually create the user profile in public.users
+  const { data: profileData, error: profileError } = await supabaseAdmin
+    .from('users')
+    .insert({
+      auth_id: authUser.id,
+      name: formData.name,
+      email: formData.email,
+      role: roleInt,
+      avatar_url: userMetadata.avatar_url,
+    })
+    .select('id')
+    .single();
+
+  if (profileError) {
+    console.error('Error creating user profile:', profileError);
+    // Attempt to clean up the auth user if profile creation fails
+    await supabaseAdmin.auth.admin.deleteUser(authUser.id);
+    return { success: false, error: `Failed to create user profile: ${profileError.message}` };
+  }
+  
+  const newUserId = profileData.id;
+
+  // Step 3: If it's a distributor user, link them in the junction table
+  if ((formData.role === 'delivery_partner' || formData.role === 'distributor_admin') && distributorId) {
+    const { error: linkError } = await supabaseAdmin
+      .from('distributor_users')
+      .insert({
+        distributor_id: parseInt(distributorId),
+        user_id: newUserId,
+      });
+
+    if (linkError) {
+      console.error('Error linking user to distributor:', linkError);
+      // Clean up user and profile
+      await supabaseAdmin.from('users').delete().eq('id', newUserId);
+      await supabaseAdmin.auth.admin.deleteUser(authUser.id);
+      return { success: false, error: `User was created but could not be linked to the distributor: ${linkError.message}` };
+    }
+  }
+
 
   return { success: true, user: authUser };
 }
+
 
 export async function createDistributorWithAdmin(formData: DistributorFormData) {
     const cookieStore = cookies()
@@ -110,9 +150,6 @@ export async function createDistributorWithAdmin(formData: DistributorFormData) 
     }
 
     // 3. Link the new user's profile ID back to the distributor table as the main admin
-    // Add a small delay to ensure the user profile is available via the trigger
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
     const { data: newUserProfile, error: profileError } = await supabaseAdmin
         .from('users')
         .select('id')
@@ -135,4 +172,75 @@ export async function createDistributorWithAdmin(formData: DistributorFormData) 
     }
 
     return { success: true };
+}
+
+export async function createNewSku(formData: SkuFormData, distributorId: number) {
+  const cookieStore = cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { cookies: { get: (name: string) => cookieStore.get(name)?.value } }
+  );
+
+  const { error } = await supabase.from("skus").insert({
+    ...formData,
+    distributor_id: distributorId,
+  });
+
+  if (error) {
+    console.error("Error creating SKU:", error);
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/dashboard/distributor/skus");
+  return { success: true };
+}
+
+export async function createNewOrder(formData: OrderFormData, distributorId: number) {
+  const cookieStore = cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { cookies: { get: (name: string) => cookieStore.get(name)?.value } }
+  );
+
+  // 1. Create the main order record
+  const { data: orderData, error: orderError } = await supabase
+    .from("orders")
+    .insert({
+      distributor_id: distributorId,
+      outlet_id: formData.outlet_id,
+      status: "Pending",
+      total_value: formData.total_value,
+      order_date: new Date().toISOString(),
+    })
+    .select()
+    .single();
+
+  if (orderError) {
+    console.error("Error creating order:", orderError);
+    return { success: false, error: orderError.message };
+  }
+
+  // 2. Prepare and insert order items
+  const orderItems = formData.items.map(item => ({
+    order_id: orderData.id,
+    sku_id: item.sku_id,
+    quantity: item.quantity,
+    unit_price: item.unit_price,
+    total_price: item.total_price,
+  }));
+
+  const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
+
+  if (itemsError) {
+    console.error("Error creating order items:", itemsError);
+    // Rollback the order creation if items fail
+    await supabase.from("orders").delete().eq("id", orderData.id);
+    return { success: false, error: `Order items could not be saved: ${itemsError.message}` };
+  }
+
+  revalidatePath("/dashboard/distributor/orders");
+  revalidatePath("/dashboard/distributor");
+  return { success: true, orderId: orderData.id };
 }

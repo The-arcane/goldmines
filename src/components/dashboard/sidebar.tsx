@@ -13,6 +13,8 @@ import {
   Warehouse,
   Rocket,
   Building,
+  ShoppingCart,
+  Box,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/types";
@@ -32,6 +34,8 @@ const navItems = {
   ],
   distributor_admin: [
     { href: "/dashboard/distributor", icon: Home, label: "Dashboard" },
+    { href: "/dashboard/distributor/orders", icon: ShoppingCart, label: "Orders" },
+    { href: "/dashboard/distributor/skus", icon: Box, label: "SKU Management" },
     { href: "/dashboard/distributor/users", icon: Users, label: "Manage Team" },
   ],
   delivery_partner: [
@@ -62,7 +66,7 @@ export function Sidebar({ userRole }: { userRole: UserRole | undefined }) {
                 href={href}
                 className={cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                  pathname.startsWith(href) && (href !== '/dashboard/admin' || pathname === href) && "bg-muted text-primary"
+                  (pathname === href || (pathname.startsWith(href) && href !== '/dashboard/distributor')) && "bg-muted text-primary"
                 )}
               >
                 <Icon className="h-4 w-4" />

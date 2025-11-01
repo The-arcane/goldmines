@@ -1,0 +1,222 @@
+
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/lib/auth";
+import type { Outlet, Sku, Distributor } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Trash2, PlusCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { createNewOrder } from "@/lib/actions";
+
+const formSchema = z.object({
+    outlet_id: z.string().min(1, "Please select an outlet."),
+    items: z.array(z.object({
+        sku_id: z.coerce.number().min(1, "SKU must be selected."),
+        quantity: z.coerce.number().int().min(1, "Quantity must be at least 1."),
+        unit_price: z.number(),
+        total_price: z.number(),
+    })).min(1, "Please add at least one item to the order."),
+});
+
+export default function CreateOrderPage() {
+    const { user } = useAuth();
+    const router = useRouter();
+    const { toast } = useToast();
+    const [distributor, setDistributor] = useState<Distributor | null>(null);
+    const [outlets, setOutlets] = useState<Outlet[]>([]);
+    const [skus, setSkus] = useState<Sku[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const form = useForm<z.infer<typeof formSchema>>({
+        resolver: zodResolver(formSchema),
+        defaultValues: { outlet_id: "", items: [] },
+    });
+
+    const { fields, append, remove, update } = useFieldArray({
+        control: form.control,
+        name: "items",
+    });
+
+    const fetchData = useCallback(async () => {
+        if (!user) return;
+        setLoading(true);
+
+        const { data: distributorData } = await supabase
+            .from('distributors').select('*').eq('admin_user_id', user.id).single();
+
+        if (distributorData) {
+            setDistributor(distributorData);
+            const outletsPromise = supabase.from("outlets").select("*"); // Simplified for now
+            const skusPromise = supabase.from("skus").select("*").eq("distributor_id", distributorData.id);
+            const [outletsRes, skusRes] = await Promise.all([outletsPromise, skusPromise]);
+            if(outletsRes.data) setOutlets(outletsRes.data);
+            if(skusRes.data) setSkus(skusRes.data);
+        }
+        setLoading(false);
+    }, [user]);
+
+    useEffect(() => { fetchData() }, [fetchData]);
+
+    const watchedItems = form.watch("items");
+    const totalValue = watchedItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
+
+    const handleSkuChange = (index: number, skuId: string) => {
+        const selectedSku = skus.find(s => s.id === parseInt(skuId));
+        if (selectedSku) {
+            const currentItem = form.getValues(`items.${index}`);
+            update(index, { 
+                ...currentItem, 
+                sku_id: selectedSku.id, 
+                unit_price: selectedSku.ptr || 0,
+                total_price: (selectedSku.ptr || 0) * (currentItem.quantity || 1)
+            });
+        }
+    };
+    
+    const handleQuantityChange = (index: number, quantity: string) => {
+         const currentItem = form.getValues(`items.${index}`);
+         const newQuantity = parseInt(quantity) || 0;
+         update(index, {
+            ...currentItem,
+            quantity: newQuantity,
+            total_price: (currentItem.unit_price || 0) * newQuantity
+         });
+    }
+
+    const onSubmit = async (data: z.infer<typeof formSchema>) => {
+        if (!distributor) return;
+        
+        const orderData = {
+            ...data,
+            total_value: totalValue
+        };
+
+        const result = await createNewOrder(orderData, distributor.id);
+        if (result.success) {
+            toast({ title: "Order Created!", description: `Order #${result.orderId} has been successfully placed.` });
+            router.push("/dashboard/distributor/orders");
+        } else {
+            toast({ variant: "destructive", title: "Failed to create order", description: result.error });
+        }
+    };
+
+    return (
+        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)}>
+                    <div className="grid gap-4">
+                        <div>
+                            <h1 className="font-headline text-3xl font-bold">Create New Order</h1>
+                            <p className="text-muted-foreground">Select an outlet and add products to the order.</p>
+                        </div>
+                        
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Outlet Details</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <FormField
+                                    control={form.control}
+                                    name="outlet_id"
+                                    render={({ field }) => (
+                                        <FormItem className="max-w-sm">
+                                            <FormLabel>Outlet</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={loading}>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Select a retail outlet" /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    {outlets.map(o => <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Order Items</CardTitle>
+                                <CardDescription>Add the SKUs and quantities for this order.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-[50%]">SKU</TableHead>
+                                            <TableHead>Quantity</TableHead>
+                                            <TableHead>Unit Price</TableHead>
+                                            <TableHead className="text-right">Total Price</TableHead>
+                                            <TableHead className="w-[50px]"><span className="sr-only">Actions</span></TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {fields.map((field, index) => (
+                                            <TableRow key={field.id}>
+                                                <TableCell>
+                                                    <Controller
+                                                        control={form.control}
+                                                        name={`items.${index}.sku_id`}
+                                                        render={({ field }) => (
+                                                            <Select onValueChange={(value) => { field.onChange(value); handleSkuChange(index, value); }} defaultValue={String(field.value)}>
+                                                                <FormControl><SelectTrigger><SelectValue placeholder="Select a SKU" /></SelectTrigger></FormControl>
+                                                                <SelectContent>
+                                                                    {skus.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        )}
+                                                    />
+                                                </TableCell>
+                                                <TableCell>
+                                                     <Controller
+                                                        control={form.control}
+                                                        name={`items.${index}.quantity`}
+                                                        render={({ field }) => (
+                                                            <Input type="number" {...field} onChange={(e) => { field.onChange(e); handleQuantityChange(index, e.target.value); }} />
+                                                        )}
+                                                     />
+                                                </TableCell>
+                                                <TableCell>${watchedItems[index]?.unit_price.toFixed(2) || '0.00'}</TableCell>
+                                                <TableCell className="text-right">${watchedItems[index]?.total_price.toFixed(2) || '0.00'}</TableCell>
+                                                <TableCell>
+                                                    <Button variant="ghost" size="icon" onClick={() => remove(index)}>
+                                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                                <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => append({ sku_id: 0, quantity: 1, unit_price: 0, total_price: 0 })}>
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Item
+                                </Button>
+                                <FormMessage>{form.formState.errors.items?.message}</FormMessage>
+                            </CardContent>
+                        </Card>
+                        
+                        <div className="flex items-center justify-end gap-4">
+                           <div className="text-right">
+                                <p className="text-muted-foreground">Total Order Value</p>
+                                <p className="text-2xl font-bold">${totalValue.toFixed(2)}</p>
+                            </div>
+                            <Button type="submit" size="lg" disabled={form.formState.isSubmitting}>
+                                {form.formState.isSubmitting ? "Placing Order..." : "Place Order"}
+                            </Button>
+                        </div>
+                    </div>
+                </form>
+            </Form>
+        </main>
+    );
+}
