@@ -71,7 +71,7 @@ export type Order = {
   total_value?: number;
   status: string;
   created_at: string;
-  order_items: OrderItem[]; // This can be populated via a join
+  order_items?: OrderItem[]; // This can be populated via a join
   outlets?: { name: string }; // To get outlet name
 };
 

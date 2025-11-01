@@ -53,7 +53,7 @@ export default function DistributorDashboardPage() {
       .eq("distributor_id", currentDistributorId);
 
     if (memberLinks) {
-        const members = memberLinks.map(link => link.users).filter(member => member && member.id !== user.id) as User[];
+        const members = memberLinks.map((link : any) => link.users).filter(member => member && member.id !== user.id) as User[];
         setTeamMembers(members);
     }
     
@@ -68,6 +68,7 @@ export default function DistributorDashboardPage() {
       .eq("distributor_id", currentDistributorId)
       .order("created_at", { ascending: false })
       .limit(5);
+
     setRecentOrders(orders as Order[] || []);
 
     setLoading(false);
@@ -180,6 +181,13 @@ export default function DistributorDashboardPage() {
                                     <TableCell className="text-right">${order.total_value?.toFixed(2) || '0.00'}</TableCell>
                                 </TableRow>
                             ))}
+                             {recentOrders.length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="text-center text-muted-foreground">
+                                        No recent orders found.
+                                    </TableCell>
+                                </TableRow>
+                            )}
                         </TableBody>
                     </Table>
                 )}
@@ -205,6 +213,9 @@ export default function DistributorDashboardPage() {
                                 </div>
                             </div>
                         ))}
+                         {teamMembers.length === 0 && (
+                            <p className="text-center text-muted-foreground">No team members found.</p>
+                         )}
                     </div>
                 )}
             </CardContent>
