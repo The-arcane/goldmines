@@ -43,6 +43,7 @@ const navItems = {
     { href: "/dashboard/distributor/payments", icon: Banknote, label: "Payments" },
     { href: "/dashboard/distributor/skus", icon: Box, label: "SKU Management" },
     { href: "/dashboard/distributor/users", icon: Users, label: "Manage Team" },
+    { href: "/dashboard/analytics", icon: LineChart, label: "Analytics" },
   ],
   delivery_partner: [
     { href: "/dashboard/delivery", icon: Truck, label: "My Deliveries" },
