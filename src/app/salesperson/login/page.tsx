@@ -12,37 +12,22 @@ export default function SalespersonLoginPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // If loading is done and we have a user
-    if (!loading && user) {
-      // If the user is the correct role, send them to their dashboard
-      if (user.role === 'sales_executive') {
-        router.replace('/salesperson/dashboard');
-      }
-      // If they have a different role, they shouldn't be here, but we won't redirect from the login page
-      // as it can cause loops. The layout will handle the redirect if they try to access protected pages.
+    // If loading is done and we have a user who is a sales executive
+    if (!loading && user && user.role === 'sales_executive') {
+      router.replace('/salesperson/dashboard');
     }
   }, [user, loading, router]);
 
-  // If loading, show spinner.
-  if (loading) {
+  // Show a loading spinner while checking auth or if redirecting
+  if (loading || (user && user.role === 'sales_executive')) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
   }
-
-  // If user is logged in and is a sales executive, show a loading spinner while redirecting.
-  if (user && user.role === 'sales_executive') {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <p>Redirecting to your dashboard...</p>
-        <div className="ml-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
   
-  // Otherwise, show the login form
+  // If not loading, and user is either null or not a sales exec, show the login form.
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">

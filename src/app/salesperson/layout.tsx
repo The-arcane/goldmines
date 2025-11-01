@@ -16,15 +16,21 @@ export default function SalespersonLayout({
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (loading) {
+      return; // Wait for the auth state to load
+    }
+
+    if (!user) {
+      // If not logged in, redirect to the salesperson login page
       router.replace("/salesperson/login");
-    } else if (!loading && user && user.role !== 'sales_executive') {
-      // If a non-sales exec user gets here, redirect them
+    } else if (user.role !== 'sales_executive') {
+      // If logged in but not a sales executive, redirect to the main login page
       router.replace("/login");
     }
   }, [user, loading, router]);
   
-  if (loading || !user) {
+  // Show a loading spinner while checking auth or if the user is not the correct role yet
+  if (loading || !user || user.role !== 'sales_executive') {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -32,6 +38,7 @@ export default function SalespersonLayout({
     );
   }
 
+  // If the user is a sales executive, render the layout
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <Sidebar />
