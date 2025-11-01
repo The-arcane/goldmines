@@ -81,7 +81,8 @@ export default function SkusPage() {
                                 <TableRow>
                                     <TableHead>Product Name</TableHead>
                                     <TableHead>SKU Code</TableHead>
-                                    <TableHead className="text-right">Stock Quantity</TableHead>
+                                    <TableHead className="text-right">Stock</TableHead>
+                                    <TableHead>Unit</TableHead>
                                     <TableHead className="text-right">Case Price</TableHead>
                                     <TableHead className="text-right">MRP</TableHead>
                                 </TableRow>
@@ -93,15 +94,16 @@ export default function SkusPage() {
                                         <TableCell>{sku.product_code || 'N/A'}</TableCell>
                                         <TableCell className="text-right">
                                             <Badge variant={sku.stock_quantity < 10 ? 'destructive' : 'secondary'}>
-                                                {sku.stock_quantity} {sku.unit_type || 'units'}
+                                                {sku.stock_quantity}
                                             </Badge>
                                         </TableCell>
+                                        <TableCell>{sku.unit_type || 'N/A'}</TableCell>
                                         <TableCell className="text-right">₹{sku.case_price?.toFixed(2) || '0.00'}</TableCell>
                                         <TableCell className="text-right">₹{sku.mrp?.toFixed(2) || '0.00'}</TableCell>
                                     </TableRow>
                                 )) : (
                                     <TableRow>
-                                        <TableCell colSpan={5} className="text-center text-muted-foreground p-8">
+                                        <TableCell colSpan={6} className="text-center text-muted-foreground p-8">
                                             No SKUs found. Add one to get started.
                                         </TableCell>
                                     </TableRow>
