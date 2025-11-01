@@ -16,8 +16,6 @@ export async function checkVisitAnomaly(visitDetails: string, criteria: string) 
   }
 }
 
-// This function is now for creating non-distributor-admin users by the admin,
-// or for a distributor admin creating their own team members.
 export async function createNewUser(formData: UserFormData, distributorId?: string) {
   const cookieStore = cookies()
 
@@ -35,17 +33,16 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
       avatar_url: `https://picsum.photos/seed/${formData.email}/100/100`,
   };
 
-  // If a delivery partner is being created, they must be linked to a distributor.
-  if (formData.role === 'delivery_partner' && distributorId) {
+  if ((formData.role === 'delivery_partner' || formData.role === 'distributor_admin') && distributorId) {
     userMetadata.distributor_id = distributorId;
   } else if (formData.role === 'delivery_partner' && !distributorId) {
     return { success: false, error: "A distributor must be selected to create a delivery partner."}
   }
-
-  // The 'distributor_admin' role should only be created via the createDistributorWithAdmin action.
-  if (formData.role === 'distributor_admin') {
-      return { success: false, error: "Distributor Admins must be created from the 'Distributors' page."}
+  
+  if (formData.role === 'distributor_admin' && !distributorId) {
+    return { success: false, error: "This form cannot create a distributor admin without an organization. Please use the Distributors page."}
   }
+
 
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email: formData.email,

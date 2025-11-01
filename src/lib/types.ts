@@ -22,7 +22,7 @@ export type Distributor = {
 }
 
 export type Outlet = {
-  id: string;
+  id: string; // UUID
   name: string;
   type: string;
   address: string;
@@ -32,18 +32,18 @@ export type Outlet = {
 };
 
 export type Geofence = {
-  id: string;
+  id: string; // UUID
   lat: number;
   lng: number;
   radius: number; // in meters
-  outlet_id: string;
+  outlet_id: string; // UUID
   created_at: string;
 };
 
 export type Visit = {
   id: number;
   user_id: number;
-  outlet_id: string;
+  outlet_id: string; // UUID
   entry_time: string;
   exit_time: string | null;
   within_radius: boolean;
@@ -52,17 +52,17 @@ export type Visit = {
 };
 
 export type Order = {
-  id: string;
-  outlet_id: string;
+  id: number;
+  outlet_id: string; // UUID
   order_date: string;
   total_amount: number;
   status: 'Pending' | 'In Transit' | 'Delivered';
 };
 
 export type Delivery = {
-  id: string;
-  order_id: string;
-  delivery_person_id: string;
+  id: number;
+  order_id: number;
+  delivery_person_id: number;
   status: 'Pending' | 'Delivered';
   delivered_at: string | null;
 };
