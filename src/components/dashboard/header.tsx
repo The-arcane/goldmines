@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Menu, Rocket } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { Sidebar } from "./sidebar";
+import { MobileSidebar } from "./mobile-sidebar";
 
 export function Header() {
   const { user } = useAuth();
@@ -21,7 +21,7 @@ export function Header() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="flex flex-col p-0">
-          <Sidebar userRole={user.role} />
+          <MobileSidebar userRole={user.role} />
         </SheetContent>
       </Sheet>
       <div className="w-full flex-1">
