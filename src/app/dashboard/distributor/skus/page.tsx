@@ -9,9 +9,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { AddSkuDialog } from "@/components/dashboard/distributor/add-sku-dialog";
+import { useTranslation } from "@/components/i18n/provider";
 
 export default function SkusPage() {
     const { user } = useAuth();
+    const { t } = useTranslation();
     const [skus, setSkus] = useState<Sku[]>([]);
     const [distributor, setDistributor] = useState<Distributor | null>(null);
     const [loading, setLoading] = useState(true);
@@ -58,9 +60,9 @@ export default function SkusPage() {
             <Card>
                 <CardHeader className="flex flex-row items-center">
                     <div className="grid gap-2">
-                        <CardTitle>SKU & Inventory Management</CardTitle>
+                        <CardTitle>{t('SKU Management')}</CardTitle>
                         <CardDescription>
-                           A list of all products in your inventory.
+                           {t('A list of all products in your inventory.')}
                         </CardDescription>
                     </div>
                     <div className="ml-auto">
@@ -82,14 +84,14 @@ export default function SkusPage() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Product Name</TableHead>
-                                            <TableHead>SKU Code</TableHead>
-                                            <TableHead className="text-right">Stock</TableHead>
-                                            <TableHead>Unit</TableHead>
-                                            <TableHead className="text-right">Units/Case</TableHead>
-                                            <TableHead className="text-right">Case Price</TableHead>
-                                            <TableHead className="text-right">Per Item Cost</TableHead>
-                                            <TableHead className="text-right">MRP</TableHead>
+                                            <TableHead>{t('Product Name')}</TableHead>
+                                            <TableHead>{t('SKU Code')}</TableHead>
+                                            <TableHead className="text-right">{t('Stock')}</TableHead>
+                                            <TableHead>{t('Unit')}</TableHead>
+                                            <TableHead className="text-right">{t('Units/Case')}</TableHead>
+                                            <TableHead className="text-right">{t('Case Price')}</TableHead>
+                                            <TableHead className="text-right">{t('Per Item Cost')}</TableHead>
+                                            <TableHead className="text-right">{t('MRP')}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -134,29 +136,29 @@ export default function SkusPage() {
                                             </CardHeader>
                                             <CardContent className="grid gap-4 text-sm">
                                                 <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Stock</span>
+                                                    <span className="text-muted-foreground">{t('Stock')}</span>
                                                     <Badge variant={sku.stock_quantity < 10 ? 'destructive' : 'secondary'}>
                                                         {sku.stock_quantity}
                                                     </Badge>
                                                 </div>
                                                  <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Unit Type</span>
+                                                    <span className="text-muted-foreground">{t('Unit')}</span>
                                                     <span>{sku.unit_type || 'N/A'}</span>
                                                 </div>
                                                  <div className="flex justify-between">
-                                                    <span className="text-muted-foreground">Units/Case</span>
+                                                    <span className="text-muted-foreground">{t('Units/Case')}</span>
                                                     <span>{sku.units_per_case || 'N/A'}</span>
                                                 </div>
                                                  <div className="flex justify-between font-medium">
-                                                    <span className="text-muted-foreground">Case Price</span>
+                                                    <span className="text-muted-foreground">{t('Case Price')}</span>
                                                     <span>₹{sku.case_price?.toFixed(2) || '0.00'}</span>
                                                 </div>
                                                 <div className="flex justify-between font-medium">
-                                                    <span className="text-muted-foreground">Per Item Cost</span>
+                                                    <span className="text-muted-foreground">{t('Per Item Cost')}</span>
                                                     <span>₹{perItemCost.toFixed(2)}</span>
                                                 </div>
                                                 <div className="flex justify-between font-medium">
-                                                    <span className="text-muted-foreground">MRP</span>
+                                                    <span className="text-muted-foreground">{t('MRP')}</span>
                                                     <span>₹{sku.mrp?.toFixed(2) || '0.00'}</span>
                                                 </div>
                                             </CardContent>
@@ -167,7 +169,7 @@ export default function SkusPage() {
                         </>
                     ) : (
                         <div className="text-center text-muted-foreground p-8 border-dashed border-2 rounded-md">
-                            No SKUs found. Add one to get started.
+                            {t('No SKUs found. Add one to get started.')}
                         </div>
                     )}
                 </CardContent>

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { AddUserDialog } from "@/components/dashboard/users/add-user-dialog";
 import { useAuth } from "@/lib/auth";
+import { useTranslation } from "@/components/i18n/provider";
 
 const distributorAllowedRoles: { value: UserRole, label: string }[] = [
     { value: 'delivery_partner', label: 'Delivery Partner' },
@@ -29,6 +30,7 @@ const mapNumericRoleToString = (role: number): UserRole => {
 
 export default function DistributorUsersPage() {
     const { user } = useAuth();
+    const { t } = useTranslation();
     const [teamMembers, setTeamMembers] = useState<User[]>([]);
     const [distributor, setDistributor] = useState<Distributor | null>(null);
     const [loading, setLoading] = useState(true);
@@ -127,9 +129,9 @@ export default function DistributorUsersPage() {
             <Card>
                 <CardHeader className="flex flex-row items-center">
                     <div className="grid gap-2">
-                        <CardTitle>Manage Your Team</CardTitle>
+                        <CardTitle>{t('Manage Team')}</CardTitle>
                         <CardDescription>
-                           A list of all team members in your organization.
+                           {t('A list of all team members in your organization.')}
                         </CardDescription>
                     </div>
                     <div className="ml-auto">
@@ -154,10 +156,10 @@ export default function DistributorUsersPage() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Name</TableHead>
-                                            <TableHead>Email</TableHead>
-                                            <TableHead>Role</TableHead>
-                                            <TableHead className="text-right">Joined</TableHead>
+                                            <TableHead>{t('Name')}</TableHead>
+                                            <TableHead>{t('Email')}</TableHead>
+                                            <TableHead>{t('Role')}</TableHead>
+                                            <TableHead className="text-right">{t('Joined')}</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -199,7 +201,7 @@ export default function DistributorUsersPage() {
                                         </CardHeader>
                                         <CardFooter className="flex justify-between text-sm">
                                              <Badge variant="secondary">{mapRoleToString(member.role)}</Badge>
-                                             <span className="text-muted-foreground">Joined: {format(new Date(member.created_at), 'MMM d, yyyy')}</span>
+                                             <span className="text-muted-foreground">{t('Joined')}: {format(new Date(member.created_at), 'MMM d, yyyy')}</span>
                                         </CardFooter>
                                     </Card>
                                 ))}
@@ -207,7 +209,7 @@ export default function DistributorUsersPage() {
                         </>
                     ) : (
                         <div className="text-center text-muted-foreground p-8 border-dashed border-2 rounded-md">
-                            No team members found. Add one to get started.
+                            {t('No team members found. Add one to get started.')}
                         </div>
                     )}
                 </CardContent>

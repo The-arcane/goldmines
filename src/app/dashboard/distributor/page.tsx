@@ -20,9 +20,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { useTranslation } from "@/components/i18n/provider";
 
 export default function DistributorDashboardPage() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [teamMembers, setTeamMembers] = useState<User[]>([]);
   const [assignedOutlets, setAssignedOutlets] = useState<Outlet[]>([]);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
@@ -100,7 +102,7 @@ export default function DistributorDashboardPage() {
         case 'Pending': return 'destructive';
         case 'Dispatched': return 'outline';
         case 'Approved': return 'secondary';
-        default: return 'secondary';
+        default: 'secondary';
     }
   }
 
@@ -110,16 +112,16 @@ export default function DistributorDashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="font-headline text-3xl font-bold">
-            {distributor?.name || 'Distributor'} Dashboard
+            {distributor?.name || t('Distributor Dashboard')}
           </h1>
           <p className="text-muted-foreground">
-            An overview of your organization's operations.
+            {t("An overview of your organization's operations.")}
           </p>
         </div>
         <div className="flex gap-2">
             <Button asChild variant="outline">
                 <Link href="/dashboard/distributor/users">
-                    <Users className="mr-2 h-4 w-4" /> Manage Team
+                    <Users className="mr-2 h-4 w-4" /> {t('Manage Team')}
                 </Link>
             </Button>
         </div>
@@ -128,42 +130,42 @@ export default function DistributorDashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Recent Orders</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('Recent Orders')}</CardTitle>
                 <Package className="mr-2 h-4 w-4" />
             </CardHeader>
             <CardContent>
                 {loading ? <div className="h-8 w-1/4 rounded bg-muted animate-pulse"></div> : <div className="text-2xl font-bold">{recentOrders.length}</div>}
-                <p className="text-xs text-muted-foreground">In the last 7 days</p>
+                <p className="text-xs text-muted-foreground">{t('In the last 7 days')}</p>
             </CardContent>
         </Card>
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Assigned Outlets</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('Assigned Outlets')}</CardTitle>
                 <Warehouse className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
                  {loading ? <div className="h-8 w-1/4 rounded bg-muted animate-pulse"></div> : <div className="text-2xl font-bold">{assignedOutlets.length}</div>}
-                <p className="text-xs text-muted-foreground">In your distribution network</p>
+                <p className="text-xs text-muted-foreground">{t('In your distribution network')}</p>
             </CardContent>
         </Card>
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Team Members</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('Team Members')}</CardTitle>
                 <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
                 {loading ? <div className="h-8 w-1/4 rounded bg-muted animate-pulse"></div> : <div className="text-2xl font-bold">{teamMembers.length}</div>}
-                <p className="text-xs text-muted-foreground">Delivery partners in your team</p>
+                <p className="text-xs text-muted-foreground">{t('Delivery partners in your team')}</p>
             </CardContent>
         </Card>
          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending Dues</CardTitle>
+                <CardTitle className="text-sm font-medium">{t('Pending Dues')}</CardTitle>
                 <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
                  {loading ? <div className="h-8 w-1/4 rounded bg-muted animate-pulse"></div> : <div className="text-2xl font-bold">₹0.00</div>}
-                <p className="text-xs text-muted-foreground">Total outstanding payments</p>
+                <p className="text-xs text-muted-foreground">{t('Total outstanding payments')}</p>
             </CardContent>
         </Card>
       </div>
@@ -173,11 +175,11 @@ export default function DistributorDashboardPage() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Recent Orders</CardTitle>
-                  <CardDescription>A list of your 5 most recent orders.</CardDescription>
+                  <CardTitle>{t('Recent Orders')}</CardTitle>
+                  <CardDescription>{t('A list of your 5 most recent orders.')}</CardDescription>
                 </div>
                  <Button asChild variant="outline" size="sm">
-                  <Link href="/dashboard/distributor/orders">View All</Link>
+                  <Link href="/dashboard/distributor/orders">{t('View All')}</Link>
                 </Button>
               </div>
             </CardHeader>
@@ -186,10 +188,10 @@ export default function DistributorDashboardPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Outlet</TableHead>
-                                <TableHead className="hidden sm:table-cell">Status</TableHead>
-                                <TableHead className="hidden md:table-cell">Date</TableHead>
-                                <TableHead className="text-right">Value</TableHead>
+                                <TableHead>{t('Outlet')}</TableHead>
+                                <TableHead className="hidden sm:table-cell">{t('Status')}</TableHead>
+                                <TableHead className="hidden md:table-cell">{t('Date')}</TableHead>
+                                <TableHead className="text-right">{t('Value')}</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -203,7 +205,7 @@ export default function DistributorDashboardPage() {
                             )) : (
                                 <TableRow>
                                     <TableCell colSpan={4} className="text-center text-muted-foreground p-8">
-                                        No recent orders found.
+                                        {t('No recent orders found.')}
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -214,8 +216,8 @@ export default function DistributorDashboardPage() {
         </Card>
          <Card className="col-span-full lg:col-span-3">
             <CardHeader>
-                <CardTitle>Team Members</CardTitle>
-                <CardDescription>Your assigned delivery partners.</CardDescription>
+                <CardTitle>{t('Team Members')}</CardTitle>
+                <CardDescription>{t('Your assigned delivery partners.')}</CardDescription>
             </CardHeader>
             <CardContent className="pl-2">
                 {loading ? <p className="text-center text-muted-foreground p-4">Loading team...</p> : (
@@ -232,7 +234,7 @@ export default function DistributorDashboardPage() {
                                 </div>
                             </div>
                         )) : (
-                            <p className="text-center text-muted-foreground p-8">No team members found.</p>
+                            <p className="text-center text-muted-foreground p-8">{t('No team members found.')}</p>
                          )}
                     </div>
                 )}
