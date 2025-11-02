@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { OutletsMap } from "@/components/dashboard/admin/outlets-map";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { Outlet, Visit, User, Order } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -19,13 +19,17 @@ import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { useTranslation } from "@/components/i18n/provider";
+import { translateText } from "@/ai/flows/translate-text";
 
 export default function AdminDashboardPage() {
+  const { t, locale } = useTranslation();
   const [recentVisits, setRecentVisits] = useState<Visit[]>([]);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [translatedStatuses, setTranslatedStatuses] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchData = async () => {
@@ -47,6 +51,24 @@ export default function AdminDashboardPage() {
 
     fetchData();
   }, []);
+  
+  useEffect(() => {
+    if (locale === 'hi' && recentOrders.length > 0) {
+      const uniqueStatuses = [...new Set(recentOrders.map(order => order.status))];
+      
+      translateText({ texts: uniqueStatuses, targetLanguage: 'Hindi' })
+        .then(response => {
+          const statusMap: Record<string, string> = {};
+          uniqueStatuses.forEach((status, index) => {
+            statusMap[status] = response.translations[index];
+          });
+          setTranslatedStatuses(statusMap);
+        })
+        .catch(error => {
+          console.error("Translation error:", error);
+        });
+    }
+  }, [locale, recentOrders]);
 
   const getStatusVariant = (status: string) => {
     switch (status) {
@@ -56,6 +78,13 @@ export default function AdminDashboardPage() {
         case 'Approved': return 'secondary';
         default: return 'secondary';
     }
+  }
+
+  const getTranslatedStatus = (status: string) => {
+      if (locale === 'hi' && translatedStatuses[status]) {
+          return translatedStatuses[status];
+      }
+      return status;
   }
 
 
@@ -104,17 +133,21 @@ export default function AdminDashboardPage() {
                <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Outlet</TableHead>
-                        <TableHead className="hidden sm:table-cell">Status</TableHead>
-                        <TableHead className="hidden md:table-cell">Date</TableHead>
-                        <TableHead className="text-right">Value</TableHead>
+                        <TableHead>{t('Outlet')}</TableHead>
+                        <TableHead className="hidden sm:table-cell">{t('Status')}</TableHead>
+                        <TableHead className="hidden md:table-cell">{t('Date')}</TableHead>
+                        <TableHead className="text-right">{t('Value')}</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {recentOrders.map(order => (
                         <TableRow key={order.id}>
                             <TableCell>{(order as any).outlets?.name || 'N/A'}</TableCell>
-                            <TableCell className="hidden sm:table-cell"><Badge variant={getStatusVariant(order.status)}>{order.status}</Badge></TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                                <Badge variant={getStatusVariant(order.status)}>
+                                    {getTranslatedStatus(order.status)}
+                                </Badge>
+                            </TableCell>
                             <TableCell className="hidden md:table-cell">{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
                             <TableCell className="text-right">₹{order.total_amount?.toFixed(2) || '0.00'}</TableCell>
                         </TableRow>
