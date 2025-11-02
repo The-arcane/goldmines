@@ -8,7 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/auth";
-import type { Outlet, Sku, Distributor, Visit } from "@/lib/types";
+import type { Outlet, Sku, Distributor } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -37,7 +37,7 @@ export default function CreateOrderPage() {
     const router = useRouter();
     const { toast } = useToast();
     const [distributor, setDistributor] = useState<Distributor | null>(null);
-    const [activeOutlet, setActiveOutlet] = useState<Outlet | null>(null);
+    const [activeOutlets, setActiveOutlets] = useState<Outlet[]>([]);
     const [skus, setSkus] = useState<Sku[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -55,39 +55,39 @@ export default function CreateOrderPage() {
         if (!user) return;
         setLoading(true);
 
-        // 1. Check for an active visit (no exit_time)
-        const { data: activeVisitData, error: visitError } = await supabase
+        // 1. Check for all active visits (no exit_time)
+        const { data: activeVisitsData, error: visitError } = await supabase
             .from('visits')
             .select('outlet_id')
             .eq('user_id', user.id)
-            .is('exit_time', null)
-            .order('entry_time', { ascending: false })
-            .limit(1)
-            .single();
+            .is('exit_time', null);
 
-        if (visitError || !activeVisitData) {
+        if (visitError || !activeVisitsData || activeVisitsData.length === 0) {
             console.log("No active visit found for user.");
+            setActiveOutlets([]);
             setLoading(false);
             return;
         }
 
-        const activeOutletId = activeVisitData.outlet_id;
+        const activeOutletIds = activeVisitsData.map(v => v.outlet_id);
 
-        // 2. Fetch the specific active outlet
-        const { data: outletData, error: outletError } = await supabase
+        // 2. Fetch the specific active outlets
+        const { data: outletsData, error: outletError } = await supabase
             .from('outlets')
             .select('*')
-            .eq('id', activeOutletId)
-            .single();
+            .in('id', activeOutletIds);
         
-        if (outletError || !outletData) {
-             toast({ variant: "destructive", title: "Error", description: "Could not load the outlet you are currently visiting." });
+        if (outletError || !outletsData) {
+             toast({ variant: "destructive", title: "Error", description: "Could not load the outlets you are currently visiting." });
              setLoading(false);
              return;
         }
         
-        setActiveOutlet(outletData);
-        form.setValue('outlet_id', outletData.id); // Pre-fill and lock the outlet ID
+        setActiveOutlets(outletsData);
+        // Pre-fill form if there is only one active outlet
+        if (outletsData.length === 1) {
+            form.setValue('outlet_id', outletsData[0].id);
+        }
 
         // 3. Find the distributor for the user
         const { data: userData, error: userError } = await supabase
@@ -163,7 +163,7 @@ export default function CreateOrderPage() {
          return <div className="flex h-full w-full items-center justify-center p-8"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div></div>;
     }
 
-    if (!activeOutlet) {
+    if (activeOutlets.length === 0) {
         return (
              <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8 items-center justify-center">
                  <Alert variant="destructive" className="max-w-lg">
@@ -198,10 +198,10 @@ export default function CreateOrderPage() {
                                     render={({ field }) => (
                                         <FormItem className="max-w-sm">
                                             <FormLabel>Outlet</FormLabel>
-                                            <Select onValueChange={field.onChange} value={field.value} disabled>
-                                                <FormControl><SelectTrigger><SelectValue placeholder="Select a retail outlet" /></SelectTrigger></FormControl>
+                                            <Select onValueChange={field.onChange} value={field.value} disabled={activeOutlets.length === 1}>
+                                                <FormControl><SelectTrigger><SelectValue placeholder="Select an active outlet" /></SelectTrigger></FormControl>
                                                 <SelectContent>
-                                                    {activeOutlet && <SelectItem key={activeOutlet.id} value={String(activeOutlet.id)}>{activeOutlet.name}</SelectItem>}
+                                                    {activeOutlets.map(outlet => <SelectItem key={outlet.id} value={String(outlet.id)}>{outlet.name}</SelectItem>)}
                                                 </SelectContent>
                                             </Select>
                                             <FormMessage />
@@ -286,5 +286,3 @@ export default function CreateOrderPage() {
         </main>
     );
 }
-
-    
