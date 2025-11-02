@@ -4,7 +4,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { User, UserRole, Distributor } from "@/lib/types";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -147,41 +147,68 @@ export default function DistributorUsersPage() {
                 <CardContent>
                     {loading ? (
                         <div className="text-center p-8">Loading team members...</div>
+                    ) : teamMembers.length > 0 ? (
+                        <>
+                            {/* Desktop Table */}
+                            <div className="hidden md:block">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Name</TableHead>
+                                            <TableHead>Email</TableHead>
+                                            <TableHead>Role</TableHead>
+                                            <TableHead className="text-right">Joined</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {teamMembers.map((member) => (
+                                            <TableRow key={member.id}>
+                                                <TableCell className="font-medium flex items-center gap-3">
+                                                    <Avatar className="h-9 w-9">
+                                                        <AvatarImage src={member.avatar_url} alt={member.name} />
+                                                        <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
+                                                    </Avatar>
+                                                    {member.name}
+                                                </TableCell>
+                                                <TableCell>{member.email}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="secondary">{mapRoleToString(member.role)}</Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right">{format(new Date(member.created_at), 'MMM d, yyyy')}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+
+                            {/* Mobile Card List */}
+                            <div className="grid gap-4 md:hidden">
+                                {teamMembers.map((member) => (
+                                     <Card key={member.id}>
+                                        <CardHeader>
+                                            <div className="flex items-center gap-4">
+                                                <Avatar className="h-12 w-12">
+                                                    <AvatarImage src={member.avatar_url} alt={member.name} />
+                                                    <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
+                                                </Avatar>
+                                                <div>
+                                                    <CardTitle className="text-lg">{member.name}</CardTitle>
+                                                    <CardDescription className="break-all">{member.email}</CardDescription>
+                                                </div>
+                                            </div>
+                                        </CardHeader>
+                                        <CardFooter className="flex justify-between text-sm">
+                                             <Badge variant="secondary">{mapRoleToString(member.role)}</Badge>
+                                             <span className="text-muted-foreground">Joined: {format(new Date(member.created_at), 'MMM d, yyyy')}</span>
+                                        </CardFooter>
+                                    </Card>
+                                ))}
+                            </div>
+                        </>
                     ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Email</TableHead>
-                                    <TableHead>Role</TableHead>
-                                    <TableHead className="text-right">Joined</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {teamMembers.length > 0 ? teamMembers.map((member) => (
-                                    <TableRow key={member.id}>
-                                        <TableCell className="font-medium flex items-center gap-3">
-                                            <Avatar className="h-9 w-9">
-                                                <AvatarImage src={member.avatar_url} alt={member.name} />
-                                                <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
-                                            </Avatar>
-                                            {member.name}
-                                        </TableCell>
-                                        <TableCell>{member.email}</TableCell>
-                                        <TableCell>
-                                            <Badge variant="secondary">{mapRoleToString(member.role)}</Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right">{format(new Date(member.created_at), 'MMM d, yyyy')}</TableCell>
-                                    </TableRow>
-                                )) : (
-                                     <TableRow>
-                                        <TableCell colSpan={4} className="text-center text-muted-foreground p-8">
-                                            No team members found. Add one to get started.
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
+                        <div className="text-center text-muted-foreground p-8 border-dashed border-2 rounded-md">
+                            No team members found. Add one to get started.
+                        </div>
                     )}
                 </CardContent>
             </Card>
