@@ -125,7 +125,7 @@ export default function SalespersonDashboardPage() {
                            <Clock className="mr-2 h-4 w-4"/> End Day
                         </Button>
                     </AttendanceDialog>
-                    <AddSalespersonOutletDialog onOutletAdded={fetchDashboardData} />
+                    <AddSalespersonOutletDialog onOutletAdded={fetchDashboardData} disabled={!isCheckedIn} />
                 </div>
             </div>
 
@@ -197,7 +197,7 @@ export default function SalespersonDashboardPage() {
                                             <p className="font-medium">{outlet.name}</p>
                                             <p className="text-sm text-muted-foreground">{outlet.address}</p>
                                         </div>
-                                        <CreateOrderDialog outlet={outlet} onOrderPlaced={fetchDashboardData} />
+                                        <CreateOrderDialog outlet={outlet} onOrderPlaced={fetchDashboardData} disabled={!isCheckedIn} />
                                     </div>
                                 ))}
                             </div>
@@ -205,7 +205,7 @@ export default function SalespersonDashboardPage() {
                             <div className="flex flex-col items-center justify-center text-center p-8 border-dashed border-2 rounded-md h-full">
                                 <ShoppingCart className="h-10 w-10 text-muted-foreground mb-2" />
                                 <p className="font-semibold">No Active Visits</p>
-                                <p className="text-sm text-muted-foreground">You are not in the geofence of any outlet.</p>
+                                <p className="text-sm text-muted-foreground">{isCheckedIn ? "You are not in the geofence of any outlet." : "Start your day to begin creating orders."}</p>
                             </div>
                         )}
                     </CardContent>
@@ -215,3 +215,5 @@ export default function SalespersonDashboardPage() {
         </div>
     );
 }
+
+    

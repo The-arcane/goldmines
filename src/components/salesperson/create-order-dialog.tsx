@@ -52,9 +52,10 @@ type OrderFormValues = z.infer<typeof formSchema>;
 type CreateOrderDialogProps = {
     outlet: Outlet;
     onOrderPlaced: () => void;
+    disabled?: boolean;
 }
 
-export function CreateOrderDialog({ outlet, onOrderPlaced }: CreateOrderDialogProps) {
+export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrderDialogProps) {
     const { user } = useAuth();
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
@@ -202,7 +203,7 @@ export function CreateOrderDialog({ outlet, onOrderPlaced }: CreateOrderDialogPr
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button>Order</Button>
+                <Button disabled={disabled}>Order</Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-6xl">
                  <Form {...form}>
@@ -358,3 +359,5 @@ export function CreateOrderDialog({ outlet, onOrderPlaced }: CreateOrderDialogPr
         </Dialog>
     );
 }
+
+    

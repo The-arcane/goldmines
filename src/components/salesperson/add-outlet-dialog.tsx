@@ -25,9 +25,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 type AddSalespersonOutletDialogProps = {
   onOutletAdded: () => void;
+  disabled?: boolean;
 };
 
-export function AddSalespersonOutletDialog({ onOutletAdded }: AddSalespersonOutletDialogProps) {
+export function AddSalespersonOutletDialog({ onOutletAdded, disabled }: AddSalespersonOutletDialogProps) {
     const { user } = useAuth();
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -143,7 +144,7 @@ export function AddSalespersonOutletDialog({ onOutletAdded }: AddSalespersonOutl
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" disabled={disabled}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Add Outlet
                 </Button>
@@ -224,3 +225,5 @@ export function AddSalespersonOutletDialog({ onOutletAdded }: AddSalespersonOutl
         </Dialog>
     );
 }
+
+    
