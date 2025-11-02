@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/auth";
 import type { Attendance, Outlet } from "@/lib/types";
@@ -12,21 +12,24 @@ import { AttendanceDialog } from "@/components/salesperson/attendance-dialog";
 import { SalespersonMap } from "@/components/salesperson/live-map";
 import { AddSalespersonOutletDialog } from "@/components/salesperson/add-outlet-dialog";
 import Link from "next/link";
+import { useToast } from "@/hooks/use-toast";
 
 
 export default function SalespersonDashboardPage() {
     const { user } = useAuth();
+    const { toast } = useToast();
     const [attendance, setAttendance] = useState<Attendance | null>(null);
-    const [outlets, setOutlets] = useState<Outlet[]>([]);
+    const [activeOutlets, setActiveOutlets] = useState<Outlet[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const fetchDashboardData = async () => {
+    const fetchDashboardData = useCallback(async () => {
         if (!user) return;
         setLoading(true);
 
         const today = new Date().toISOString().slice(0, 10);
         
-        const attendancePromise = supabase
+        // Fetch current attendance status
+        const { data: attendanceData } = await supabase
             .from('attendance')
             .select('*')
             .eq('user_id', user.id)
@@ -35,26 +38,49 @@ export default function SalespersonDashboardPage() {
             .order('checkin_time', { ascending: false })
             .limit(1)
             .maybeSingle();
-            
-        // Optimized: Fetch a smaller, more relevant subset of outlets instead of all of them.
-        // This can be further improved by fetching outlets assigned to the user or within a geofence.
-        const outletsPromise = supabase
-            .from('outlets')
-            .select('*')
-            .limit(50); 
-
-        const [{ data: attendanceData }, { data: outletsData }] = await Promise.all([attendancePromise, outletsPromise]);
 
         if (attendanceData) setAttendance(attendanceData as Attendance);
-        if (outletsData) setOutlets(outletsData);
+
+        // Fetch active visits to determine which outlets to show on the map
+        const { data: activeVisitsData, error: visitError } = await supabase
+            .from('visits')
+            .select('outlet_id')
+            .eq('user_id', user.id)
+            .is('exit_time', null);
+        
+        if (visitError) {
+            toast({ variant: "destructive", title: "Error", description: "Could not load your active visits." });
+            setActiveOutlets([]);
+            setLoading(false);
+            return;
+        }
+
+        if (activeVisitsData && activeVisitsData.length > 0) {
+            const activeOutletIds = activeVisitsData.map(v => v.outlet_id);
+            const { data: outletsData, error: outletError } = await supabase
+                .from('outlets')
+                .select('*')
+                .in('id', activeOutletIds);
+            
+            if (outletError) {
+                toast({ variant: "destructive", title: "Error", description: "Could not load outlet details." });
+                setActiveOutlets([]);
+            } else {
+                setActiveOutlets(outletsData || []);
+            }
+        } else {
+            // If no active visits, clear the outlets from the map
+            setActiveOutlets([]);
+        }
+
         setLoading(false);
-    };
+    }, [user, toast]);
 
     useEffect(() => {
         if (user) {
             fetchDashboardData();
         }
-    }, [user]);
+    }, [user, fetchDashboardData]);
 
     const isCheckedIn = attendance?.status === 'Online';
     const isCheckedOut = attendance?.status === 'Offline';
@@ -120,10 +146,10 @@ export default function SalespersonDashboardPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Live Route</CardTitle>
-                    <CardDescription>Your assigned outlets and current location.</CardDescription>
+                    <CardDescription>Your current location and active outlets.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <SalespersonMap outlets={outlets} loading={loading} />
+                    <SalespersonMap outlets={activeOutlets} loading={loading} />
                 </CardContent>
             </Card>
 

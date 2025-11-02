@@ -79,6 +79,7 @@ export default function CreateOrderPage() {
         
         if (outletError || !outletsData) {
              toast({ variant: "destructive", title: "Error", description: "Could not load the outlets you are currently visiting." });
+             setActiveOutlets([]);
              setLoading(false);
              return;
         }
