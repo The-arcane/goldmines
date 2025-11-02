@@ -114,7 +114,15 @@ export default function SalespersonDashboardPage() {
                 </Card>
             </div>
             
-            <SalespersonMap outlets={outlets} loading={loading} />
+            <Card>
+                <CardHeader>
+                    <CardTitle>Live Route</CardTitle>
+                    <CardDescription>Your assigned outlets and current location.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <SalespersonMap outlets={outlets} loading={loading} />
+                </CardContent>
+            </Card>
 
         </div>
     );

@@ -144,6 +144,3 @@ export function SalespersonMap({ outlets, loading }: SalespersonMapProps) {
     </div>
   );
 }
-
-
-    
