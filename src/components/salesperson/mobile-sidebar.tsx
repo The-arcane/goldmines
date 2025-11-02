@@ -13,7 +13,6 @@ import {
   ShoppingCart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useEffect } from "react";
 
 const navItems = [
     { href: "/salesperson/dashboard", icon: Home, label: "Dashboard" },
@@ -27,14 +26,13 @@ const navItems = [
 export function MobileSidebar() {
   const pathname = usePathname();
 
-  useEffect(() => {
-    // This is a simple way to close the sheet when a link is clicked.
-    // It finds the close button of the sheet and simulates a click.
+  const handleLinkClick = () => {
+    // Find the close button of the sheet and simulate a click.
     const closeButton = document.querySelector('[data-radix-dialog-close]');
     if (closeButton instanceof HTMLElement) {
       closeButton.click();
     }
-  }, [pathname]);
+  };
   
   const isCurrentPage = (href: string) => {
     if (pathname === href) return true;
@@ -56,6 +54,7 @@ export function MobileSidebar() {
             <Link
               key={href}
               href={href}
+              onClick={handleLinkClick}
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
                 isCurrentPage(href) ? "bg-muted text-primary" : ""
