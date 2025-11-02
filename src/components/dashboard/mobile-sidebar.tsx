@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -22,6 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "@/components/i18n/provider";
 
 const navItems = {
   admin: [
@@ -56,6 +56,7 @@ const navItems = {
 
 export function MobileSidebar({ userRole }: { userRole: UserRole | undefined }) {
   const pathname = usePathname();
+  const { t } = useTranslation();
 
   const handleLinkClick = () => {
     // Find the close button of the sheet and simulate a click.
@@ -96,7 +97,7 @@ export function MobileSidebar({ userRole }: { userRole: UserRole | undefined }) 
               )}
             >
               <Icon className="h-4 w-4" />
-              {label}
+              {t(label as keyof IntlMessages)}
               {badge && (
                 <Badge className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
                   {badge}

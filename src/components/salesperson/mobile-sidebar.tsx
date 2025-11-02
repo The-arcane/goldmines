@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -13,6 +12,7 @@ import {
   ShoppingCart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/components/i18n/provider";
 
 const navItems = [
     { href: "/salesperson/dashboard", icon: Home, label: "Dashboard" },
@@ -25,6 +25,7 @@ const navItems = [
 
 export function MobileSidebar() {
   const pathname = usePathname();
+  const { t } = useTranslation();
 
   const handleLinkClick = () => {
     // Find the close button of the sheet and simulate a click.
@@ -61,7 +62,7 @@ export function MobileSidebar() {
               )}
             >
               <Icon className="h-4 w-4" />
-              {label}
+              {t(label as keyof IntlMessages)}
             </Link>
           ))}
         </nav>

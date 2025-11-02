@@ -5,6 +5,7 @@ import { Menu, Rocket } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { MobileSidebar } from "./mobile-sidebar";
+import { LanguageSwitcher } from "../i18n/language-switcher";
 
 export function Header() {
   const { user } = useAuth();
@@ -27,6 +28,7 @@ export function Header() {
       <div className="w-full flex-1">
         {/* Header content like search can go here */}
       </div>
+      <LanguageSwitcher />
       <UserNav />
     </header>
   );
