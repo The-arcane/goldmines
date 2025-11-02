@@ -4,7 +4,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/auth";
-import type { Attendance, Outlet } from "@/lib/types";
+import type { Attendance, Outlet, Order } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Clock, MapPin, Package, IndianRupee, ShoppingCart } from "lucide-react";
@@ -23,6 +23,7 @@ export default function SalespersonDashboardPage() {
     const { toast } = useToast();
     const [attendance, setAttendance] = useState<Attendance | null>(null);
     const [allOutlets, setAllOutlets] = useState<Outlet[]>([]);
+    const [todaysOrders, setTodaysOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const { coords } = useGeolocation({ enableHighAccuracy: true });
 
@@ -31,6 +32,7 @@ export default function SalespersonDashboardPage() {
         setLoading(true);
 
         const today = new Date().toISOString().slice(0, 10);
+        const userAuthId = user.auth_id;
         
         const attendancePromise = supabase
             .from('attendance')
@@ -42,16 +44,23 @@ export default function SalespersonDashboardPage() {
             .limit(1)
             .maybeSingle();
 
-        // In a real app, this should be scoped to outlets assigned to the user.
-        // For now, we fetch all to allow for geofence detection on any of them.
         const outletsPromise = supabase.from('outlets').select('*');
+
+        const ordersPromise = supabase
+            .from('orders')
+            .select('*')
+            .eq('created_by_auth_id', userAuthId)
+            .gte('order_date', `${today}T00:00:00.000Z`)
+            .lte('order_date', `${today}T23:59:59.999Z`);
 
         const [
             { data: attendanceData },
-            { data: outletsData, error: outletsError }
-        ] = await Promise.all([attendancePromise, outletsPromise]);
+            { data: outletsData, error: outletsError },
+            { data: ordersData, error: ordersError }
+        ] = await Promise.all([attendancePromise, outletsPromise, ordersPromise]);
 
         if (attendanceData) setAttendance(attendanceData as Attendance);
+        if (ordersData) setTodaysOrders(ordersData as Order[]);
 
         if (outletsError) {
             toast({ variant: "destructive", title: "Error", description: "Could not load outlet data." });
@@ -59,6 +68,11 @@ export default function SalespersonDashboardPage() {
         } else {
             setAllOutlets(outletsData || []);
         }
+
+        if (ordersError) {
+            toast({ variant: "destructive", title: "Error", description: "Could not load today's orders." });
+        }
+
 
         setLoading(false);
     }, [user, toast]);
@@ -75,10 +89,17 @@ export default function SalespersonDashboardPage() {
         }
 
         return allOutlets.filter(outlet => {
+            if (!outlet.lat || !outlet.lng) return false;
             const distance = haversineDistance(coords, { lat: outlet.lat, lng: outlet.lng });
             return distance <= 150; // User is within 150m radius
         });
     }, [coords, allOutlets]);
+
+    const dashboardStats = useMemo(() => {
+        const ordersPlaced = todaysOrders.length;
+        const salesValue = todaysOrders.reduce((sum, order) => sum + (order.total_amount || 0), 0);
+        return { ordersPlaced, salesValue };
+    }, [todaysOrders]);
 
 
     const isCheckedIn = attendance?.status === 'Online';
@@ -112,28 +133,36 @@ export default function SalespersonDashboardPage() {
                         <CardTitle className="text-sm font-medium">Orders Placed</CardTitle>
                         <Package className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
-                    <CardContent><div className="text-2xl font-bold">0</div></CardContent>
+                    <CardContent>
+                        {loading ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{dashboardStats.ordersPlaced}</div>}
+                    </CardContent>
                 </Card>
                  <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Sales Value</CardTitle>
                         <IndianRupee className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
-                    <CardContent><div className="text-2xl font-bold">₹0.00</div></CardContent>
+                    <CardContent>
+                        {loading ? <Skeleton className="h-8 w-1/2" /> : <div className="text-2xl font-bold">₹{dashboardStats.salesValue.toFixed(2)}</div>}
+                    </CardContent>
                 </Card>
                  <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Outlets Visited</CardTitle>
                         <MapPin className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
-                    <CardContent><div className="text-2xl font-bold">{activeOutlets.length}</div></CardContent>
+                    <CardContent>
+                        {loading ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">{activeOutlets.length}</div>}
+                    </CardContent>
                 </Card>
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Valid Check-ins</CardTitle>
                         <MapPin className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
-                    <CardContent><div className="text-2xl font-bold">0</div></CardContent>
+                    <CardContent>
+                        {loading ? <Skeleton className="h-8 w-1/4" /> : <div className="text-2xl font-bold">0</div>}
+                    </CardContent>
                 </Card>
             </div>
             
@@ -170,7 +199,7 @@ export default function SalespersonDashboardPage() {
                                             <p className="font-medium">{outlet.name}</p>
                                             <p className="text-sm text-muted-foreground">{outlet.address}</p>
                                         </div>
-                                        <CreateOrderDialog outlet={outlet} />
+                                        <CreateOrderDialog outlet={outlet} onOrderPlaced={fetchDashboardData} />
                                     </div>
                                 ))}
                             </div>

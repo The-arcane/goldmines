@@ -77,6 +77,7 @@ export type Order = {
   payment_status: string;
   delivery_partner_id: number | null;
   created_at: string;
+  created_by_auth_id?: string; // Track who created the order
   order_items?: OrderItem[];
   outlets?: { name: string; address: string; }; // For joins
 };

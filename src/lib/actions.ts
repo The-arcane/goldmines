@@ -183,6 +183,11 @@ export async function createNewSku(formData: SkuFormData, distributorId: number)
 
 export async function createNewOrder(formData: OrderFormData, distributorId: number) {
   const supabase = createServerActionClient({ isAdmin: true });
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: 'User not authenticated' };
+  }
 
   // 1. Check outlet credit limit
   const { data: outlet, error: outletError } = await supabase
@@ -209,6 +214,7 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
       status: "Approved", // Set status to Approved directly
       total_amount: formData.total_amount,
       order_date: new Date().toISOString(),
+      created_by_auth_id: user.id, // Track who created the order
     })
     .select()
     .single();
@@ -256,6 +262,7 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
   revalidatePath("/dashboard/distributor/orders");
   revalidatePath("/dashboard/distributor");
   revalidatePath("/dashboard/outlets");
+  revalidatePath("/salesperson/dashboard");
   return { success: true, orderId: orderData.id };
 }
 

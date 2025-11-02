@@ -2,7 +2,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -19,7 +18,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -38,7 +37,12 @@ const formSchema = z.object({
 
 type OrderFormValues = z.infer<typeof formSchema>;
 
-export function CreateOrderDialog({ outlet }: { outlet: Outlet }) {
+type CreateOrderDialogProps = {
+    outlet: Outlet;
+    onOrderPlaced: () => void;
+}
+
+export function CreateOrderDialog({ outlet, onOrderPlaced }: CreateOrderDialogProps) {
     const { user } = useAuth();
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
@@ -143,17 +147,15 @@ export function CreateOrderDialog({ outlet }: { outlet: Outlet }) {
             return;
         }
         
-        // Map form data to the format expected by createNewOrder
         const orderData = {
             outlet_id: outlet.id,
             total_amount: totalAmount,
             items: data.items.map(item => {
                 const skuDetails = getSkuDetails(item.sku_id);
-                 // We still need to provide a "unit_price" for the backend action, even if it's derived.
                  const unitPrice = (skuDetails?.units_per_case || 1) > 0 ? (item.case_price || 0) / (skuDetails?.units_per_case || 1) : 0;
                 return {
                     sku_id: item.sku_id,
-                    quantity: item.quantity * (skuDetails?.units_per_case || 1), // Convert cases to units for backend
+                    quantity: item.quantity * (skuDetails?.units_per_case || 1), 
                     unit_price: unitPrice,
                     total_price: item.total_price,
                 }
@@ -163,6 +165,7 @@ export function CreateOrderDialog({ outlet }: { outlet: Outlet }) {
         const result = await createNewOrder(orderData, distributor.id);
         if (result.success) {
             toast({ title: "Order Placed!", description: `Order #${result.orderId} for ${outlet.name} has been placed.` });
+            onOrderPlaced(); // Re-fetch dashboard data
             setOpen(false);
         } else {
             toast({ variant: "destructive", title: "Failed to create order", description: result.error });
@@ -278,5 +281,3 @@ export function CreateOrderDialog({ outlet }: { outlet: Outlet }) {
         </Dialog>
     );
 }
-
-    
