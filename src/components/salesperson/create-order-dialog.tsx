@@ -149,9 +149,8 @@ export function CreateOrderDialog({ outlet }: { outlet: Outlet }) {
             total_value: totalValue,
             items: data.items.map(item => {
                 const skuDetails = getSkuDetails(item.sku_id);
-                // For createNewOrder, unit_price is still required by the action, but it's based on case price.
-                // The total_price is the important value.
-                 const unitPrice = (skuDetails?.units_per_case || 1) > 0 ? (skuDetails?.case_price || 0) / (skuDetails?.units_per_case || 1) : 0;
+                 // We still need to provide a "unit_price" for the backend action, even if it's derived.
+                 const unitPrice = (skuDetails?.units_per_case || 1) > 0 ? (item.case_price || 0) / (skuDetails?.units_per_case || 1) : 0;
                 return {
                     sku_id: item.sku_id,
                     quantity: item.quantity * (skuDetails?.units_per_case || 1), // Convert cases to units for backend
@@ -201,8 +200,9 @@ export function CreateOrderDialog({ outlet }: { outlet: Outlet }) {
                                         <TableRow>
                                             <TableHead className="w-[30%]">SKU</TableHead>
                                             <TableHead className="w-[120px]">Qty (Cases)</TableHead>
-                                            <TableHead className="text-right">MRP</TableHead>
                                             <TableHead className="text-right">Units/Case</TableHead>
+                                            <TableHead className="text-right">MRP</TableHead>
+                                            <TableHead className="text-right">Per Item Cost</TableHead>
                                             <TableHead className="text-right font-medium">Case Price</TableHead>
                                             <TableHead className="text-right font-medium">Total Price</TableHead>
                                             <TableHead className="w-[50px]"><span className="sr-only">Actions</span></TableHead>
@@ -211,6 +211,9 @@ export function CreateOrderDialog({ outlet }: { outlet: Outlet }) {
                                     <TableBody>
                                         {fields.map((field, index) => {
                                             const skuDetails = getSkuDetails(watchedItems[index]?.sku_id);
+                                            const perItemCost = skuDetails && skuDetails.case_price && skuDetails.units_per_case 
+                                                ? skuDetails.case_price / skuDetails.units_per_case 
+                                                : 0;
                                             return (
                                                 <TableRow key={field.id}>
                                                     <TableCell>
@@ -236,8 +239,9 @@ export function CreateOrderDialog({ outlet }: { outlet: Outlet }) {
                                                             )}
                                                         />
                                                     </TableCell>
-                                                    <TableCell className="text-right font-mono">₹{skuDetails?.mrp?.toFixed(2) || '0.00'}</TableCell>
                                                     <TableCell className="text-right">{skuDetails?.units_per_case || 'N/A'}</TableCell>
+                                                    <TableCell className="text-right font-mono">₹{skuDetails?.mrp?.toFixed(2) || '0.00'}</TableCell>
+                                                    <TableCell className="text-right font-mono">₹{perItemCost.toFixed(2)}</TableCell>
                                                     <TableCell className="text-right font-mono font-medium">₹{skuDetails?.case_price?.toFixed(2) || '0.00'}</TableCell>
                                                     <TableCell className="text-right font-mono font-medium">₹{watchedItems[index]?.total_price.toFixed(2) || '0.00'}</TableCell>
                                                     <TableCell>
