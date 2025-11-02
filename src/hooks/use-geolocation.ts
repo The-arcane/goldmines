@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -52,7 +53,8 @@ export const useGeolocation = (options: PositionOptions = {}): GeolocationState 
     return () => {
       navigator.geolocation.clearWatch(watchId);
     };
-  }, [options]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [options.enableHighAccuracy, options.timeout, options.maximumAge]);
 
   return state;
 };
