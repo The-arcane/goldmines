@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Map, AdvancedMarker, Pin, useApiIsLoaded, useMap } from "@vis.gl/react-google-maps";
@@ -13,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { differenceInMinutes } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { LocateFixed, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Plus, Minus } from "lucide-react";
+import { LocateFixed, Plus, Minus } from "lucide-react";
 
 type SalespersonMapProps = {
     outlets: Outlet[];
@@ -22,19 +21,13 @@ type SalespersonMapProps = {
 
 function MapControls() {
     const map = useMap();
+    const { coords, loading: geoLoading } = useGeolocation({ enableHighAccuracy: true });
 
     const onZoom = (level: number) => {
         if (!map) return;
         map.setZoom(map.getZoom()! + level);
     };
-
-    const onPan = (x: number, y: number) => {
-        if (!map) return;
-        map.panBy(x, y);
-    };
     
-    const { coords, loading: geoLoading } = useGeolocation();
-
     const onRecenter = useCallback(() => {
         if (!map || !coords) return;
         map.panTo({ lat: coords.latitude, lng: coords.longitude });
@@ -43,16 +36,9 @@ function MapControls() {
 
     return (
         <div className="absolute top-2 right-2 flex flex-col gap-2">
-            <Button size="icon" onClick={() => onZoom(1)} aria-label="Zoom In"><Plus className="h-4 w-4" /></Button>
-            <Button size="icon" onClick={() => onZoom(-1)} aria-label="Zoom Out"><Minus className="h-4 w-4" /></Button>
-            <Button size="icon" onClick={onRecenter} disabled={geoLoading} aria-label="Recenter"><LocateFixed className="h-4 w-4" /></Button>
-            <div className="grid grid-cols-3 gap-1">
-                 <div className="col-start-2"><Button size="icon" onClick={() => onPan(0, -50)} aria-label="Pan Up"><ArrowUp className="h-4 w-4" /></Button></div>
-                 <div><Button size="icon" onClick={() => onPan(-50, 0)} aria-label="Pan Left"><ArrowLeft className="h-4 w-4" /></Button></div>
-                 <div></div>
-                 <div><Button size="icon" onClick={() => onPan(50, 0)} aria-label="Pan Right"><ArrowRight className="h-4 w-4" /></Button></div>
-                 <div className="col-start-2"><Button size="icon" onClick={() => onPan(0, 50)} aria-label="Pan Down"><ArrowDown className="h-4 w-4" /></Button></div>
-            </div>
+            <Button size="icon" variant="secondary" onClick={() => onZoom(1)} aria-label="Zoom In"><Plus className="h-4 w-4" /></Button>
+            <Button size="icon" variant="secondary" onClick={() => onZoom(-1)} aria-label="Zoom Out"><Minus className="h-4 w-4" /></Button>
+            <Button size="icon" variant="secondary" onClick={onRecenter} disabled={geoLoading} aria-label="Recenter"><LocateFixed className="h-4 w-4" /></Button>
         </div>
     )
 }
@@ -60,7 +46,7 @@ function MapControls() {
 export function SalespersonMap({ outlets, loading }: SalespersonMapProps) {
   const { user } = useAuth();
   const { coords } = useGeolocation({ enableHighAccuracy: true });
-  const [center, setCenter] = useState({ lat: 20.5937, lng: 78.9629 });
+  const [center, setCenter] = useState({ lat: 20.5937, lng: 78.9629 }); // Default to center of India
   const { toast } = useToast();
   const isLoaded = useApiIsLoaded();
   
@@ -70,6 +56,7 @@ export function SalespersonMap({ outlets, loading }: SalespersonMapProps) {
     if (coords) {
       setCenter({ lat: coords.latitude, lng: coords.longitude });
     } else if (outlets.length > 0) {
+      // If no coords, center on the first outlet
       setCenter({ lat: outlets[0].lat, lng: outlets[0].lng });
     }
   }, [coords, outlets]);
@@ -179,8 +166,8 @@ export function SalespersonMap({ outlets, loading }: SalespersonMapProps) {
             </div>
           </AdvancedMarker>
         )}
+        <MapControls />
       </Map>
-      <MapControls />
     </div>
   );
 }
