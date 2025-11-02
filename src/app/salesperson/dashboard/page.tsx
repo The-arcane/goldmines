@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/auth";
 import type { Attendance, Outlet } from "@/lib/types";
@@ -14,13 +14,17 @@ import { AddSalespersonOutletDialog } from "@/components/salesperson/add-outlet-
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CreateOrderDialog } from "@/components/salesperson/create-order-dialog";
+import { useGeolocation } from "@/hooks/use-geolocation";
+import { haversineDistance } from "@/lib/utils";
+
 
 export default function SalespersonDashboardPage() {
     const { user } = useAuth();
     const { toast } = useToast();
     const [attendance, setAttendance] = useState<Attendance | null>(null);
-    const [activeOutlets, setActiveOutlets] = useState<Outlet[]>([]);
+    const [allOutlets, setAllOutlets] = useState<Outlet[]>([]);
     const [loading, setLoading] = useState(true);
+    const { coords } = useGeolocation({ enableHighAccuracy: true });
 
     const fetchDashboardData = useCallback(async () => {
         if (!user) return;
@@ -28,8 +32,7 @@ export default function SalespersonDashboardPage() {
 
         const today = new Date().toISOString().slice(0, 10);
         
-        // Fetch current attendance status
-        const { data: attendanceData } = await supabase
+        const attendancePromise = supabase
             .from('attendance')
             .select('*')
             .eq('user_id', user.id)
@@ -39,38 +42,22 @@ export default function SalespersonDashboardPage() {
             .limit(1)
             .maybeSingle();
 
+        // In a real app, this should be scoped to outlets assigned to the user.
+        // For now, we fetch all to allow for geofence detection on any of them.
+        const outletsPromise = supabase.from('outlets').select('*');
+
+        const [
+            { data: attendanceData },
+            { data: outletsData, error: outletsError }
+        ] = await Promise.all([attendancePromise, outletsPromise]);
+
         if (attendanceData) setAttendance(attendanceData as Attendance);
 
-        // Fetch active visits to determine which outlets to show
-        const { data: activeVisitsData, error: visitError } = await supabase
-            .from('visits')
-            .select('outlet_id')
-            .eq('user_id', user.id)
-            .is('exit_time', null);
-        
-        if (visitError) {
-            toast({ variant: "destructive", title: "Error", description: "Could not load your active visits." });
-            setActiveOutlets([]);
-            setLoading(false);
-            return;
-        }
-
-        if (activeVisitsData && activeVisitsData.length > 0) {
-            const activeOutletIds = activeVisitsData.map(v => v.outlet_id);
-            const { data: outletsData, error: outletError } = await supabase
-                .from('outlets')
-                .select('*')
-                .in('id', activeOutletIds);
-            
-            if (outletError) {
-                toast({ variant: "destructive", title: "Error", description: "Could not load outlet details." });
-                setActiveOutlets([]);
-            } else {
-                setActiveOutlets(outletsData || []);
-            }
+        if (outletsError) {
+            toast({ variant: "destructive", title: "Error", description: "Could not load outlet data." });
+            setAllOutlets([]);
         } else {
-             // If no active visits, clear the list
-            setActiveOutlets([]);
+            setAllOutlets(outletsData || []);
         }
 
         setLoading(false);
@@ -81,6 +68,18 @@ export default function SalespersonDashboardPage() {
             fetchDashboardData();
         }
     }, [user, fetchDashboardData]);
+    
+    const activeOutlets = useMemo(() => {
+        if (!coords || allOutlets.length === 0) {
+            return [];
+        }
+
+        return allOutlets.filter(outlet => {
+            const distance = haversineDistance(coords, { lat: outlet.lat, lng: outlet.lng });
+            return distance <= 150; // User is within 150m radius
+        });
+    }, [coords, allOutlets]);
+
 
     const isCheckedIn = attendance?.status === 'Online';
     const isCheckedOut = attendance?.status === 'Offline';
@@ -145,7 +144,11 @@ export default function SalespersonDashboardPage() {
                         <CardDescription>Your current location and active outlets.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <SalespersonMap outlets={activeOutlets} loading={loading} />
+                        {loading ? (
+                             <Skeleton className="h-[400px] w-full" />
+                        ): (
+                            <SalespersonMap outlets={allOutlets} activeOutlets={activeOutlets} />
+                        )}
                     </CardContent>
                 </Card>
                 <Card>
@@ -175,7 +178,7 @@ export default function SalespersonDashboardPage() {
                             <div className="flex flex-col items-center justify-center text-center p-8 border-dashed border-2 rounded-md h-full">
                                 <ShoppingCart className="h-10 w-10 text-muted-foreground mb-2" />
                                 <p className="font-semibold">No Active Visits</p>
-                                <p className="text-sm text-muted-foreground">Check into an outlet to create an order.</p>
+                                <p className="text-sm text-muted-foreground">You are not in the geofence of any outlet.</p>
                             </div>
                         )}
                     </CardContent>
