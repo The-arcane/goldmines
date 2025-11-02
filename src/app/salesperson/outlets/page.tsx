@@ -40,49 +40,63 @@ export default function MyOutletsPage() {
     }, [user, fetchOutlets]);
 
     return (
-        <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
+        <main className="flex flex-1 flex-col gap-4 md:gap-8">
             <Card>
-                <CardHeader className="flex flex-row items-center">
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div className="grid gap-2">
                         <CardTitle>My Outlets</CardTitle>
                         <CardDescription>
                            A list of all outlets you have added.
                         </CardDescription>
                     </div>
-                    <div className="ml-auto">
+                    <div className="flex-shrink-0">
                         <AddSalespersonOutletDialog onOutletAdded={fetchOutlets} />
                     </div>
                 </CardHeader>
                 <CardContent>
                     {loading ? (
                         <div className="text-center p-8">Loading your outlets...</div>
-                    ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Type</TableHead>
-                                    <TableHead>Address</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {outlets.length > 0 ? outlets.map((outlet) => (
-                                    <TableRow key={outlet.id}>
-                                        <TableCell className="font-medium">{outlet.name}</TableCell>
-                                        <TableCell>
-                                            <Badge variant="outline">{outlet.type}</Badge>
-                                        </TableCell>
-                                        <TableCell>{outlet.address}</TableCell>
-                                    </TableRow>
-                                )) : (
+                    ) : outlets.length > 0 ? (
+                        <div className="hidden md:block">
+                            <Table>
+                                <TableHeader>
                                     <TableRow>
-                                        <TableCell colSpan={3} className="text-center text-muted-foreground p-8">
-                                            You haven't added any outlets yet.
-                                        </TableCell>
+                                        <TableHead className="w-[30%]">Name</TableHead>
+                                        <TableHead className="w-[15%]">Type</TableHead>
+                                        <TableHead>Address</TableHead>
                                     </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {outlets.map((outlet) => (
+                                        <TableRow key={outlet.id}>
+                                            <TableCell className="font-medium">{outlet.name}</TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline">{outlet.type}</Badge>
+                                            </TableCell>
+                                            <TableCell className="whitespace-pre-wrap break-words">{outlet.address}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    ) : (
+                         <div className="text-center text-muted-foreground p-8 border-dashed border-2 rounded-md">
+                            You haven't added any outlets yet.
+                        </div>
+                    )}
+
+                    {outlets.length > 0 && (
+                        <div className="grid gap-4 md:hidden">
+                            {outlets.map((outlet) => (
+                                <div key={outlet.id} className="rounded-lg border bg-card text-card-foreground p-4">
+                                    <div className="flex justify-between items-start">
+                                        <h3 className="font-semibold">{outlet.name}</h3>
+                                        <Badge variant="outline">{outlet.type}</Badge>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground mt-2 whitespace-pre-wrap break-words">{outlet.address}</p>
+                                </div>
+                            ))}
+                        </div>
                     )}
                 </CardContent>
             </Card>
