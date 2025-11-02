@@ -106,8 +106,8 @@ export default function DistributorDashboardPage() {
 
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-1 flex-col gap-4 md:gap-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="font-headline text-3xl font-bold">
             {distributor?.name || 'Distributor'} Dashboard
@@ -125,7 +125,7 @@ export default function DistributorDashboardPage() {
         </div>
       </div>
       
-      <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Recent Orders</CardTitle>
@@ -168,7 +168,7 @@ export default function DistributorDashboardPage() {
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+      <div className="grid gap-4 md:gap-8 lg:grid-cols-7">
         <Card className="col-span-full lg:col-span-4">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -187,8 +187,8 @@ export default function DistributorDashboardPage() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Outlet</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Date</TableHead>
+                                <TableHead className="hidden sm:table-cell">Status</TableHead>
+                                <TableHead className="hidden md:table-cell">Date</TableHead>
                                 <TableHead className="text-right">Value</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -196,8 +196,8 @@ export default function DistributorDashboardPage() {
                             {recentOrders.length > 0 ? recentOrders.map(order => (
                                 <TableRow key={order.id}>
                                     <TableCell>{(order as any).outlets?.name || 'N/A'}</TableCell>
-                                    <TableCell><Badge variant={getStatusVariant(order.status)}>{order.status}</Badge></TableCell>
-                                    <TableCell>{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
+                                    <TableCell className="hidden sm:table-cell"><Badge variant={getStatusVariant(order.status)}>{order.status}</Badge></TableCell>
+                                    <TableCell className="hidden md:table-cell">{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
                                     <TableCell className="text-right">₹{order.total_amount?.toFixed(2) || '0.00'}</TableCell>
                                 </TableRow>
                             )) : (

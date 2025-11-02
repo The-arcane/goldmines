@@ -92,7 +92,7 @@ export default function AdminDashboardPage() {
              {loading ? <p>Loading outlets map...</p> : <OutletsMap outlets={outlets} />}
           </CardContent>
         </Card>
-         <Card className="xl:col-span-3">
+         <Card className="xl:col-span-full">
           <CardHeader>
             <CardTitle>Recent Orders</CardTitle>
             <CardDescription>
@@ -105,8 +105,8 @@ export default function AdminDashboardPage() {
                 <TableHeader>
                     <TableRow>
                         <TableHead>Outlet</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Date</TableHead>
+                        <TableHead className="hidden sm:table-cell">Status</TableHead>
+                        <TableHead className="hidden md:table-cell">Date</TableHead>
                         <TableHead className="text-right">Value</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -114,8 +114,8 @@ export default function AdminDashboardPage() {
                     {recentOrders.map(order => (
                         <TableRow key={order.id}>
                             <TableCell>{(order as any).outlets?.name || 'N/A'}</TableCell>
-                            <TableCell><Badge variant={getStatusVariant(order.status)}>{order.status}</Badge></TableCell>
-                            <TableCell>{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
+                            <TableCell className="hidden sm:table-cell"><Badge variant={getStatusVariant(order.status)}>{order.status}</Badge></TableCell>
+                            <TableCell className="hidden md:table-cell">{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
                             <TableCell className="text-right">₹{order.total_amount?.toFixed(2) || '0.00'}</TableCell>
                         </TableRow>
                     ))}

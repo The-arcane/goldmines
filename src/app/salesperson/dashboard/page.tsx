@@ -49,7 +49,7 @@ export default function SalespersonDashboardPage() {
         const ordersPromise = supabase
             .from('orders')
             .select('*')
-            // .eq('created_by_auth_id', user.auth_id) // This was the bug, column doesn't exist
+            .eq('created_by_user_id', user.id)
             .gte('order_date', `${today}T00:00:00.000Z`)
             .lte('order_date', `${today}T23:59:59.999Z`);
 
@@ -215,5 +215,3 @@ export default function SalespersonDashboardPage() {
         </div>
     );
 }
-
-    
