@@ -70,8 +70,7 @@ export default function SalespersonDashboardPage() {
                 setActiveOutlets(outletsData || []);
             }
         } else {
-            // If no active visits, fetch all outlets as a fallback for display.
-            // This can be optimized to fetch only assigned outlets.
+            // If no active visits, fetch all outlets assigned to the user as a fallback.
              const { data: allOutlets, error: allOutletsError } = await supabase.from("outlets").select("*");
              if(allOutletsError) {
                 toast({ variant: "destructive", title: "Error", description: "Could not load outlet details." });
@@ -157,11 +156,7 @@ export default function SalespersonDashboardPage() {
                     <CardDescription>Your current location and active outlets.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {loading ? (
-                         <Skeleton className="h-[400px] w-full rounded-lg" />
-                    ) : (
-                        <SalespersonMap outlets={activeOutlets} />
-                    )}
+                    <SalespersonMap outlets={activeOutlets} loading={loading} />
                 </CardContent>
             </Card>
 

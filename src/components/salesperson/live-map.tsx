@@ -12,10 +12,12 @@ import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInMinutes } from "date-fns";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { LocateFixed, Plus, Minus, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from "lucide-react";
 
 type SalespersonMapProps = {
     outlets: Outlet[];
+    loading: boolean;
 }
 
 function MapControls() {
@@ -55,7 +57,7 @@ function MapControls() {
     )
 }
 
-export function SalespersonMap({ outlets }: SalespersonMapProps) {
+export function SalespersonMap({ outlets, loading }: SalespersonMapProps) {
   const { user } = useAuth();
   const { coords } = useGeolocation({ enableHighAccuracy: true });
   const [center, setCenter] = useState({ lat: 20.5937, lng: 78.9629 }); // Default to center of India
@@ -68,7 +70,6 @@ export function SalespersonMap({ outlets }: SalespersonMapProps) {
     if (coords) {
       setCenter({ lat: coords.latitude, lng: coords.longitude });
     } else if (outlets.length > 0) {
-      // If no coords, center on the first outlet
       setCenter({ lat: outlets[0].lat, lng: outlets[0].lng });
     }
   }, [coords, outlets]);
@@ -139,47 +140,46 @@ export function SalespersonMap({ outlets }: SalespersonMapProps) {
 
   }, [coords, user, outlets, toast]);
   
-  if (!isLoaded) {
-      return null; // The parent component handles the loading skeleton
-  }
-
   return (
     <div className="h-[400px] w-full rounded-lg overflow-hidden border relative">
-      <Map
-        mapId="salesperson-live-map"
-        center={center}
-        zoom={14}
-        gestureHandling={"greedy"}
-        disableDefaultUI={true}
-      >
-        {outlets.map((outlet) => (
-          <AdvancedMarker key={outlet.id} position={{ lat: outlet.lat, lng: outlet.lng }}>
-            <Pin background={"#2E3192"} borderColor={"#2E3192"} glyphColor={"#fff"} />
-          </AdvancedMarker>
-        ))}
-         {outlets.map((outlet) => (
-          <Circle
-            key={`circle-${outlet.id}`}
-            center={{ lat: outlet.lat, lng: outlet.lng }}
-            radius={150} // 150m radius
-            strokeColor="#2E3192"
-            strokeOpacity={0.4}
-            strokeWeight={1}
-            fillColor="#2E3192"
-            fillOpacity={0.1}
-          />
-        ))}
-
-        {coords && (
-          <AdvancedMarker position={{ lat: coords.latitude, lng: coords.longitude }}>
-            <div className="relative">
-                <div className="absolute h-6 w-6 rounded-full bg-green-400 animate-ping"></div>
-                <div className="relative h-6 w-6 rounded-full bg-green-500 border-2 border-white shadow-md"></div>
-            </div>
-          </AdvancedMarker>
-        )}
-        <MapControls />
-      </Map>
+      {loading || !isLoaded ? (
+        <Skeleton className="h-full w-full" />
+      ) : (
+        <Map
+          mapId="salesperson-live-map"
+          center={center}
+          zoom={14}
+          gestureHandling={"greedy"}
+          disableDefaultUI={true}
+        >
+          {outlets.map((outlet) => (
+            <AdvancedMarker key={outlet.id} position={{ lat: outlet.lat, lng: outlet.lng }}>
+              <Pin background={"#2E3192"} borderColor={"#2E3192"} glyphColor={"#fff"} />
+            </AdvancedMarker>
+          ))}
+          {outlets.map((outlet) => (
+            <Circle
+              key={`circle-${outlet.id}`}
+              center={{ lat: outlet.lat, lng: outlet.lng }}
+              radius={150} // 150m radius
+              strokeColor="#2E3192"
+              strokeOpacity={0.4}
+              strokeWeight={1}
+              fillColor="#2E3192"
+              fillOpacity={0.1}
+            />
+          ))}
+          {coords && (
+            <AdvancedMarker position={{ lat: coords.latitude, lng: coords.longitude }}>
+              <div className="relative">
+                  <div className="absolute h-6 w-6 rounded-full bg-green-400 animate-ping"></div>
+                  <div className="relative h-6 w-6 rounded-full bg-green-500 border-2 border-white shadow-md"></div>
+              </div>
+            </AdvancedMarker>
+          )}
+          <MapControls />
+        </Map>
+      )}
     </div>
   );
 }
