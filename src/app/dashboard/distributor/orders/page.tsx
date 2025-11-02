@@ -102,7 +102,7 @@ export default function OrdersPage() {
                                     <TableRow key={order.id}>
                                         <TableCell className="font-mono">#{order.id}</TableCell>
                                         <TableCell>{(order as any).outlets?.name || 'N/A'}</TableCell>
-                                        <TableCell className="hidden md:table-cell"><Badge variant={getPaymentStatusVariant(order.status)}>{order.status}</Badge></TableCell>
+                                        <TableCell className="hidden md:table-cell"><Badge variant={getStatusVariant(order.status)}>{order.status}</Badge></TableCell>
                                         <TableCell className="hidden sm:table-cell">{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
                                         <TableCell className="text-right">₹{order.total_amount?.toFixed(2) || '0.00'}</TableCell>
                                         <TableCell className="text-right">
