@@ -29,10 +29,6 @@ const formSchema = z.object({
     })).min(1, "Please add at least one item to the order."),
 });
 
-// THIS PAGE IS NOW DEPRECATED and exists for reference.
-// Salespeople should use /salesperson/orders/create
-// Distributors do not create orders, they approve them.
-// A more generic version might be needed if other roles can create orders.
 export default function CreateOrderPage() {
     const { user } = useAuth();
     const router = useRouter();
@@ -56,7 +52,7 @@ export default function CreateOrderPage() {
         if (!user) return;
         setLoading(true);
 
-        // A sales exec or delivery partner belongs to ONE distributor.
+        // A sales exec belongs to ONE distributor.
         // We need to fetch the user profile to find which distributor they belong to.
         const { data: userData, error: userError } = await supabase
             .from('users')
@@ -76,7 +72,7 @@ export default function CreateOrderPage() {
 
         if (distributorData) {
             setDistributor(distributorData);
-            const outletsPromise = supabase.from("outlets").select("*"); // Simplified for now
+            const outletsPromise = supabase.from("outlets").select("*"); // Simplified for now, can be scoped later
             const skusPromise = supabase.from("skus").select("*").or(`distributor_id.eq.${distributorData.id},distributor_id.is.null`);
             const [outletsRes, skusRes] = await Promise.all([outletsPromise, skusPromise]);
             if(outletsRes.data) setOutlets(outletsRes.data);
@@ -124,7 +120,7 @@ export default function CreateOrderPage() {
         const result = await createNewOrder(orderData, distributor.id);
         if (result.success) {
             toast({ title: "Order Placed!", description: `Order #${result.orderId} has been sent for approval.` });
-            router.push("/dashboard"); // Redirect to their main dashboard after placing order
+            router.push("/salesperson/dashboard"); // Redirect to salesperson dashboard
         } else {
             toast({ variant: "destructive", title: "Failed to create order", description: result.error });
         }
