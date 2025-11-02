@@ -29,6 +29,8 @@ const formSchema = z.object({
     })).min(1, "Please add at least one item to the order."),
 });
 
+type OrderFormValues = z.infer<typeof formSchema>;
+
 export default function CreateOrderPage() {
     const { user } = useAuth();
     const router = useRouter();
@@ -38,7 +40,7 @@ export default function CreateOrderPage() {
     const [skus, setSkus] = useState<Sku[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const form = useForm<z.infer<typeof formSchema>>({
+    const form = useForm<OrderFormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: { outlet_id: "", items: [] },
     });
@@ -109,7 +111,7 @@ export default function CreateOrderPage() {
          });
     }
 
-    const onSubmit = async (data: z.infer<typeof formSchema>>) => {
+    const onSubmit = async (data: OrderFormValues) => {
         if (!distributor) return;
         
         const orderData = {
@@ -235,5 +237,3 @@ export default function CreateOrderPage() {
         </main>
     );
 }
-
-    
