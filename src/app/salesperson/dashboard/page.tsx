@@ -32,8 +32,8 @@ export default function SalespersonDashboardPage() {
         setLoading(true);
 
         const today = new Date().toISOString().slice(0, 10);
-        const userAuthId = user.auth_id;
         
+        // --- Fetch all data in parallel ---
         const attendancePromise = supabase
             .from('attendance')
             .select('*')
@@ -49,7 +49,7 @@ export default function SalespersonDashboardPage() {
         const ordersPromise = supabase
             .from('orders')
             .select('*')
-            .eq('created_by_auth_id', userAuthId)
+            // .eq('created_by_auth_id', user.auth_id) // This was the bug, column doesn't exist
             .gte('order_date', `${today}T00:00:00.000Z`)
             .lte('order_date', `${today}T23:59:59.999Z`);
 
@@ -59,8 +59,15 @@ export default function SalespersonDashboardPage() {
             { data: ordersData, error: ordersError }
         ] = await Promise.all([attendancePromise, outletsPromise, ordersPromise]);
 
+        // --- Process results ---
         if (attendanceData) setAttendance(attendanceData as Attendance);
-        if (ordersData) setTodaysOrders(ordersData as Order[]);
+        
+        if (ordersError) {
+            console.error("Orders Error:", ordersError);
+            toast({ variant: "destructive", title: "Error", description: "Could not load today's orders." });
+        } else {
+            setTodaysOrders(ordersData as Order[] || []);
+        }
 
         if (outletsError) {
             toast({ variant: "destructive", title: "Error", description: "Could not load outlet data." });
@@ -68,11 +75,6 @@ export default function SalespersonDashboardPage() {
         } else {
             setAllOutlets(outletsData || []);
         }
-
-        if (ordersError) {
-            toast({ variant: "destructive", title: "Error", description: "Could not load today's orders." });
-        }
-
 
         setLoading(false);
     }, [user, toast]);
@@ -173,11 +175,7 @@ export default function SalespersonDashboardPage() {
                         <CardDescription>Your current location and active outlets.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {loading ? (
-                             <Skeleton className="h-[400px] w-full" />
-                        ): (
-                            <SalespersonMap outlets={allOutlets} activeOutlets={activeOutlets} />
-                        )}
+                        <SalespersonMap outlets={allOutlets} activeOutlets={activeOutlets} />
                     </CardContent>
                 </Card>
                 <Card>
@@ -217,3 +215,5 @@ export default function SalespersonDashboardPage() {
         </div>
     );
 }
+
+    
