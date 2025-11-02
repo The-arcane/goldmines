@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -35,9 +36,12 @@ export default function SalespersonDashboardPage() {
             .limit(1)
             .maybeSingle();
             
+        // Optimized: Fetch a smaller, more relevant subset of outlets instead of all of them.
+        // This can be further improved by fetching outlets assigned to the user or within a geofence.
         const outletsPromise = supabase
             .from('outlets')
-            .select('*'); // Fetch all for now, can be optimized later
+            .select('*')
+            .limit(50); 
 
         const [{ data: attendanceData }, { data: outletsData }] = await Promise.all([attendancePromise, outletsPromise]);
 

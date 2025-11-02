@@ -102,7 +102,7 @@ export function SalespersonMap({ outlets, loading }: SalespersonMapProps) {
   }, [coords, user, outlets, toast]);
   
   if (loading || !isLoaded) {
-    return <Skeleton className="h-[400px] w-full" />
+    return <Skeleton className="h-[400px] w-full rounded-lg" />
   }
 
   return (
