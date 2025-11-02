@@ -18,13 +18,15 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Form, FormControl, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Trash2, PlusCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createNewOrder } from "@/lib/actions";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Separator } from "@/components/ui/separator";
 
 const formSchema = z.object({
     items: z.array(z.object({
@@ -33,6 +35,16 @@ const formSchema = z.object({
         case_price: z.number(),
         total_price: z.number(),
     })).min(1, "Please add at least one item to the order."),
+    payment_status: z.enum(["Unpaid", "Partially Paid", "Paid"]),
+    amount_paid: z.coerce.number().optional(),
+}).refine(data => {
+    if (data.payment_status === 'Partially Paid') {
+        return data.amount_paid !== undefined && data.amount_paid > 0;
+    }
+    return true;
+}, {
+    message: "Please enter the amount for partial payment.",
+    path: ["amount_paid"],
 });
 
 type OrderFormValues = z.infer<typeof formSchema>;
@@ -53,7 +65,7 @@ export function CreateOrderDialog({ outlet, onOrderPlaced }: CreateOrderDialogPr
 
     const form = useForm<OrderFormValues>({
         resolver: zodResolver(formSchema),
-        defaultValues: { items: [] },
+        defaultValues: { items: [], payment_status: "Unpaid" },
     });
 
     const { fields, append, remove, update } = useFieldArray({
@@ -105,13 +117,14 @@ export function CreateOrderDialog({ outlet, onOrderPlaced }: CreateOrderDialogPr
     
     useEffect(() => {
         if (!open) {
-            form.reset({ items: [] });
+            form.reset({ items: [], payment_status: "Unpaid", amount_paid: 0 });
             setLoading(false);
             setError(null);
         }
     }, [open, form]);
 
     const watchedItems = form.watch("items");
+    const watchedPaymentStatus = form.watch("payment_status");
     const totalAmount = watchedItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
 
     const handleSkuChange = (index: number, skuId: string) => {
@@ -146,10 +159,24 @@ export function CreateOrderDialog({ outlet, onOrderPlaced }: CreateOrderDialogPr
             toast({ variant: "destructive", title: "Error", description: "Distributor information is missing." });
             return;
         }
+
+        let amountPaid = 0;
+        if (data.payment_status === 'Paid') {
+            amountPaid = totalAmount;
+        } else if (data.payment_status === 'Partially Paid') {
+            amountPaid = data.amount_paid || 0;
+        }
+
+        if (data.payment_status === 'Partially Paid' && amountPaid >= totalAmount) {
+            form.setError("amount_paid", { message: "Partial payment cannot be equal to or exceed the total amount." });
+            return;
+        }
         
         const orderData = {
             outlet_id: outlet.id,
             total_amount: totalAmount,
+            amount_paid: amountPaid,
+            payment_status: data.payment_status,
             items: data.items.map(item => {
                 const skuDetails = getSkuDetails(item.sku_id);
                  const unitPrice = (skuDetails?.units_per_case || 1) > 0 ? (item.case_price || 0) / (skuDetails?.units_per_case || 1) : 0;
@@ -182,7 +209,7 @@ export function CreateOrderDialog({ outlet, onOrderPlaced }: CreateOrderDialogPr
                     <form onSubmit={form.handleSubmit(onSubmit)}>
                         <DialogHeader>
                             <DialogTitle>New Order for: {outlet.name}</DialogTitle>
-                            <DialogDescription>Add products to the order. Click save when you're done.</DialogDescription>
+                            <DialogDescription>Add products and payment details. Click save when you're done.</DialogDescription>
                         </DialogHeader>
 
                         {loading ? (
@@ -197,7 +224,7 @@ export function CreateOrderDialog({ outlet, onOrderPlaced }: CreateOrderDialogPr
                                 </div>
                             </div>
                         ) : (
-                             <div className="py-4">
+                             <div className="py-4 space-y-4">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
@@ -261,6 +288,56 @@ export function CreateOrderDialog({ outlet, onOrderPlaced }: CreateOrderDialogPr
                                     <PlusCircle className="mr-2 h-4 w-4" /> Add Item
                                 </Button>
                                 <FormMessage>{form.formState.errors.items?.message}</FormMessage>
+                                
+                                <Separator className="my-4" />
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                     <FormField
+                                        control={form.control}
+                                        name="payment_status"
+                                        render={({ field }) => (
+                                            <FormItem className="space-y-3">
+                                                <FormLabel>Payment Status</FormLabel>
+                                                <FormControl>
+                                                    <RadioGroup
+                                                    onValueChange={field.onChange}
+                                                    defaultValue={field.value}
+                                                    className="flex flex-col space-y-1"
+                                                    >
+                                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                                        <FormControl><RadioGroupItem value="Unpaid" /></FormControl>
+                                                        <FormLabel className="font-normal">Unpaid</FormLabel>
+                                                    </FormItem>
+                                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                                        <FormControl><RadioGroupItem value="Paid" /></FormControl>
+                                                        <FormLabel className="font-normal">Fully Paid (₹{totalAmount.toFixed(2)})</FormLabel>
+                                                    </FormItem>
+                                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                                        <FormControl><RadioGroupItem value="Partially Paid" /></FormControl>
+                                                        <FormLabel className="font-normal">Partially Paid</FormLabel>
+                                                    </FormItem>
+                                                    </RadioGroup>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    {watchedPaymentStatus === 'Partially Paid' && (
+                                        <FormField
+                                            control={form.control}
+                                            name="amount_paid"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Amount Paid</FormLabel>
+                                                    <FormControl>
+                                                        <Input type="number" placeholder="Enter amount" {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    )}
+                                </div>
                             </div>
                         )}
                         

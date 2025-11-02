@@ -1,5 +1,4 @@
 
-
 export type UserRole = 'admin' | 'sales_executive' | 'distributor_admin' | 'delivery_partner';
 
 export type User = {
@@ -141,6 +140,8 @@ export type SkuFormData = {
 export type OrderFormData = {
   outlet_id: string;
   total_amount: number;
+  payment_status: "Unpaid" | "Partially Paid" | "Paid";
+  amount_paid?: number;
   items: {
     sku_id: number;
     quantity: number;
@@ -158,5 +159,3 @@ export type AttendanceData = {
     };
     selfie: string; // base64 data URI
 }
-
-    
