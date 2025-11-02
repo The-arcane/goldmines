@@ -54,7 +54,7 @@ export const useGeolocation = (options: PositionOptions = {}): GeolocationState 
       navigator.geolocation.clearWatch(watchId);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options.enableHighAccuracy, options.timeout, options.maximumAge]);
+  }, [JSON.stringify(options)]);
 
   return state;
 };
