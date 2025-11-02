@@ -16,7 +16,6 @@ import { cn } from "@/lib/utils";
 const navItems = [
     { href: "/salesperson/dashboard", icon: Home, label: "Dashboard" },
     { href: "/salesperson/outlets", icon: Warehouse, label: "My Outlets" },
-    { href: "/salesperson/orders/create", icon: PlusCircle, label: "Create Order" },
     { href: "/salesperson/visits", icon: BarChart, label: "Visit History" },
     { href: "/salesperson/route", icon: Map, label: "Route Plan" },
     { href: "/salesperson/reports", icon: BarChart, label: "My Reports" },

@@ -7,14 +7,13 @@ import { useAuth } from "@/lib/auth";
 import type { Attendance, Outlet } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Clock, MapPin, Package, IndianRupee, PlusCircle } from "lucide-react";
+import { Clock, MapPin, Package, IndianRupee, ShoppingCart } from "lucide-react";
 import { AttendanceDialog } from "@/components/salesperson/attendance-dialog";
 import { SalespersonMap } from "@/components/salesperson/live-map";
 import { AddSalespersonOutletDialog } from "@/components/salesperson/add-outlet-dialog";
-import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-
+import { CreateOrderDialog } from "@/components/salesperson/create-order-dialog";
 
 export default function SalespersonDashboardPage() {
     const { user } = useAuth();
@@ -42,7 +41,7 @@ export default function SalespersonDashboardPage() {
 
         if (attendanceData) setAttendance(attendanceData as Attendance);
 
-        // Fetch active visits to determine which outlets to show on the map
+        // Fetch active visits to determine which outlets to show
         const { data: activeVisitsData, error: visitError } = await supabase
             .from('visits')
             .select('outlet_id')
@@ -70,14 +69,8 @@ export default function SalespersonDashboardPage() {
                 setActiveOutlets(outletsData || []);
             }
         } else {
-            // If no active visits, fetch all outlets assigned to the user as a fallback.
-             const { data: allOutlets, error: allOutletsError } = await supabase.from("outlets").select("*");
-             if(allOutletsError) {
-                toast({ variant: "destructive", title: "Error", description: "Could not load outlet details." });
-                setActiveOutlets([]);
-             } else {
-                setActiveOutlets(allOutlets || []);
-             }
+             // If no active visits, clear the list
+            setActiveOutlets([]);
         }
 
         setLoading(false);
@@ -111,11 +104,6 @@ export default function SalespersonDashboardPage() {
                         </Button>
                     </AttendanceDialog>
                     <AddSalespersonOutletDialog onOutletAdded={fetchDashboardData} />
-                     <Button asChild>
-                        <Link href="/salesperson/orders/create">
-                            <PlusCircle className="mr-2 h-4 w-4"/> Create Order
-                        </Link>
-                    </Button>
                 </div>
             </div>
 
@@ -139,7 +127,7 @@ export default function SalespersonDashboardPage() {
                         <CardTitle className="text-sm font-medium">Outlets Visited</CardTitle>
                         <MapPin className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
-                    <CardContent><div className="text-2xl font-bold">0</div></CardContent>
+                    <CardContent><div className="text-2xl font-bold">{activeOutlets.length}</div></CardContent>
                 </Card>
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -150,15 +138,49 @@ export default function SalespersonDashboardPage() {
                 </Card>
             </div>
             
-            <Card>
-                <CardHeader>
-                    <CardTitle>Live Route</CardTitle>
-                    <CardDescription>Your current location and active outlets.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <SalespersonMap outlets={activeOutlets} loading={loading} />
-                </CardContent>
-            </Card>
+            <div className="grid gap-4 md:grid-cols-2">
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Live Route</CardTitle>
+                        <CardDescription>Your current location and active outlets.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <SalespersonMap outlets={activeOutlets} loading={loading} />
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Active Outlets</CardTitle>
+                        <CardDescription>Create an order at an outlet you are currently visiting.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {loading ? (
+                            <div className="space-y-4">
+                                <Skeleton className="h-12 w-full" />
+                                <Skeleton className="h-12 w-full" />
+                            </div>
+                        ) : activeOutlets.length > 0 ? (
+                            <div className="space-y-2">
+                                {activeOutlets.map((outlet) => (
+                                    <div key={outlet.id} className="flex items-center justify-between rounded-md border p-3">
+                                        <div>
+                                            <p className="font-medium">{outlet.name}</p>
+                                            <p className="text-sm text-muted-foreground">{outlet.address}</p>
+                                        </div>
+                                        <CreateOrderDialog outlet={outlet} />
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center text-center p-8 border-dashed border-2 rounded-md h-full">
+                                <ShoppingCart className="h-10 w-10 text-muted-foreground mb-2" />
+                                <p className="font-semibold">No Active Visits</p>
+                                <p className="text-sm text-muted-foreground">Check into an outlet to create an order.</p>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
 
         </div>
     );
