@@ -76,7 +76,7 @@ export type Order = {
   payment_status: string;
   delivery_partner_id: number | null;
   created_at: string;
-  created_by_auth_id?: string; // Track who created the order
+  created_by_user_id?: number; // Track who created the order using public user ID
   order_items?: OrderItem[];
   outlets?: { name: string; address: string; }; // For joins
 };
@@ -159,3 +159,5 @@ export type AttendanceData = {
     };
     selfie: string; // base64 data URI
 }
+
+    

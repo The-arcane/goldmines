@@ -30,7 +30,7 @@ export default function MyOrderDetailsPage({ params }: { params: { id: string } 
             .from('orders')
             .select('*, outlets (name, address), order_items(*, skus(name, product_code))')
             .eq('id', params.id)
-            .eq('created_by_auth_id', user.auth_id) // Security check
+            .eq('created_by_user_id', user.id) // Security check
             .single();
 
         if (error || !data) {
@@ -143,3 +143,5 @@ export default function MyOrderDetailsPage({ params }: { params: { id: string } 
         </main>
     );
 }
+
+    

@@ -25,7 +25,7 @@ export default function MyOrdersPage() {
         const { data, error } = await supabase
             .from("orders")
             .select("*, outlets(name)")
-            .eq('created_by_auth_id', user.auth_id)
+            .eq('created_by_user_id', user.id)
             .order("order_date", { ascending: false });
 
         if (error) {
@@ -111,3 +111,5 @@ export default function MyOrdersPage() {
         </main>
     );
 }
+
+    
