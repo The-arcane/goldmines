@@ -13,6 +13,7 @@ import { SalespersonMap } from "@/components/salesperson/live-map";
 import { AddSalespersonOutletDialog } from "@/components/salesperson/add-outlet-dialog";
 import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 export default function SalespersonDashboardPage() {
@@ -69,8 +70,15 @@ export default function SalespersonDashboardPage() {
                 setActiveOutlets(outletsData || []);
             }
         } else {
-            // If no active visits, clear the outlets from the map
-            setActiveOutlets([]);
+            // If no active visits, fetch all outlets as a fallback for display.
+            // This can be optimized to fetch only assigned outlets.
+             const { data: allOutlets, error: allOutletsError } = await supabase.from("outlets").select("*");
+             if(allOutletsError) {
+                toast({ variant: "destructive", title: "Error", description: "Could not load outlet details." });
+                setActiveOutlets([]);
+             } else {
+                setActiveOutlets(allOutlets || []);
+             }
         }
 
         setLoading(false);
@@ -149,7 +157,11 @@ export default function SalespersonDashboardPage() {
                     <CardDescription>Your current location and active outlets.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <SalespersonMap outlets={activeOutlets} loading={loading} />
+                    {loading ? (
+                         <Skeleton className="h-[400px] w-full rounded-lg" />
+                    ) : (
+                        <SalespersonMap outlets={activeOutlets} />
+                    )}
                 </CardContent>
             </Card>
 

@@ -11,13 +11,11 @@ import { haversineDistance } from "@/lib/utils";
 import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInMinutes } from "date-fns";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { LocateFixed, Plus, Minus } from "lucide-react";
+import { LocateFixed, Plus, Minus, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from "lucide-react";
 
 type SalespersonMapProps = {
     outlets: Outlet[];
-    loading: boolean;
 }
 
 function MapControls() {
@@ -27,6 +25,11 @@ function MapControls() {
     const onZoom = (level: number) => {
         if (!map) return;
         map.setZoom(map.getZoom()! + level);
+    };
+
+    const onPan = (dx: number, dy: number) => {
+        if (!map) return;
+        map.panBy(dx, dy);
     };
     
     const onRecenter = useCallback(() => {
@@ -40,11 +43,19 @@ function MapControls() {
             <Button size="icon" variant="secondary" onClick={() => onZoom(1)} aria-label="Zoom In"><Plus className="h-4 w-4" /></Button>
             <Button size="icon" variant="secondary" onClick={() => onZoom(-1)} aria-label="Zoom Out"><Minus className="h-4 w-4" /></Button>
             <Button size="icon" variant="secondary" onClick={onRecenter} disabled={geoLoading} aria-label="Recenter"><LocateFixed className="h-4 w-4" /></Button>
+            <div className="p-1 bg-secondary rounded-lg flex flex-col items-center gap-1 mt-2">
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onPan(0, -50)}><ArrowUp className="h-4 w-4"/></Button>
+              <div className="flex gap-1">
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onPan(-50, 0)}><ArrowLeft className="h-4 w-4"/></Button>
+                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onPan(50, 0)}><ArrowRight className="h-4 w-4"/></Button>
+              </div>
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => onPan(0, 50)}><ArrowDown className="h-4 w-4"/></Button>
+            </div>
         </div>
     )
 }
 
-export function SalespersonMap({ outlets, loading }: SalespersonMapProps) {
+export function SalespersonMap({ outlets }: SalespersonMapProps) {
   const { user } = useAuth();
   const { coords } = useGeolocation({ enableHighAccuracy: true });
   const [center, setCenter] = useState({ lat: 20.5937, lng: 78.9629 }); // Default to center of India
@@ -128,8 +139,8 @@ export function SalespersonMap({ outlets, loading }: SalespersonMapProps) {
 
   }, [coords, user, outlets, toast]);
   
-  if (loading || !isLoaded) {
-    return <Skeleton className="h-[400px] w-full rounded-lg" />
+  if (!isLoaded) {
+      return null; // The parent component handles the loading skeleton
   }
 
   return (
