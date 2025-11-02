@@ -146,7 +146,7 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
                         </CardContent>
                          <CardFooter className="flex flex-row items-center border-t bg-muted/50 px-6 py-3">
                             <div className="text-s text-muted-foreground">
-                                Order Total: <span className="font-bold text-lg text-foreground">₹{order.total_value.toFixed(2)}</span>
+                                Order Total: <span className="font-bold text-lg text-foreground">₹{order.total_amount.toFixed(2)}</span>
                             </div>
                         </CardFooter>
                     </Card>
@@ -178,5 +178,7 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
         </main>
     );
 }
+
+    
 
     

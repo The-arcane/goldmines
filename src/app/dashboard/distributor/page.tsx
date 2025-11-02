@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -197,7 +198,7 @@ export default function DistributorDashboardPage() {
                                     <TableCell>{(order as any).outlets?.name || 'N/A'}</TableCell>
                                     <TableCell><Badge variant={getStatusVariant(order.status)}>{order.status}</Badge></TableCell>
                                     <TableCell>{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
-                                    <TableCell className="text-right">₹{order.total_value?.toFixed(2) || '0.00'}</TableCell>
+                                    <TableCell className="text-right">₹{order.total_amount?.toFixed(2) || '0.00'}</TableCell>
                                 </TableRow>
                             )) : (
                                 <TableRow>
@@ -242,4 +243,5 @@ export default function DistributorDashboardPage() {
   );
 }
 
+    
     

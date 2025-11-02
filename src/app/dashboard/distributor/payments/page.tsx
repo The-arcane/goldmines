@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useCallback, useMemo } from "react";
@@ -58,7 +59,7 @@ export default function PaymentsPage() {
 
     const totalDues = useMemo(() => {
         return orders.reduce((sum, order) => {
-            const due = (order.total_value || 0) - (order.amount_paid || 0);
+            const due = (order.total_amount || 0) - (order.amount_paid || 0);
             return sum + due;
         }, 0);
     }, [orders]);
@@ -102,14 +103,14 @@ export default function PaymentsPage() {
                             </TableHeader>
                             <TableBody>
                                 {orders.length > 0 ? orders.map((order) => {
-                                    const balanceDue = order.total_value - (order.amount_paid || 0);
+                                    const balanceDue = order.total_amount - (order.amount_paid || 0);
                                     return (
                                         <TableRow key={order.id}>
                                             <TableCell className="font-mono text-xs">#{order.id}</TableCell>
                                             <TableCell>{(order as any).outlets?.name || 'N/A'}</TableCell>
                                             <TableCell className="hidden sm:table-cell">{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
                                             <TableCell className="hidden md:table-cell"><Badge variant={getPaymentStatusVariant(order.payment_status)}>{order.payment_status}</Badge></TableCell>
-                                            <TableCell className="text-right">₹{order.total_value?.toFixed(2) || '0.00'}</TableCell>
+                                            <TableCell className="text-right">₹{order.total_amount?.toFixed(2) || '0.00'}</TableCell>
                                             <TableCell className="text-right">₹{order.amount_paid?.toFixed(2) || '0.00'}</TableCell>
                                             <TableCell className="text-right font-medium">₹{balanceDue.toFixed(2)}</TableCell>
                                             <TableCell className="text-right">
@@ -136,3 +137,5 @@ export default function PaymentsPage() {
         </main>
     );
 }
+
+    

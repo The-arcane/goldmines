@@ -71,7 +71,7 @@ export type Order = {
   distributor_id: number;
   outlet_id: string;
   order_date: string;
-  total_value: number;
+  total_amount: number;
   status: string;
   amount_paid: number;
   payment_status: string;
@@ -139,7 +139,7 @@ export type SkuFormData = {
 // For creating a new Order
 export type OrderFormData = {
   outlet_id: string;
-  total_value: number;
+  total_amount: number;
   items: {
     sku_id: number;
     quantity: number;
@@ -157,3 +157,5 @@ export type AttendanceData = {
     };
     selfie: string; // base64 data URI
 }
+
+    

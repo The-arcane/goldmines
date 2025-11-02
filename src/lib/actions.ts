@@ -195,7 +195,7 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
     return { success: false, error: 'Could not find the selected outlet.' };
   }
 
-  if (outlet.credit_limit > 0 && (outlet.current_due + formData.total_value) > outlet.credit_limit) {
+  if (outlet.credit_limit > 0 && (outlet.current_due + formData.total_amount) > outlet.credit_limit) {
     return { success: false, error: 'This order exceeds the outlets credit limit.' };
   }
 
@@ -207,7 +207,7 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
       distributor_id: distributorId,
       outlet_id: formData.outlet_id,
       status: "Pending",
-      total_value: formData.total_value,
+      total_amount: formData.total_amount,
       order_date: new Date().toISOString(),
     })
     .select()
@@ -247,7 +247,7 @@ export async function updateOrderStatus(orderId: number, status: string) {
     // Get order details to update outlet due
     const { data: order, error: fetchError } = await supabase
         .from('orders')
-        .select('outlet_id, total_value, status')
+        .select('outlet_id, total_amount, status')
         .eq('id', orderId)
         .single();
         
@@ -270,7 +270,7 @@ export async function updateOrderStatus(orderId: number, status: string) {
     if (status === 'Approved' && order.status !== 'Approved') {
         const { error: rpcError } = await supabase.rpc('update_outlet_due', {
             outlet_uuid: order.outlet_id,
-            amount_change: order.total_value
+            amount_change: order.total_amount
         });
         if (rpcError) {
              return { success: false, error: `Order status updated, but failed to update outlet due: ${rpcError.message}` };
@@ -279,7 +279,7 @@ export async function updateOrderStatus(orderId: number, status: string) {
         // If an approved order is rejected, decrease the outlet's due
         const { error: rpcError } = await supabase.rpc('update_outlet_due', {
             outlet_uuid: order.outlet_id,
-            amount_change: -order.total_value
+            amount_change: -order.total_amount
         });
          if (rpcError) {
              return { success: false, error: `Order status updated, but failed to update outlet due: ${rpcError.message}` };
@@ -298,7 +298,7 @@ export async function recordOrderPayment(orderId: number, paymentAmount: number)
     // 1. Get the current order details
     const { data: order, error: fetchError } = await supabase
         .from('orders')
-        .select('total_value, amount_paid, outlet_id')
+        .select('total_amount, amount_paid, outlet_id')
         .eq('id', orderId)
         .single();
 
@@ -310,7 +310,7 @@ export async function recordOrderPayment(orderId: number, paymentAmount: number)
     // 2. Calculate new payment status
     const newAmountPaid = (order.amount_paid || 0) + paymentAmount;
     let paymentStatus = 'Partially Paid';
-    if (newAmountPaid >= order.total_value) {
+    if (newAmountPaid >= order.total_amount) {
         paymentStatus = 'Paid';
     }
 
@@ -432,4 +432,5 @@ export async function markAttendance(data: AttendanceData) {
     }
 }
  
+    
     

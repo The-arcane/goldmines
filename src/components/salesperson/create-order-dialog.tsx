@@ -108,7 +108,7 @@ export function CreateOrderDialog({ outlet }: { outlet: Outlet }) {
     }, [open, form]);
 
     const watchedItems = form.watch("items");
-    const totalValue = watchedItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
+    const totalAmount = watchedItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
 
     const handleSkuChange = (index: number, skuId: string) => {
         const selectedSku = skus.find(s => s.id === parseInt(skuId));
@@ -146,7 +146,7 @@ export function CreateOrderDialog({ outlet }: { outlet: Outlet }) {
         // Map form data to the format expected by createNewOrder
         const orderData = {
             outlet_id: outlet.id,
-            total_value: totalValue,
+            total_amount: totalAmount,
             items: data.items.map(item => {
                 const skuDetails = getSkuDetails(item.sku_id);
                  // We still need to provide a "unit_price" for the backend action, even if it's derived.
@@ -265,7 +265,7 @@ export function CreateOrderDialog({ outlet }: { outlet: Outlet }) {
                             <div className="flex items-center gap-4 w-full justify-end">
                                 <div className="text-right">
                                     <p className="text-muted-foreground">Total Order Value</p>
-                                    <p className="text-2xl font-bold">₹{totalValue.toFixed(2)}</p>
+                                    <p className="text-2xl font-bold">₹{totalAmount.toFixed(2)}</p>
                                 </div>
                                 <Button type="submit" size="lg" disabled={form.formState.isSubmitting || loading || !!error || fields.length === 0}>
                                     {form.formState.isSubmitting ? "Placing Order..." : "Place Order"}
@@ -278,3 +278,5 @@ export function CreateOrderDialog({ outlet }: { outlet: Outlet }) {
         </Dialog>
     );
 }
+
+    

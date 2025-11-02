@@ -100,7 +100,7 @@ export default function OrdersPage() {
                                         <TableCell>{(order as any).outlets?.name || 'N/A'}</TableCell>
                                         <TableCell className="hidden md:table-cell"><Badge variant={getStatusVariant(order.status)}>{order.status}</Badge></TableCell>
                                         <TableCell className="hidden sm:table-cell">{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
-                                        <TableCell className="text-right">₹{order.total_value?.toFixed(2) || '0.00'}</TableCell>
+                                        <TableCell className="text-right">₹{order.total_amount?.toFixed(2) || '0.00'}</TableCell>
                                         <TableCell className="text-right">
                                             <Button asChild variant="outline" size="sm">
                                                 <Link href={`/dashboard/distributor/orders/${order.id}`}>
@@ -124,3 +124,5 @@ export default function OrdersPage() {
         </main>
     );
 }
+
+    

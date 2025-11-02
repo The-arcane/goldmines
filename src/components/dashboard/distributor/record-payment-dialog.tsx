@@ -40,7 +40,7 @@ type RecordPaymentDialogProps = {
 export function RecordPaymentDialog({ order, onPaymentRecorded }: RecordPaymentDialogProps) {
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
-    const balanceDue = order.total_value - (order.amount_paid || 0);
+    const balanceDue = order.total_amount - (order.amount_paid || 0);
 
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -118,3 +118,5 @@ export function RecordPaymentDialog({ order, onPaymentRecorded }: RecordPaymentD
         </Dialog>
     );
 }
+
+    
