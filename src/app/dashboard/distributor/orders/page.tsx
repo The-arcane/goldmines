@@ -23,6 +23,7 @@ export default function OrdersPage() {
         if (!user) return;
         setLoading(true);
 
+        // First, find the distributor ID for the current admin user
         const { data: distributorData, error: distributorError } = await supabase
             .from('distributors')
             .select('id')
@@ -31,11 +32,13 @@ export default function OrdersPage() {
 
         if (distributorError || !distributorData) {
             console.error("Could not find distributor for this admin:", distributorError);
+            setOrders([]); // Ensure orders are cleared if distributor not found
             setLoading(false);
             return;
         }
         setDistributor(distributorData);
 
+        // Then, fetch orders for that distributor ID
         const { data, error } = await supabase
             .from("orders")
             .select("*, outlets(name)")
@@ -44,6 +47,7 @@ export default function OrdersPage() {
 
         if (error) {
             console.error("Error fetching orders:", error);
+            setOrders([]);
         } else {
             setOrders(data as Order[] || []);
         }

@@ -13,12 +13,16 @@ import {
 import { OutletsMap } from "@/components/dashboard/admin/outlets-map";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import type { Outlet, Visit, User } from "@/lib/types";
+import type { Outlet, Visit, User, Order } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
 
 export default function AdminDashboardPage() {
   const [recentVisits, setRecentVisits] = useState<Visit[]>([]);
+  const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,12 +31,14 @@ export default function AdminDashboardPage() {
     const fetchData = async () => {
       setLoading(true);
       const visitsPromise = supabase.from("visits").select("*").order("entry_time", { ascending: false }).limit(5);
+      const ordersPromise = supabase.from("orders").select("*, outlets(name)").order("order_date", { ascending: false }).limit(5);
       const outletsPromise = supabase.from("outlets").select("*");
       const usersPromise = supabase.from("users").select("*");
 
-      const [visitsRes, outletsRes, usersRes] = await Promise.all([visitsPromise, outletsPromise, usersPromise]);
+      const [visitsRes, ordersRes, outletsRes, usersRes] = await Promise.all([visitsPromise, ordersPromise, outletsPromise, usersPromise]);
 
       if (visitsRes.data) setRecentVisits(visitsRes.data);
+      if (ordersRes.data) setRecentOrders(ordersRes.data as Order[]);
       if (outletsRes.data) setOutlets(outletsRes.data);
       if (usersRes.data) setUsers(usersRes.data);
 
@@ -41,6 +47,16 @@ export default function AdminDashboardPage() {
 
     fetchData();
   }, []);
+
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+        case 'Delivered': return 'default';
+        case 'Pending': return 'destructive';
+        case 'Dispatched': return 'outline';
+        case 'Approved': return 'secondary';
+        default: return 'secondary';
+    }
+  }
 
 
   return (
@@ -74,6 +90,38 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
              {loading ? <p>Loading outlets map...</p> : <OutletsMap outlets={outlets} />}
+          </CardContent>
+        </Card>
+         <Card className="xl:col-span-3">
+          <CardHeader>
+            <CardTitle>Recent Orders</CardTitle>
+            <CardDescription>
+              A summary of the latest orders from all distributors.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {loading ? <p>Loading recent orders...</p> : (
+               <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Outlet</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead className="text-right">Value</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {recentOrders.map(order => (
+                        <TableRow key={order.id}>
+                            <TableCell>{(order as any).outlets?.name || 'N/A'}</TableCell>
+                            <TableCell><Badge variant={getStatusVariant(order.status)}>{order.status}</Badge></TableCell>
+                            <TableCell>{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
+                            <TableCell className="text-right">₹{order.total_amount?.toFixed(2) || '0.00'}</TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+            )}
           </CardContent>
         </Card>
       </div>
