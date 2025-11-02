@@ -1,21 +1,60 @@
 
 "use client";
 
-import { Map, AdvancedMarker, Pin, useApiIsLoaded } from "@vis.gl/react-google-maps";
+import { Map, AdvancedMarker, Pin, useApiIsLoaded, useMap } from "@vis.gl/react-google-maps";
 import { Circle } from "@/components/map/circle";
 import type { Outlet } from "@/lib/types";
 import { useGeolocation } from "@/hooks/use-geolocation";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useAuth } from "@/lib/auth";
 import { haversineDistance } from "@/lib/utils";
 import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import { differenceInMinutes } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { LocateFixed, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Plus, Minus } from "lucide-react";
 
 type SalespersonMapProps = {
     outlets: Outlet[];
     loading: boolean;
+}
+
+function MapControls() {
+    const map = useMap();
+
+    const onZoom = (level: number) => {
+        if (!map) return;
+        map.setZoom(map.getZoom()! + level);
+    };
+
+    const onPan = (x: number, y: number) => {
+        if (!map) return;
+        map.panBy(x, y);
+    };
+    
+    const { coords, loading: geoLoading } = useGeolocation();
+
+    const onRecenter = useCallback(() => {
+        if (!map || !coords) return;
+        map.panTo({ lat: coords.latitude, lng: coords.longitude });
+        map.setZoom(15);
+    }, [map, coords]);
+
+    return (
+        <div className="absolute top-2 right-2 flex flex-col gap-2">
+            <Button size="icon" onClick={() => onZoom(1)} aria-label="Zoom In"><Plus className="h-4 w-4" /></Button>
+            <Button size="icon" onClick={() => onZoom(-1)} aria-label="Zoom Out"><Minus className="h-4 w-4" /></Button>
+            <Button size="icon" onClick={onRecenter} disabled={geoLoading} aria-label="Recenter"><LocateFixed className="h-4 w-4" /></Button>
+            <div className="grid grid-cols-3 gap-1">
+                 <div className="col-start-2"><Button size="icon" onClick={() => onPan(0, -50)} aria-label="Pan Up"><ArrowUp className="h-4 w-4" /></Button></div>
+                 <div><Button size="icon" onClick={() => onPan(-50, 0)} aria-label="Pan Left"><ArrowLeft className="h-4 w-4" /></Button></div>
+                 <div></div>
+                 <div><Button size="icon" onClick={() => onPan(50, 0)} aria-label="Pan Right"><ArrowRight className="h-4 w-4" /></Button></div>
+                 <div className="col-start-2"><Button size="icon" onClick={() => onPan(0, 50)} aria-label="Pan Down"><ArrowDown className="h-4 w-4" /></Button></div>
+            </div>
+        </div>
+    )
 }
 
 export function SalespersonMap({ outlets, loading }: SalespersonMapProps) {
@@ -106,7 +145,7 @@ export function SalespersonMap({ outlets, loading }: SalespersonMapProps) {
   }
 
   return (
-    <div className="h-[400px] w-full rounded-lg overflow-hidden border">
+    <div className="h-[400px] w-full rounded-lg overflow-hidden border relative">
       <Map
         mapId="salesperson-live-map"
         center={center}
@@ -141,6 +180,7 @@ export function SalespersonMap({ outlets, loading }: SalespersonMapProps) {
           </AdvancedMarker>
         )}
       </Map>
+      <MapControls />
     </div>
   );
 }
