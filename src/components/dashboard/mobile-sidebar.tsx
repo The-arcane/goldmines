@@ -22,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
+import { useEffect } from "react";
 
 const navItems = {
   admin: [
@@ -56,6 +57,16 @@ const navItems = {
 
 export function MobileSidebar({ userRole }: { userRole: UserRole | undefined }) {
   const pathname = usePathname();
+
+  useEffect(() => {
+    // This is a simple way to close the sheet when a link is clicked.
+    // It finds the close button of the sheet and simulates a click.
+    const closeButton = document.querySelector('[data-radix-dialog-close]');
+    if (closeButton instanceof HTMLElement) {
+      closeButton.click();
+    }
+  }, [pathname]);
+
   if (!userRole) return null;
   
   const items = navItems[userRole as keyof typeof navItems] || [];
