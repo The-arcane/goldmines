@@ -88,63 +88,81 @@ export default function SkusPage() {
                                             <TableHead>Unit</TableHead>
                                             <TableHead className="text-right">Units/Case</TableHead>
                                             <TableHead className="text-right">Case Price</TableHead>
+                                            <TableHead className="text-right">Per Item Cost</TableHead>
                                             <TableHead className="text-right">MRP</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {skus.map((sku) => (
-                                            <TableRow key={sku.id}>
-                                                <TableCell className="font-medium">{sku.name}</TableCell>
-                                                <TableCell>{sku.product_code || 'N/A'}</TableCell>
-                                                <TableCell className="text-right">
-                                                    <Badge variant={sku.stock_quantity < 10 ? 'destructive' : 'secondary'}>
-                                                        {sku.stock_quantity}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell>{sku.unit_type || 'N/A'}</TableCell>
-                                                <TableCell className="text-right">{sku.units_per_case || 'N/A'}</TableCell>
-                                                <TableCell className="text-right">₹{sku.case_price?.toFixed(2) || '0.00'}</TableCell>
-                                                <TableCell className="text-right">₹{sku.mrp?.toFixed(2) || '0.00'}</TableCell>
-                                            </TableRow>
-                                        ))}
+                                        {skus.map((sku) => {
+                                            const perItemCost = (sku.case_price && sku.units_per_case && sku.units_per_case > 0) 
+                                                ? sku.case_price / sku.units_per_case 
+                                                : 0;
+
+                                            return (
+                                                <TableRow key={sku.id}>
+                                                    <TableCell className="font-medium">{sku.name}</TableCell>
+                                                    <TableCell>{sku.product_code || 'N/A'}</TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Badge variant={sku.stock_quantity < 10 ? 'destructive' : 'secondary'}>
+                                                            {sku.stock_quantity}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell>{sku.unit_type || 'N/A'}</TableCell>
+                                                    <TableCell className="text-right">{sku.units_per_case || 'N/A'}</TableCell>
+                                                    <TableCell className="text-right">₹{sku.case_price?.toFixed(2) || '0.00'}</TableCell>
+                                                    <TableCell className="text-right">₹{perItemCost.toFixed(2)}</TableCell>
+                                                    <TableCell className="text-right">₹{sku.mrp?.toFixed(2) || '0.00'}</TableCell>
+                                                </TableRow>
+                                            );
+                                        })}
                                     </TableBody>
                                 </Table>
                             </div>
                             
                             {/* Mobile Card View */}
                             <div className="grid gap-4 md:hidden">
-                                {skus.map((sku) => (
-                                    <Card key={sku.id}>
-                                        <CardHeader>
-                                            <CardTitle className="text-base">{sku.name}</CardTitle>
-                                            <CardDescription>SKU: {sku.product_code || 'N/A'}</CardDescription>
-                                        </CardHeader>
-                                        <CardContent className="grid gap-4 text-sm">
-                                            <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Stock</span>
-                                                <Badge variant={sku.stock_quantity < 10 ? 'destructive' : 'secondary'}>
-                                                    {sku.stock_quantity}
-                                                </Badge>
-                                            </div>
-                                             <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Unit Type</span>
-                                                <span>{sku.unit_type || 'N/A'}</span>
-                                            </div>
-                                             <div className="flex justify-between">
-                                                <span className="text-muted-foreground">Units/Case</span>
-                                                <span>{sku.units_per_case || 'N/A'}</span>
-                                            </div>
-                                             <div className="flex justify-between font-medium">
-                                                <span className="text-muted-foreground">Case Price</span>
-                                                <span>₹{sku.case_price?.toFixed(2) || '0.00'}</span>
-                                            </div>
-                                            <div className="flex justify-between font-medium">
-                                                <span className="text-muted-foreground">MRP</span>
-                                                <span>₹{sku.mrp?.toFixed(2) || '0.00'}</span>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
+                                {skus.map((sku) => {
+                                    const perItemCost = (sku.case_price && sku.units_per_case && sku.units_per_case > 0) 
+                                        ? sku.case_price / sku.units_per_case 
+                                        : 0;
+
+                                    return (
+                                        <Card key={sku.id}>
+                                            <CardHeader>
+                                                <CardTitle className="text-base">{sku.name}</CardTitle>
+                                                <CardDescription>SKU: {sku.product_code || 'N/A'}</CardDescription>
+                                            </CardHeader>
+                                            <CardContent className="grid gap-4 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">Stock</span>
+                                                    <Badge variant={sku.stock_quantity < 10 ? 'destructive' : 'secondary'}>
+                                                        {sku.stock_quantity}
+                                                    </Badge>
+                                                </div>
+                                                 <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">Unit Type</span>
+                                                    <span>{sku.unit_type || 'N/A'}</span>
+                                                </div>
+                                                 <div className="flex justify-between">
+                                                    <span className="text-muted-foreground">Units/Case</span>
+                                                    <span>{sku.units_per_case || 'N/A'}</span>
+                                                </div>
+                                                 <div className="flex justify-between font-medium">
+                                                    <span className="text-muted-foreground">Case Price</span>
+                                                    <span>₹{sku.case_price?.toFixed(2) || '0.00'}</span>
+                                                </div>
+                                                <div className="flex justify-between font-medium">
+                                                    <span className="text-muted-foreground">Per Item Cost</span>
+                                                    <span>₹{perItemCost.toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between font-medium">
+                                                    <span className="text-muted-foreground">MRP</span>
+                                                    <span>₹{sku.mrp?.toFixed(2) || '0.00'}</span>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    );
+                                })}
                             </div>
                         </>
                     ) : (
