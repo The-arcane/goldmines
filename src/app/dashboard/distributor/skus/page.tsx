@@ -37,7 +37,7 @@ export default function SkusPage() {
             .from("skus")
             .select("*")
             .or(`distributor_id.eq.${distributorData.id},distributor_id.is.null`)
-            .order("created_at", { ascending: false });
+            .order("name", { ascending: true });
 
         if (error) {
             console.error("Error fetching SKUs:", error);

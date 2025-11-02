@@ -23,7 +23,7 @@ export default function OutletsPage() {
 
     const fetchOutlets = async () => {
         setLoading(true);
-        const { data, error } = await supabase.from("outlets").select("*").order("created_at", { ascending: false });
+        const { data, error } = await supabase.from("outlets").select("*").order("name", { ascending: true });
 
         if (error) {
             toast({

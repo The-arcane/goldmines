@@ -53,7 +53,7 @@ export default function DistributorDashboardPage() {
       const [memberLinksRes, outletsRes, ordersRes] = await Promise.all([
         supabase.from("distributor_users").select("users(*)").eq("distributor_id", currentDistributorId),
         supabase.from("outlets").select("*").limit(10), // Placeholder logic for assigned outlets
-        supabase.from("orders").select("*, outlets(name)").eq("distributor_id", currentDistributorId).order("created_at", { ascending: false }).limit(5)
+        supabase.from("orders").select("*, outlets(name)").eq("distributor_id", currentDistributorId).order("order_date", { ascending: false }).limit(5)
       ]);
 
       // Process team members
@@ -242,6 +242,3 @@ export default function DistributorDashboardPage() {
     </div>
   );
 }
-
-    
-    

@@ -16,7 +16,7 @@ export default function DistributorsPage() {
 
     const fetchData = useCallback(async () => {
         setLoading(true);
-        const distributorsPromise = supabase.from("distributors").select("*").order("created_at", { ascending: false });
+        const distributorsPromise = supabase.from("distributors").select("*").order("name", { ascending: true });
         const usersPromise = supabase.from("users").select("id, name"); // Only need id and name for mapping
 
         const [distributorsRes, usersRes] = await Promise.all([distributorsPromise, usersPromise]);

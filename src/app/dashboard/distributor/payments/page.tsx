@@ -41,7 +41,7 @@ export default function PaymentsPage() {
             .select("*, outlets(name)")
             .eq('distributor_id', distributorData.id)
             .neq('status', 'Rejected') // Ignore rejected orders for payment
-            .order("created_at", { ascending: false });
+            .order("order_date", { ascending: false });
 
         if (error) {
             console.error("Error fetching orders for payment:", error);
@@ -137,5 +137,3 @@ export default function PaymentsPage() {
         </main>
     );
 }
-
-    
