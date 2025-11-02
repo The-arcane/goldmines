@@ -29,6 +29,7 @@ export type Outlet = {
   created_at: string;
   credit_limit: number;
   current_due: number;
+  created_by?: string; // Add this if you track who created the outlet
 };
 
 export type Geofence = {

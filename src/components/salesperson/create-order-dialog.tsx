@@ -30,8 +30,8 @@ import { createNewOrder } from "@/lib/actions";
 const formSchema = z.object({
     items: z.array(z.object({
         sku_id: z.coerce.number().min(1, "SKU must be selected."),
-        quantity: z.coerce.number().int().min(1, "Quantity must be at least 1."),
-        unit_price: z.number(),
+        quantity: z.coerce.number().int().min(1, "Quantity must be at least 1 case."),
+        case_price: z.number(),
         total_price: z.number(),
     })).min(1, "Please add at least one item to the order."),
 });
@@ -114,15 +114,13 @@ export function CreateOrderDialog({ outlet }: { outlet: Outlet }) {
         const selectedSku = skus.find(s => s.id === parseInt(skuId));
         if (selectedSku) {
             const currentItem = form.getValues(`items.${index}`);
-            const unitsPerCase = selectedSku.units_per_case || 1;
             const casePrice = selectedSku.case_price || 0;
-            const unitPrice = unitsPerCase > 0 ? casePrice / unitsPerCase : (selectedSku.ptr || 0);
 
             update(index, { 
                 ...currentItem, 
                 sku_id: selectedSku.id, 
-                unit_price: unitPrice,
-                total_price: unitPrice * (currentItem.quantity || 1)
+                case_price: casePrice,
+                total_price: casePrice * (currentItem.quantity || 1)
             });
         }
     };
@@ -133,7 +131,7 @@ export function CreateOrderDialog({ outlet }: { outlet: Outlet }) {
          update(index, {
             ...currentItem,
             quantity: newQuantity,
-            total_price: (currentItem.unit_price || 0) * newQuantity
+            total_price: (currentItem.case_price || 0) * newQuantity
          });
     }
     
@@ -145,10 +143,22 @@ export function CreateOrderDialog({ outlet }: { outlet: Outlet }) {
             return;
         }
         
+        // Map form data to the format expected by createNewOrder
         const orderData = {
-            ...data,
             outlet_id: outlet.id,
-            total_value: totalValue
+            total_value: totalValue,
+            items: data.items.map(item => {
+                const skuDetails = getSkuDetails(item.sku_id);
+                // For createNewOrder, unit_price is still required by the action, but it's based on case price.
+                // The total_price is the important value.
+                 const unitPrice = (skuDetails?.units_per_case || 1) > 0 ? (skuDetails?.case_price || 0) / (skuDetails?.units_per_case || 1) : 0;
+                return {
+                    sku_id: item.sku_id,
+                    quantity: item.quantity * (skuDetails?.units_per_case || 1), // Convert cases to units for backend
+                    unit_price: unitPrice,
+                    total_price: item.total_price,
+                }
+            })
         };
 
         const result = await createNewOrder(orderData, distributor.id);
@@ -190,11 +200,10 @@ export function CreateOrderDialog({ outlet }: { outlet: Outlet }) {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead className="w-[30%]">SKU</TableHead>
-                                            <TableHead className="w-[80px]">Qty</TableHead>
+                                            <TableHead className="w-[120px]">Qty (Cases)</TableHead>
                                             <TableHead className="text-right">MRP</TableHead>
                                             <TableHead className="text-right">Units/Case</TableHead>
-                                            <TableHead className="text-right">Case Price</TableHead>
-                                            <TableHead className="text-right font-medium">Unit Price</TableHead>
+                                            <TableHead className="text-right font-medium">Case Price</TableHead>
                                             <TableHead className="text-right font-medium">Total Price</TableHead>
                                             <TableHead className="w-[50px]"><span className="sr-only">Actions</span></TableHead>
                                         </TableRow>
@@ -223,14 +232,13 @@ export function CreateOrderDialog({ outlet }: { outlet: Outlet }) {
                                                             control={form.control}
                                                             name={`items.${index}.quantity`}
                                                             render={({ field }) => (
-                                                                <Input type="number" {...field} onChange={(e) => { field.onChange(e); handleQuantityChange(index, e.target.value); }} />
+                                                                <Input type="number" {...field} onChange={(e) => { field.onChange(e); handleQuantityChange(index, e.target.value); }} placeholder="Cases" />
                                                             )}
                                                         />
                                                     </TableCell>
                                                     <TableCell className="text-right font-mono">₹{skuDetails?.mrp?.toFixed(2) || '0.00'}</TableCell>
                                                     <TableCell className="text-right">{skuDetails?.units_per_case || 'N/A'}</TableCell>
-                                                    <TableCell className="text-right font-mono">₹{skuDetails?.case_price?.toFixed(2) || '0.00'}</TableCell>
-                                                    <TableCell className="text-right font-mono font-medium">₹{watchedItems[index]?.unit_price.toFixed(2) || '0.00'}</TableCell>
+                                                    <TableCell className="text-right font-mono font-medium">₹{skuDetails?.case_price?.toFixed(2) || '0.00'}</TableCell>
                                                     <TableCell className="text-right font-mono font-medium">₹{watchedItems[index]?.total_price.toFixed(2) || '0.00'}</TableCell>
                                                     <TableCell>
                                                         <Button variant="ghost" size="icon" onClick={() => remove(index)}>
@@ -242,7 +250,7 @@ export function CreateOrderDialog({ outlet }: { outlet: Outlet }) {
                                         })}
                                     </TableBody>
                                 </Table>
-                                <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => append({ sku_id: 0, quantity: 1, unit_price: 0, total_price: 0 })}>
+                                <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => append({ sku_id: 0, quantity: 1, case_price: 0, total_price: 0 })}>
                                     <PlusCircle className="mr-2 h-4 w-4" /> Add Item
                                 </Button>
                                 <FormMessage>{form.formState.errors.items?.message}</FormMessage>
