@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/auth";
 import type { Attendance, Outlet } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Clock, MapPin, Package, IndianRupee, PlusCircle } from "lucide-react";
 import { AttendanceDialog } from "@/components/salesperson/attendance-dialog";
 import { SalespersonMap } from "@/components/salesperson/live-map";
