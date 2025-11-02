@@ -52,5 +52,21 @@
     "Case Price": "case price",
     "Per Item Cost": "प्रति आइटम लागत",
     "MRP": "MRP",
-    "No SKUs found. Add one to get started.": "कोई SKU नहीं मिला। आरंभ करने के लिए एक जोड़ें।"
+    "No SKUs found. Add one to get started.": "कोई SKU नहीं मिला। आरंभ करने के लिए एक जोड़ें।",
+    "Welcome": "स्वागत है",
+    "Here's your overview for the day.": "यहाँ दिन के लिए आपका अवलोकन है।",
+    "Start Day": "दिन शुरू करें",
+    "End Day": "दिन समाप्त करें",
+    "Add Outlet": "आउटलेट जोड़ें",
+    "Orders Placed": "दिए गए ऑर्डर",
+    "Sales Value": "बिक्री मूल्य",
+    "Outlets Visited": "देखे गए आउटलेट",
+    "Valid Check-ins": "मान्य चेक-इन",
+    "Live Route": "लाइव रूट",
+    "Your current location and active outlets.": "आपका वर्तमान स्थान और सक्रिय आउटलेट।",
+    "Active Outlets": "सक्रिय आउटलेट",
+    "Create an order at an outlet you are currently visiting.": "आप जिस आउटलेट पर वर्तमान में जा रहे हैं, उस पर एक ऑर्डर बनाएं।",
+    "No Active Visits": "कोई सक्रिय विज़िट नहीं",
+    "You are not in the geofence of any outlet.": "आप किसी भी आउटलेट के जियोफ़ेंस में नहीं हैं।",
+    "Start your day to begin creating orders.": "ऑर्डर बनाना शुरू करने के लिए अपना दिन शुरू करें।"
 }

@@ -16,11 +16,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CreateOrderDialog } from "@/components/salesperson/create-order-dialog";
 import { useGeolocation } from "@/hooks/use-geolocation";
 import { haversineDistance } from "@/lib/utils";
+import { useTranslation } from "@/components/i18n/provider";
 
 
 export default function SalespersonDashboardPage() {
     const { user } = useAuth();
     const { toast } = useToast();
+    const { t } = useTranslation();
     const [attendance, setAttendance] = useState<Attendance | null>(null);
     const [allOutlets, setAllOutlets] = useState<Outlet[]>([]);
     const [todaysOrders, setTodaysOrders] = useState<Order[]>([]);
@@ -111,18 +113,18 @@ export default function SalespersonDashboardPage() {
         <div className="flex flex-1 flex-col gap-4">
             <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
-                    <h1 className="font-headline text-3xl font-bold">Welcome, {user?.name.split(' ')[0]}</h1>
-                    <p className="text-muted-foreground">Here's your overview for the day.</p>
+                    <h1 className="font-headline text-3xl font-bold">{t('Welcome')}, {user?.name.split(' ')[0]}</h1>
+                    <p className="text-muted-foreground">{t("Here's your overview for the day.")}</p>
                 </div>
                 <div className="flex gap-2 flex-wrap">
                     <AttendanceDialog type="checkin" onAttendanceMarked={fetchDashboardData} disabled={isCheckedIn || isCheckedOut}>
                         <Button variant={isCheckedIn ? "secondary" : "default"} disabled={isCheckedIn || isCheckedOut}>
-                            <Clock className="mr-2 h-4 w-4"/> Start Day
+                            <Clock className="mr-2 h-4 w-4"/> {t('Start Day')}
                         </Button>
                     </AttendanceDialog>
                     <AttendanceDialog type="checkout" onAttendanceMarked={fetchDashboardData} disabled={!isCheckedIn || isCheckedOut}>
                         <Button variant="destructive" disabled={!isCheckedIn || isCheckedOut}>
-                           <Clock className="mr-2 h-4 w-4"/> End Day
+                           <Clock className="mr-2 h-4 w-4"/> {t('End Day')}
                         </Button>
                     </AttendanceDialog>
                     <AddSalespersonOutletDialog onOutletAdded={fetchDashboardData} disabled={!isCheckedIn} />
@@ -132,7 +134,7 @@ export default function SalespersonDashboardPage() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Orders Placed</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('Orders Placed')}</CardTitle>
                         <Package className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
@@ -141,7 +143,7 @@ export default function SalespersonDashboardPage() {
                 </Card>
                  <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Sales Value</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('Sales Value')}</CardTitle>
                         <IndianRupee className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
@@ -150,7 +152,7 @@ export default function SalespersonDashboardPage() {
                 </Card>
                  <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Outlets Visited</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('Outlets Visited')}</CardTitle>
                         <MapPin className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
@@ -159,7 +161,7 @@ export default function SalespersonDashboardPage() {
                 </Card>
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Valid Check-ins</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('Valid Check-ins')}</CardTitle>
                         <MapPin className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
@@ -171,8 +173,8 @@ export default function SalespersonDashboardPage() {
             <div className="grid gap-4 md:grid-cols-2">
                  <Card>
                     <CardHeader>
-                        <CardTitle>Live Route</CardTitle>
-                        <CardDescription>Your current location and active outlets.</CardDescription>
+                        <CardTitle>{t('Live Route')}</CardTitle>
+                        <CardDescription>{t('Your current location and active outlets.')}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <SalespersonMap outlets={allOutlets} activeOutlets={activeOutlets} />
@@ -180,8 +182,8 @@ export default function SalespersonDashboardPage() {
                 </Card>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Active Outlets</CardTitle>
-                        <CardDescription>Create an order at an outlet you are currently visiting.</CardDescription>
+                        <CardTitle>{t('Active Outlets')}</CardTitle>
+                        <CardDescription>{t('Create an order at an outlet you are currently visiting.')}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         {loading ? (
@@ -204,8 +206,8 @@ export default function SalespersonDashboardPage() {
                         ) : (
                             <div className="flex flex-col items-center justify-center text-center p-8 border-dashed border-2 rounded-md h-full">
                                 <ShoppingCart className="h-10 w-10 text-muted-foreground mb-2" />
-                                <p className="font-semibold">No Active Visits</p>
-                                <p className="text-sm text-muted-foreground">{isCheckedIn ? "You are not in the geofence of any outlet." : "Start your day to begin creating orders."}</p>
+                                <p className="font-semibold">{t('No Active Visits')}</p>
+                                <p className="text-sm text-muted-foreground">{isCheckedIn ? t('You are not in the geofence of any outlet.') : t('Start your day to begin creating orders.')}</p>
                             </div>
                         )}
                     </CardContent>
@@ -215,5 +217,3 @@ export default function SalespersonDashboardPage() {
         </div>
     );
 }
-
-    

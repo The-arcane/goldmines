@@ -52,5 +52,21 @@
     "Case Price": "Case Price",
     "Per Item Cost": "Per Item Cost",
     "MRP": "MRP",
-    "No SKUs found. Add one to get started.": "No SKUs found. Add one to get started."
+    "No SKUs found. Add one to get started.": "No SKUs found. Add one to get started.",
+    "Welcome": "Welcome",
+    "Here's your overview for the day.": "Here's your overview for the day.",
+    "Start Day": "Start Day",
+    "End Day": "End Day",
+    "Add Outlet": "Add Outlet",
+    "Orders Placed": "Orders Placed",
+    "Sales Value": "Sales Value",
+    "Outlets Visited": "Outlets Visited",
+    "Valid Check-ins": "Valid Check-ins",
+    "Live Route": "Live Route",
+    "Your current location and active outlets.": "Your current location and active outlets.",
+    "Active Outlets": "Active Outlets",
+    "Create an order at an outlet you are currently visiting.": "Create an order at an outlet you are currently visiting.",
+    "No Active Visits": "No Active Visits",
+    "You are not in the geofence of any outlet.": "You are not in the geofence of any outlet.",
+    "Start your day to begin creating orders.": "Start your day to begin creating orders."
 }
