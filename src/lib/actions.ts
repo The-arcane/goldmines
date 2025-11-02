@@ -200,13 +200,13 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
   }
 
 
-  // 2. Create the main order record
+  // 2. Create the main order record with "Approved" status directly
   const { data: orderData, error: orderError } = await supabase
     .from("orders")
     .insert({
       distributor_id: distributorId,
       outlet_id: formData.outlet_id,
-      status: "Pending",
+      status: "Approved", // Set status to Approved directly
       total_amount: formData.total_amount,
       order_date: new Date().toISOString(),
     })
@@ -218,7 +218,20 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
     return { success: false, error: orderError.message };
   }
 
-  // 3. Prepare and insert order items
+  // 3. Since the order is auto-approved, update the outlet's due amount
+  const { error: rpcError } = await supabase.rpc('update_outlet_due', {
+    outlet_uuid: orderData.outlet_id,
+    amount_change: orderData.total_amount
+  });
+
+  if (rpcError) {
+      // Rollback the order creation if the due update fails, to maintain data integrity
+      await supabase.from("orders").delete().eq("id", orderData.id);
+      console.error("Error updating outlet due on order creation:", rpcError);
+      return { success: false, error: `Order could not be placed because outlet balance could not be updated: ${rpcError.message}` };
+  }
+
+  // 4. Prepare and insert order items
   const orderItems = formData.items.map(item => ({
     order_id: orderData.id,
     sku_id: item.sku_id,
@@ -231,13 +244,18 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
 
   if (itemsError) {
     console.error("Error creating order items:", itemsError);
-    // Rollback the order creation if items fail
+    // Rollback the order and the due update
+    await supabase.rpc('update_outlet_due', {
+        outlet_uuid: orderData.outlet_id,
+        amount_change: -orderData.total_amount
+    });
     await supabase.from("orders").delete().eq("id", orderData.id);
     return { success: false, error: `Order items could not be saved: ${itemsError.message}` };
   }
 
   revalidatePath("/dashboard/distributor/orders");
   revalidatePath("/dashboard/distributor");
+  revalidatePath("/dashboard/outlets");
   return { success: true, orderId: orderData.id };
 }
 
@@ -266,16 +284,10 @@ export async function updateOrderStatus(orderId: number, status: string) {
         return { success: false, error: error.message };
     }
 
-    // If order is approved, increase the outlet's current_due
-    if (status === 'Approved' && order.status !== 'Approved') {
-        const { error: rpcError } = await supabase.rpc('update_outlet_due', {
-            outlet_uuid: order.outlet_id,
-            amount_change: order.total_amount
-        });
-        if (rpcError) {
-             return { success: false, error: `Order status updated, but failed to update outlet due: ${rpcError.message}` };
-        }
-    } else if (status === 'Rejected' && order.status === 'Approved') {
+    // This logic is now mostly for status changes other than Approved/Rejected by distributor
+    // e.g., Dispatched, Delivered etc.
+    // The credit logic is handled during order creation.
+    if (status === 'Rejected' && order.status === 'Approved') {
         // If an approved order is rejected, decrease the outlet's due
         const { error: rpcError } = await supabase.rpc('update_outlet_due', {
             outlet_uuid: order.outlet_id,

@@ -162,7 +162,7 @@ export function CreateOrderDialog({ outlet }: { outlet: Outlet }) {
 
         const result = await createNewOrder(orderData, distributor.id);
         if (result.success) {
-            toast({ title: "Order Placed!", description: `Order #${result.orderId} for ${outlet.name} has been sent.` });
+            toast({ title: "Order Placed!", description: `Order #${result.orderId} for ${outlet.name} has been placed.` });
             setOpen(false);
         } else {
             toast({ variant: "destructive", title: "Failed to create order", description: result.error });

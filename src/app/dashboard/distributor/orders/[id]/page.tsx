@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { updateOrderStatus } from "@/lib/actions";
-import { ArrowLeft, FileText, CheckCircle, XCircle } from "lucide-react";
+import { ArrowLeft, FileText, CheckCircle, XCircle, Truck } from "lucide-react";
 import { format } from "date-fns";
 
 export default function OrderDetailsPage({ params }: { params: { id: string } }) {
@@ -51,7 +51,7 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
         fetchOrderDetails();
     }, [fetchOrderDetails]);
 
-    const handleUpdateStatus = (status: 'Approved' | 'Rejected') => {
+    const handleUpdateStatus = (status: 'Dispatched' | 'Rejected') => {
         if (!order) return;
         startTransition(async () => {
             const result = await updateOrderStatus(order.id, status);
@@ -94,19 +94,19 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
                 </h1>
                 <Badge variant={getStatusVariant(order.status)} className="ml-auto sm:ml-0">{order.status}</Badge>
                 <div className="hidden items-center gap-2 md:ml-auto md:flex">
-                     {order.status === 'Pending' && (
+                     {order.status === 'Approved' && (
                         <>
                             <Button variant="outline" size="sm" onClick={() => handleUpdateStatus('Rejected')} disabled={isPending}>
                                 <XCircle className="mr-2 h-4 w-4" />
                                 Reject
                             </Button>
-                            <Button size="sm" onClick={() => handleUpdateStatus('Approved')} disabled={isPending}>
-                                <CheckCircle className="mr-2 h-4 w-4" />
-                                Approve
+                            <Button size="sm" onClick={() => handleUpdateStatus('Dispatched')} disabled={isPending}>
+                                <Truck className="mr-2 h-4 w-4" />
+                                Mark as Dispatched
                             </Button>
                         </>
                     )}
-                    {order.status === 'Approved' && (
+                    {(order.status === 'Dispatched' || order.status === 'Delivered') && (
                         <Button variant="outline" size="sm"><FileText className="mr-2 h-4 w-4" />Generate Bill</Button>
                     )}
                 </div>
@@ -168,10 +168,10 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
                 </div>
             </div>
              <div className="flex items-center justify-center gap-2 md:hidden">
-                {order.status === 'Pending' && (
+                {order.status === 'Approved' && (
                     <>
                         <Button variant="outline" size="sm" onClick={() => handleUpdateStatus('Rejected')} disabled={isPending}>Reject</Button>
-                        <Button size="sm" onClick={() => handleUpdateStatus('Approved')} disabled={isPending}>Approve</Button>
+                        <Button size="sm" onClick={() => handleUpdateStatus('Dispatched')} disabled={isPending}>Mark as Dispatched</Button>
                     </>
                  )}
             </div>
