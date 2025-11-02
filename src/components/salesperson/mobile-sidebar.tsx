@@ -66,6 +66,9 @@ export function MobileSidebar() {
           ))}
         </nav>
       </div>
+      <div className="mt-auto p-4 text-center text-xs text-muted-foreground">
+        Version 1.0.0.0 done by Raunaq
+      </div>
     </div>
   );
 }
