@@ -113,12 +113,19 @@ export default function CreateOrderPage() {
          });
     }
 
-    const onSubmit = async (data: z.infer<typeof formSchema>>) => {
+    const onSubmit = async (data: z.infer<typeof formSchema>) => {
         if (!distributor) return;
         
         const orderData = {
-            ...data,
-            total_value: totalValue
+            outlet_id: data.outlet_id,
+            total_amount: totalValue,
+            items: data.items.map(item => ({
+                sku_id: item.sku_id,
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+                total_price: item.total_price,
+            })),
+            payment_status: 'Unpaid' as const,
         };
 
         const result = await createNewOrder(orderData, distributor.id);
@@ -239,5 +246,3 @@ export default function CreateOrderPage() {
         </main>
     );
 }
-
-    
