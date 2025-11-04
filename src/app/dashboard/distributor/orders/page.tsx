@@ -15,12 +15,15 @@ import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function OrdersPage() {
-    const { user } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchOrders = useCallback(async () => {
-        if (!user) return;
+        if (!user) {
+            setLoading(false);
+            return;
+        };
         setLoading(true);
 
         const { data: distributorData, error: distributorError } = await supabase
@@ -52,10 +55,10 @@ export default function OrdersPage() {
     }, [user]);
 
     useEffect(() => {
-        if (user) {
+        if (!authLoading) {
             fetchOrders();
         }
-    }, [user, fetchOrders]);
+    }, [authLoading, fetchOrders]);
     
     const getStatusVariant = (status: string) => {
         switch (status) {
