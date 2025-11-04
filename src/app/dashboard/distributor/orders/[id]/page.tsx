@@ -10,11 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { updateOrderStatus } from "@/lib/actions";
-import { ArrowLeft, FileText, CheckCircle, XCircle, Truck } from "lucide-react";
+import { updateOrderStatus, updateOrderAndStock } from "@/lib/actions";
+import { ArrowLeft, FileText, CheckCircle, XCircle, Truck, ShoppingCart } from "lucide-react";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+
 
 export default function OrderDetailsPage({ params }: { params: { id: string } }) {
     const { id } = use(params);
@@ -25,6 +27,9 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
     const [items, setItems] = useState<OrderItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [isPending, startTransition] = useTransition();
+
+    // New state to track out of stock items
+    const [outOfStockItems, setOutOfStockItems] = useState<Set<number>>(new Set());
 
     const fetchOrderDetails = useCallback(async () => {
         if (!user) return;
@@ -44,13 +49,31 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
         }
 
         setOrder(data as Order);
-        setItems(data.order_items as OrderItem[] || []);
+        const orderItems = (data.order_items as OrderItem[] || []);
+        setItems(orderItems);
+        
+        // Initialize out of stock state from DB if exists
+        const initialOutOfStock = new Set(orderItems.filter(item => item.is_out_of_stock).map(item => item.id));
+        setOutOfStockItems(initialOutOfStock);
+
         setLoading(false);
     }, [user, id, router, toast]);
 
     useEffect(() => {
         fetchOrderDetails();
     }, [fetchOrderDetails]);
+    
+    const handleToggleOutOfStock = (itemId: number) => {
+        setOutOfStockItems(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(itemId)) {
+                newSet.delete(itemId);
+            } else {
+                newSet.add(itemId);
+            }
+            return newSet;
+        });
+    };
 
     const handleUpdateStatus = (status: 'Dispatched' | 'Rejected') => {
         if (!order) return;
@@ -58,7 +81,20 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
             const result = await updateOrderStatus(order.id, status);
             if(result.success) {
                 toast({ title: `Order ${status}`, description: `The order has been marked as ${status}.`});
-                fetchOrderDetails(); // Re-fetch to show the latest status
+                fetchOrderDetails();
+            } else {
+                toast({ variant: 'destructive', title: "Update failed", description: result.error});
+            }
+        });
+    }
+
+    const handleDeliverOrder = () => {
+         if (!order) return;
+        startTransition(async () => {
+            const result = await updateOrderAndStock(order.id, Array.from(outOfStockItems));
+             if(result.success) {
+                toast({ title: `Order Delivered`, description: `Stock has been updated.`});
+                fetchOrderDetails();
             } else {
                 toast({ variant: 'destructive', title: "Update failed", description: result.error});
             }
@@ -74,6 +110,14 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
             default: return 'secondary';
         }
     }
+    
+    const recalculatedTotal = items.reduce((sum, item) => {
+        if (outOfStockItems.has(item.id)) {
+            return sum;
+        }
+        return sum + item.total_price;
+    }, 0);
+
 
     if (loading) {
         return <div className="flex h-full w-full items-center justify-center p-8"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div></div>;
@@ -87,7 +131,7 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
              <div className="flex items-center gap-4">
                 <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => router.back()}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    <ArrowLeft className="h-4 w-4" />
                     <span className="sr-only">Back</span>
                 </Button>
                 <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-semibold tracking-tight sm:grow-0">
@@ -107,7 +151,13 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
                             </Button>
                         </>
                     )}
-                    {(order.status === 'Dispatched' || order.status === 'Delivered') && (
+                    {order.status === 'Dispatched' && (
+                        <Button size="sm" onClick={handleDeliverOrder} disabled={isPending}>
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            Mark as Delivered
+                        </Button>
+                    )}
+                    {(order.status === 'Delivered') && (
                         <Button variant="outline" size="sm"><FileText className="mr-2 h-4 w-4" />Generate Bill</Button>
                     )}
                 </div>
@@ -125,6 +175,7 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
                              <Table>
                                 <TableHeader>
                                     <TableRow>
+                                        <TableHead className="w-[40px]">Stock</TableHead>
                                         <TableHead>Product</TableHead>
                                         <TableHead>SKU</TableHead>
                                         <TableHead className="text-right">Quantity</TableHead>
@@ -134,20 +185,41 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
                                 </TableHeader>
                                 <TableBody>
                                     {items.map(item => (
-                                        <TableRow key={item.id}>
-                                            <TableCell>{item.skus?.name}</TableCell>
-                                            <TableCell>{item.skus?.product_code}</TableCell>
-                                            <TableCell className="text-right">{item.quantity}</TableCell>
-                                            <TableCell className="text-right">₹{item.unit_price.toFixed(2)}</TableCell>
-                                            <TableCell className="text-right">₹{item.total_price.toFixed(2)}</TableCell>
+                                        <TableRow key={item.id} className={cn(outOfStockItems.has(item.id) && "bg-muted/50")}>
+                                            <TableCell>
+                                                <Checkbox
+                                                    checked={outOfStockItems.has(item.id)}
+                                                    onCheckedChange={() => handleToggleOutOfStock(item.id)}
+                                                    aria-label="Mark out of stock"
+                                                    disabled={order.status === 'Delivered' || order.status === 'Dispatched'}
+                                                />
+                                            </TableCell>
+                                            <TableCell className={cn(outOfStockItems.has(item.id) && "text-muted-foreground line-through")}>
+                                                {item.skus?.name}
+                                            </TableCell>
+                                            <TableCell className={cn(outOfStockItems.has(item.id) && "text-muted-foreground line-through")}>
+                                                {item.skus?.product_code}
+                                            </TableCell>
+                                            <TableCell className={cn("text-right", outOfStockItems.has(item.id) && "text-muted-foreground line-through")}>
+                                                {item.quantity}
+                                            </TableCell>
+                                            <TableCell className={cn("text-right", outOfStockItems.has(item.id) && "text-muted-foreground line-through")}>
+                                                ₹{item.unit_price.toFixed(2)}
+                                            </TableCell>
+                                            <TableCell className={cn("text-right", outOfStockItems.has(item.id) && "text-muted-foreground line-through")}>
+                                                ₹{item.total_price.toFixed(2)}
+                                            </TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
                             </Table>
                         </CardContent>
-                         <CardFooter className="flex flex-row items-center border-t bg-muted/50 px-6 py-3">
-                            <div className="text-s text-muted-foreground">
-                                Order Total: <span className="font-bold text-lg text-foreground">₹{order.total_amount.toFixed(2)}</span>
+                         <CardFooter className="flex flex-col items-end gap-2 border-t bg-muted/50 px-6 py-3">
+                            <div className="text-sm text-muted-foreground line-through">
+                                Original Total: ₹{order.total_amount.toFixed(2)}
+                            </div>
+                            <div className="text-lg text-foreground">
+                                Adjusted Total: <span className="font-bold text-xl">₹{recalculatedTotal.toFixed(2)}</span>
                             </div>
                         </CardFooter>
                     </Card>
@@ -175,6 +247,12 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
                         <Button size="sm" onClick={() => handleUpdateStatus('Dispatched')} disabled={isPending}>Mark as Dispatched</Button>
                     </>
                  )}
+                 {order.status === 'Dispatched' && (
+                    <Button size="sm" onClick={handleDeliverOrder} disabled={isPending} className="w-full">
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Mark as Delivered
+                    </Button>
+                )}
             </div>
         </main>
     );

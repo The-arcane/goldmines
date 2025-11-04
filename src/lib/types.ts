@@ -88,6 +88,7 @@ export type OrderItem = {
   quantity: number;
   unit_price: number;
   total_price: number;
+  is_out_of_stock: boolean; // new field
   skus?: { name: string, product_code: string }; // For joins
 };
 

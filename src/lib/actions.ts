@@ -472,8 +472,78 @@ export async function markAttendance(data: AttendanceData) {
         return { success: true, message: 'Day ended successfully!' };
     }
 }
- 
-    
-    
 
+export async function updateOrderAndStock(orderId: number, outOfStockItemIds: number[]) {
+    const supabase = createServerActionClient({ isAdmin: true });
+
+    // 1. Fetch the order and its items
+    const { data: order, error: fetchError } = await supabase
+        .from('orders')
+        .select('*, order_items(*)')
+        .eq('id', orderId)
+        .single();
     
+    if (fetchError || !order) {
+        return { success: false, error: "Order not found." };
+    }
+
+    if (order.status !== 'Dispatched') {
+        return { success: false, error: "Only dispatched orders can be marked as delivered." };
+    }
+
+    // 2. Mark specified items as out of stock
+    if (outOfStockItemIds.length > 0) {
+        const { error: updateItemsError } = await supabase
+            .from('order_items')
+            .update({ is_out_of_stock: true })
+            .in('id', outOfStockItemIds);
+
+        if (updateItemsError) {
+            return { success: false, error: `Could not mark items as out of stock: ${updateItemsError.message}` };
+        }
+    }
+
+    // 3. Recalculate total based on in-stock items
+    const fulfilledItems = order.order_items.filter(item => !outOfStockItemIds.includes(item.id));
+    const newTotalAmount = fulfilledItems.reduce((sum, item) => sum + item.total_price, 0);
+
+    // 4. Update order status and new total
+    const { error: updateOrderError } = await supabase
+        .from('orders')
+        .update({ 
+            status: 'Delivered',
+            total_amount: newTotalAmount,
+            // You might also want to adjust amount_paid or payment_status if logic requires
+         })
+        .eq('id', orderId);
+
+    if (updateOrderError) {
+        return { success: false, error: `Could not update order status: ${updateOrderError.message}` };
+    }
+
+    // 5. Update stock for fulfilled items
+    if (fulfilledItems.length > 0) {
+        const stockUpdates = fulfilledItems.map(item => 
+            supabase.rpc('update_sku_stock', {
+                sku_id_to_update: item.sku_id,
+                quantity_to_decrement: item.quantity,
+            })
+        );
+        
+        const results = await Promise.all(stockUpdates);
+        const rpcErrors = results.filter(res => res.error);
+
+        if (rpcErrors.length > 0) {
+            // This is tricky; the order is delivered but stock might not be updated.
+            // A more robust system would use a transactional queue.
+            // For now, we return an error indicating partial success.
+            console.error('Stock update RPC errors:', rpcErrors);
+            return { success: false, error: "Order marked as delivered, but failed to update stock for some items." };
+        }
+    }
+
+    revalidatePath(`/dashboard/distributor/orders/${orderId}`);
+    revalidatePath('/dashboard/distributor/orders');
+    revalidatePath('/dashboard/distributor/skus');
+    return { success: true };
+}
