@@ -38,7 +38,7 @@ export default function OrdersPage() {
 
         const { data, error } = await supabase
             .from("orders")
-            .select("*, outlets(name)")
+            .select("id, order_date, total_amount, status, outlets(name)")
             .eq('distributor_id', distributorData.id)
             .order("order_date", { ascending: false });
 
