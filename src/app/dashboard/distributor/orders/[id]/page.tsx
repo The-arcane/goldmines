@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useCallback, useTransition } from "react";
+import { useEffect, useState, useCallback, useTransition, use } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import type { Order, OrderItem } from "@/lib/types";
@@ -17,6 +17,7 @@ import { ArrowLeft, FileText, CheckCircle, XCircle, Truck } from "lucide-react";
 import { format } from "date-fns";
 
 export default function OrderDetailsPage({ params }: { params: { id: string } }) {
+    const { id } = use(params);
     const { user } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
@@ -32,7 +33,7 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
         const { data, error } = await supabase
             .from('orders')
             .select('*, outlets (name, address), order_items(*, skus(name, product_code))')
-            .eq('id', params.id)
+            .eq('id', id)
             .single();
 
         if (error || !data) {
@@ -45,7 +46,7 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
         setOrder(data as Order);
         setItems(data.order_items as OrderItem[] || []);
         setLoading(false);
-    }, [user, params.id, router, toast]);
+    }, [user, id, router, toast]);
 
     useEffect(() => {
         fetchOrderDetails();
@@ -178,7 +179,3 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
         </main>
     );
 }
-
-    
-
-    
