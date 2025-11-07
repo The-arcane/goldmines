@@ -116,7 +116,11 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
         }
     }, [user, open, toast]);
 
-    useEffect(() => { fetchData() }, [fetchData]);
+    useEffect(() => { 
+        if(open && user) {
+            fetchData() 
+        }
+    }, [open, user, fetchData]);
     
     useEffect(() => {
         if (!open) {
@@ -353,7 +357,3 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
         </Dialog>
     );
 }
-
-    
-
-    
