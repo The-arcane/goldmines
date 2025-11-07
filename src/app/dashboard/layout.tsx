@@ -16,20 +16,15 @@ export default function DashboardLayout({
   const router = useRouter();
 
   useEffect(() => {
-    // Wait until loading is finished
     if (!loading) {
       if (!user) {
-        // If there's no user, redirect to login
         router.replace("/login");
       } else if (user.role === 'sales_executive') {
-        // If user has the wrong role for this layout, redirect
         router.replace("/salesperson/dashboard");
       }
     }
   }, [user, loading, router]);
   
-  // While loading, or if the user is null/incorrect role (before redirect happens), show a spinner.
-  // This is the key fix: we don't render children until we are sure the user is authenticated and has the correct role.
   if (loading || !user || user.role === 'sales_executive') {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -38,7 +33,6 @@ export default function DashboardLayout({
     );
   }
 
-  // If loading is false and we have a valid user for this layout, render the dashboard.
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <Sidebar userRole={user.role} />

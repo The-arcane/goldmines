@@ -16,20 +16,15 @@ export default function SalespersonLayout({
   const router = useRouter();
 
   useEffect(() => {
-    // Wait until loading is finished
     if (!loading) {
       if (!user) {
-        // If no user, redirect to the correct login page
         router.replace("/salesperson/login");
       } else if (user.role !== 'sales_executive') {
-        // If user has the wrong role, redirect to the main login page
         router.replace("/login");
       }
     }
   }, [user, loading, router]);
   
-  // While loading, or if the user is null/incorrect role, show a spinner.
-  // This is the key fix: we don't render children until we are sure the user is authenticated and has the correct role.
   if (loading || !user || user.role !== 'sales_executive') {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -38,7 +33,6 @@ export default function SalespersonLayout({
     );
   }
 
-  // If loading is false and we have a valid sales executive, render the layout
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <Sidebar />
