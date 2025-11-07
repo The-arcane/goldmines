@@ -1,5 +1,4 @@
 
-
 "use server";
 
 import { flagAnomalousVisit } from "@/ai/flows/flag-anomalous-visits";
@@ -616,5 +615,54 @@ export async function updateOrderAndStock(orderId: number, outOfStockItemIds: nu
     revalidatePath(`/dashboard/distributor/orders/${orderId}`);
     revalidatePath('/dashboard/distributor/orders');
     revalidatePath('/dashboard/distributor/skus');
+    return { success: true };
+}
+
+export async function updateStockOrderStatus(orderId: number, status: string) {
+    const supabase = createServerActionClient({ isAdmin: true });
+
+    // 1. Update the order status
+    const { data: updatedOrder, error: updateError } = await supabase
+        .from('stock_orders')
+        .update({ status })
+        .eq('id', orderId)
+        .select()
+        .single();
+    
+    if (updateError) {
+        return { success: false, error: `Failed to update status: ${updateError.message}` };
+    }
+
+    // 2. If status is 'Shipped', update distributor's stock
+    if (status === 'Shipped') {
+        // Fetch order items
+        const { data: items, error: itemsError } = await supabase
+            .from('stock_order_items')
+            .select('*, skus(units_per_case)')
+            .eq('stock_order_id', orderId);
+
+        if (itemsError) {
+            return { success: false, error: `Status updated, but failed to fetch items for stock update: ${itemsError.message}`};
+        }
+
+        const stockUpdates = items.map(item => {
+            const totalUnits = item.quantity * (item.skus?.units_per_case || 1);
+            return supabase.rpc('update_sku_stock_for_distributor', {
+                p_sku_id: item.sku_id,
+                p_distributor_id: updatedOrder.distributor_id,
+                p_quantity_change: totalUnits
+            });
+        });
+
+        const results = await Promise.all(stockUpdates);
+        const rpcErrors = results.filter(res => res.error);
+
+        if (rpcErrors.length > 0) {
+            console.error('Stock update RPC errors:', rpcErrors);
+            return { success: false, error: "Order shipped, but failed to update stock for some items." };
+        }
+    }
+
+    revalidatePath('/dashboard/admin/stock-orders');
     return { success: true };
 }

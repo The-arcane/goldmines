@@ -18,6 +18,7 @@ import {
   PlusCircle,
   Banknote,
   LineChart,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/types";
@@ -29,6 +30,7 @@ const navItems = {
     { href: "/dashboard/admin", icon: Home, label: "Dashboard" },
     { href: "/dashboard/analytics", icon: LineChart, label: "Analytics" },
     { href: "/dashboard/distributors", icon: Building, label: "Distributors" },
+    { href: "/dashboard/admin/stock-orders", icon: ClipboardList, label: "Stock Orders" },
     { href: "/dashboard/outlets", icon: Warehouse, label: "Outlets" },
     { href: "/dashboard/visits", icon: BarChart, label: "Visits Log" },
     { href: "/dashboard/users", icon: Users, label: "Users" },

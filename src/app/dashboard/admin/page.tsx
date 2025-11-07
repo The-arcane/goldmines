@@ -122,11 +122,16 @@ export default function AdminDashboardPage() {
           </CardContent>
         </Card>
          <Card className="xl:col-span-full">
-          <CardHeader>
-            <CardTitle>Recent Orders</CardTitle>
-            <CardDescription>
-              A summary of the latest orders from all distributors.
-            </CardDescription>
+          <CardHeader className="flex flex-row items-center">
+            <div className="grid gap-2">
+                <CardTitle>Recent Orders</CardTitle>
+                <CardDescription>
+                A summary of the latest orders from all distributors.
+                </CardDescription>
+            </div>
+             <Button asChild size="sm" className="ml-auto gap-1">
+                <Link href="/dashboard/orders">View All</Link>
+            </Button>
           </CardHeader>
           <CardContent>
             {loading ? <p>Loading recent orders...</p> : (

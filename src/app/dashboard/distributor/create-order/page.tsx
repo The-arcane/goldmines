@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useEffect, useState, useCallback, useTransition } from "react";
@@ -132,7 +131,7 @@ export default function CreateStockOrderPage() {
 
             const result = await createStockOrder(stockOrderData, distributor.id);
             if (result.success) {
-                toast({ title: "Stock Order Submitted!", description: `Your stock order #${result.stockOrderId} has been sent for approval.` });
+                toast({ title: "Stock Order Submitted!", description: `Your stock order #${result.stockOrderId} has been placed.` });
                 router.push("/dashboard/distributor/stock-orders");
             } else {
                 toast({ variant: "destructive", title: "Failed to create stock order", description: result.error });

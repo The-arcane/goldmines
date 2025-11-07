@@ -1,5 +1,4 @@
 
-
 export type UserRole = 'admin' | 'sales_executive' | 'distributor_admin' | 'delivery_partner';
 
 export type User = {
@@ -102,15 +101,18 @@ export type StockOrder = {
   created_at: string;
   created_by_user_id?: number;
   notes?: string;
+  distributors?: { name: string }; // For joins
+  stock_order_items?: StockOrderItem[]; // For joins
 };
 
 export type StockOrderItem = {
   id: number;
   stock_order_id: number;
   sku_id: number;
-  quantity: number;
+  quantity: number; // in cases
   case_price: number;
   total_price: number;
+  skus?: { name: string, units_per_case: number }; // For joins
 };
 
 
