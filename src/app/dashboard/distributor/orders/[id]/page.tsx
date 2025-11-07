@@ -104,6 +104,7 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
     const handleGenerateInvoice = () => {
         if (!order) return;
         startTransition(async () => {
+            // Pass orderId to generateInvoice
             await generateInvoice(order.id);
         });
     };

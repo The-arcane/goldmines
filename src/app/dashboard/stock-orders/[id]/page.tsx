@@ -52,7 +52,8 @@ export default function StockOrderDetailsPage({ params }: { params: { id: string
     
     const getStatusVariant = (status: string) => {
         switch (status) {
-            case 'Shipped': return 'default';
+            case 'Delivered': return 'default';
+            case 'Shipped': return 'outline';
             case 'Pending': return 'destructive';
             case 'Rejected': return 'outline';
             case 'Approved': return 'secondary';
@@ -63,6 +64,7 @@ export default function StockOrderDetailsPage({ params }: { params: { id: string
     const handleGenerateInvoice = () => {
         if (!order) return;
         startTransition(async () => {
+            // Pass stockOrderId to generateInvoice
             await generateInvoice(undefined, order.id);
         });
     };
