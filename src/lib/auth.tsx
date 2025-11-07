@@ -1,3 +1,4 @@
+
 "use client";
 
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -26,7 +27,7 @@ const mapNumericRoleToString = (role: number): UserRole => {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true); // Start as true, and only set to false once auth is confirmed.
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
@@ -42,7 +43,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (error) {
         console.error("Error fetching user profile:", error);
-        // This is a critical error, sign out to prevent being stuck.
         await supabase.auth.signOut();
         return null;
     }
@@ -59,46 +59,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const handleAuthStateChange = async (session: Session | null) => {
+    setLoading(true);
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      try {
         const supabaseUser = session?.user ?? null;
         if (supabaseUser) {
-            const profile = await fetchUserProfile(supabaseUser);
-            setUser(profile);
+          const profile = await fetchUserProfile(supabaseUser);
+          setUser(profile);
         } else {
-            setUser(null);
+          setUser(null);
         }
-        // Crucially, set loading to false only after all async logic is complete.
+      } catch (e) {
+        console.error("Error in onAuthStateChange handler", e);
+        setUser(null);
+      } finally {
         setLoading(false);
-    };
-
-    // First, get the initial session on component mount.
-    supabase.auth.getSession().then(({ data: { session } }) => {
-        handleAuthStateChange(session);
+      }
     });
-
-    // Then, subscribe to any subsequent auth state changes.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-        // We only update the user state if it has actually changed to avoid unnecessary re-renders.
-        const newAuthId = session?.user?.id;
-        const currentAuthId = user?.auth_id;
-        
-        if (newAuthId !== currentAuthId) {
-             handleAuthStateChange(session);
-        }
-    });
-
+    
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchUserProfile, user?.auth_id]);
+  }, [fetchUserProfile]);
 
 
   const logout = async () => {
     setLoading(true);
     await supabase.auth.signOut();
     setUser(null);
-    // Don't need to manually set loading false, auth listener will do it.
     router.push('/login'); 
+    setLoading(false);
   };
   
   const value = { user, loading, logout };

@@ -25,12 +25,16 @@ export default function DashboardLayout({
     }
   }, [user, loading, router]);
   
-  if (loading || !user || user.role === 'sales_executive') {
+  if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
+  }
+
+  if (!user || user.role === 'sales_executive') {
+    return null; // Or a redirect component, but useEffect handles it
   }
 
   return (
