@@ -716,8 +716,26 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
     return { success: false, error: "An order ID or stock order ID is required." };
   }
 
-  const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+  // Check if an invoice already exists for this order/stockOrder
+  let existingInvoiceCheck = supabase.from('invoices').select('id');
+  if (orderId) {
+      existingInvoiceCheck = existingInvoiceCheck.eq('order_id', orderId);
+  } else if (stockOrderId) {
+      existingInvoiceCheck = existingInvoiceCheck.eq('stock_order_id', stockOrderId);
+  }
+  const { data: existingInvoice, error: checkError } = await existingInvoiceCheck.limit(1).maybeSingle();
 
+  if (checkError) {
+      console.error("Error checking for existing invoice:", checkError);
+      return { success: false, error: `Database error checking for invoice: ${checkError.message}` };
+  }
+
+  if (existingInvoice) {
+      redirect(`/invoice/${existingInvoice.id}`);
+      return { success: true };
+  }
+
+  const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
   let totalAmount = 0;
   let totalDiscount = 0;
   let subTotal = 0;
@@ -744,10 +762,8 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
         total_price: item.total_price
     }));
 
-    // Set is_invoice_created to true for the order
     const { error: updateError } = await supabase.from('orders').update({ is_invoice_created: true }).eq('id', orderId);
     if (updateError) console.error("Failed to update invoice status for order:", updateError.message);
-
 
   } else if (stockOrderId) {
     const { data, error } = await supabase
@@ -756,8 +772,11 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
         .eq('id', stockOrderId)
         .single();
     if (error || !data) return { success: false, error: "Could not find stock order." };
+    
     totalAmount = data.total_amount;
     subTotal = data.total_amount; // No discount for stock orders
+    totalDiscount = 0;
+
     itemsToStore = data.stock_order_items.map(item => ({
         name: item.skus?.name,
         code: item.skus?.product_code,
@@ -767,7 +786,6 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
         total_price: item.total_price
     }));
 
-    // Set is_invoice_created to true for the stock order
     const { error: updateError } = await supabase.from('stock_orders').update({ is_invoice_created: true }).eq('id', stockOrderId);
     if (updateError) console.error("Failed to update invoice status for stock order:", updateError.message);
   }
@@ -797,5 +815,3 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
   revalidatePath('/dashboard/distributor/stock-orders');
   redirect(`/invoice/${invoiceData.id}`);
 }
-
-    

@@ -66,12 +66,12 @@ export default function OrdersPage() {
 
     const handleGenerateInvoice = (orderId: number) => {
         startTransition(async () => {
+            toast({ title: "Generating Bill...", description: "Please wait a moment." });
             const result = await generateInvoice(orderId);
-            // Redirect is handled by the server action
             if (result && result.error) {
                 toast({
                     variant: "destructive",
-                    title: "Invoice Generation Failed",
+                    title: "Bill Generation Failed",
                     description: result.error,
                 });
             }

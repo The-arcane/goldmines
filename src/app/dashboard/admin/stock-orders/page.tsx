@@ -74,7 +74,11 @@ export default function AdminStockOrdersPage() {
 
     const handleGenerateInvoice = (orderId: number) => {
         startTransition(async () => {
-            await generateInvoice(undefined, orderId);
+            toast({ title: "Generating Invoice...", description: "Please wait a moment." });
+            const result = await generateInvoice(undefined, orderId);
+            if (result && result.error) {
+                toast({ variant: "destructive", title: "Invoice Generation Failed", description: result.error });
+            }
         });
     }
 
