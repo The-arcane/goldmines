@@ -635,7 +635,6 @@ export async function updateStockOrderStatus(orderId: number, status: string) {
 
     // 2. If status is 'Shipped', update distributor's stock
     if (status === 'Shipped') {
-        // Fetch order items
         const { data: items, error: itemsError } = await supabase
             .from('stock_order_items')
             .select('*, skus(units_per_case)')
@@ -645,24 +644,68 @@ export async function updateStockOrderStatus(orderId: number, status: string) {
             return { success: false, error: `Status updated, but failed to fetch items for stock update: ${itemsError.message}`};
         }
 
-        const stockUpdates = items.map(item => {
+        if (!items) {
+             return { success: true }; // No items to update
+        }
+
+        const stockUpdateErrors = [];
+
+        for (const item of items) {
             const totalUnits = item.quantity * (item.skus?.units_per_case || 1);
-            return supabase.rpc('update_sku_stock_for_distributor', {
-                p_sku_id: item.sku_id,
-                p_distributor_id: updatedOrder.distributor_id,
-                p_quantity_change: totalUnits
-            });
-        });
+            if (totalUnits <= 0) continue;
 
-        const results = await Promise.all(stockUpdates);
-        const rpcErrors = results.filter(res => res.error);
+            const { data: existingSku, error: fetchSkuError } = await supabase
+                .from('skus')
+                .select('id, stock_quantity')
+                .eq('distributor_id', updatedOrder.distributor_id)
+                .eq('product_code', item.skus?.product_code) // Assuming product_code is unique for a base product
+                .single();
 
-        if (rpcErrors.length > 0) {
-            console.error('Stock update RPC errors:', rpcErrors);
-            return { success: false, error: "Order shipped, but failed to update stock for some items." };
+            if (fetchSkuError && fetchSkuError.code !== 'PGRST116') { // Ignore "not found" error
+                stockUpdateErrors.push(`Error fetching existing SKU for item ${item.sku_id}: ${fetchSkuError.message}`);
+                continue;
+            }
+
+            if (existingSku) {
+                // Update existing stock
+                const { error: updateStockError } = await supabase
+                    .from('skus')
+                    .update({ stock_quantity: existingSku.stock_quantity + totalUnits })
+                    .eq('id', existingSku.id);
+                if (updateStockError) {
+                    stockUpdateErrors.push(`Error updating stock for SKU ${item.sku_id}: ${updateStockError.message}`);
+                }
+            } else {
+                 // Sku doesn't exist for this distributor, so we should create it
+                 // We need more info from the base sku to create a new one.
+                 const { data: baseSku, error: baseSkuError } = await supabase.from('skus').select('*').eq('id', item.sku_id).single();
+                 if(baseSkuError || !baseSku) {
+                    stockUpdateErrors.push(`Could not find base SKU to create new entry for distributor. SKU ID: ${item.sku_id}`);
+                    continue;
+                 }
+                 // Create a new SKU for the distributor
+                 const { error: createStockError } = await supabase
+                    .from('skus')
+                    .insert({
+                        ...baseSku,
+                        id: undefined, // let db generate new id
+                        created_at: new Date().toISOString(),
+                        distributor_id: updatedOrder.distributor_id,
+                        stock_quantity: totalUnits,
+                    });
+                if (createStockError) {
+                     stockUpdateErrors.push(`Error creating stock for SKU ${item.sku_id}: ${createStockError.message}`);
+                }
+            }
+        }
+
+        if (stockUpdateErrors.length > 0) {
+            console.error('Stock update errors:', stockUpdateErrors);
+            return { success: false, error: `Order shipped, but failed to update stock for some items: ${stockUpdateErrors.join(", ")}` };
         }
     }
 
     revalidatePath('/dashboard/admin/stock-orders');
+    revalidatePath('/dashboard/distributor/skus');
     return { success: true };
 }
