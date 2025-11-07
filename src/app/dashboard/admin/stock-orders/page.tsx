@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import Link from 'next/link';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, CheckCircle, XCircle, Truck } from "lucide-react";
+import { MoreHorizontal, CheckCircle, XCircle, Truck, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { updateStockOrderStatus } from "@/lib/actions";
 
@@ -116,8 +117,14 @@ export default function AdminStockOrdersPage() {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
-                                                    <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                    <DropdownMenuItem asChild>
+                                                        <Link href={`/dashboard/stock-orders/${order.id}`}>
+                                                            <Eye className="mr-2 h-4 w-4" />View Order
+                                                        </Link>
+                                                    </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
+                                                    <DropdownMenuLabel>Change Status</DropdownMenuLabel>
                                                     <DropdownMenuItem 
                                                         disabled={order.status !== 'Pending'}
                                                         onClick={() => handleStatusChange(order.id, 'Approved')}>

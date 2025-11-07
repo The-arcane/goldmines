@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
+import Link from "next/link";
 
 export default function StockOrdersPage() {
     const { user, loading: authLoading } = useAuth();
@@ -105,8 +106,8 @@ export default function StockOrdersPage() {
                                         <TableCell><Badge variant={getStatusVariant(order.status)}>{order.status}</Badge></TableCell>
                                         <TableCell className="text-right">₹{order.total_amount?.toFixed(2) || '0.00'}</TableCell>
                                         <TableCell className="text-right">
-                                            <Button asChild variant="outline" size="sm" disabled>
-                                                <span>View</span>
+                                            <Button asChild variant="outline" size="sm">
+                                                <Link href={`/dashboard/stock-orders/${order.id}`}>View</Link>
                                             </Button>
                                         </TableCell>
                                     </TableRow>
