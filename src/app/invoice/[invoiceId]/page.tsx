@@ -93,7 +93,7 @@ export default function InvoicePage({ params }: { params: { invoiceId: string } 
                     </Button>
                     <div className="flex gap-2">
                         <Button variant="outline" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" /> Print</Button>
-                        <Button disabled><Download className="mr-2 h-4 w-4" /> Download PDF</Button>
+                        <Button onClick={() => window.print()}><Download className="mr-2 h-4 w-4" /> Download PDF</Button>
                     </div>
                 </div>
 
