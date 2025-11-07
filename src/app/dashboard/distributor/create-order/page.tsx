@@ -165,7 +165,8 @@ export default function CreateDistributorOrderPage() {
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
-                                                <TableHead className="w-[40%]">SKU</TableHead>
+                                                <TableHead className="w-[35%]">SKU</TableHead>
+                                                <TableHead className="text-center">Units/Case</TableHead>
                                                 <TableHead>Qty (Cases)</TableHead>
                                                 <TableHead className="text-right">Case Price</TableHead>
                                                 <TableHead className="text-right">Total Price</TableHead>
@@ -185,12 +186,13 @@ export default function CreateDistributorOrderPage() {
                                                                 <Select onValueChange={(value) => { field.onChange(value); handleSkuChange(index, value); }} defaultValue={String(field.value)}>
                                                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a SKU" /></SelectTrigger></FormControl>
                                                                     <SelectContent>
-                                                                        {skus.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name} ({s.units_per_case} units/case)</SelectItem>)}
+                                                                        {skus.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}{s.unit_type ? ` (${s.unit_type})` : ''}</SelectItem>)}
                                                                     </SelectContent>
                                                                 </Select>
                                                             )}
                                                         />
                                                     </TableCell>
+                                                    <TableCell className="text-center">{skuDetails?.units_per_case || 'N/A'}</TableCell>
                                                     <TableCell>
                                                         <Controller
                                                             control={form.control}
