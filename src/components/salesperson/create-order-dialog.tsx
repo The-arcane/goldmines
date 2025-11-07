@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useTransition } from "react";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -67,6 +67,7 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
     const [open, setOpen] = useState(false);
     const [distributorStock, setDistributorStock] = useState<DistributorStock[]>([]);
     const [loading, setLoading] = useState(false);
+    const [isSubmitting, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
 
     const form = useForm<OrderFormValues>({
@@ -78,49 +79,50 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
         control: form.control,
         name: "items",
     });
-
+    
     const fetchData = useCallback(async () => {
         if (!user || !open) return;
         setLoading(true);
         setError(null);
-
-        try {
-            const { data: userData, error: userError } = await supabase
-                .from('users')
-                .select('distributor_id:distributor_users!inner(distributor_id)')
-                .eq('id', user.id)
-                .single();
-
-            if (userError || !userData || !(userData as any).distributor_id.length) {
-                throw new Error("You are not assigned to a distributor.");
-            }
-            
-            const distributorId = (userData as any).distributor_id[0].distributor_id;
-            
-            const { data: stockData, error: stockError } = await supabase
-                .from('distributor_stock')
-                .select('*, skus(*)')
-                .eq('distributor_id', distributorId);
-
-            if (stockError) throw new Error("Could not load distributor's product stock.");
-            
-            setDistributorStock(stockData || []);
-
-        } catch (e: any) {
-            const errorMessage = e.message || "An unexpected error occurred.";
-            toast({ variant: "destructive", title: "Cannot Create Order", description: errorMessage });
-            setError(errorMessage);
-        } finally {
-            setLoading(false);
-        }
-    }, [user, open, toast]);
-
-    useEffect(() => { 
-        if(open && user) {
-            fetchData() 
-        }
-    }, [open, user, fetchData]);
     
+        try {
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('distributor_id:distributor_users!inner(distributor_id)')
+            .eq('id', user.id)
+            .single();
+    
+          if (userError || !userData || !(userData as any).distributor_id.length) {
+            throw new Error("You are not assigned to a distributor.");
+          }
+    
+          const distributorId = (userData as any).distributor_id[0].distributor_id;
+    
+          const { data: stockData, error: stockError } = await supabase
+            .from('distributor_stock')
+            .select('*, skus(*)')
+            .eq('distributor_id', distributorId);
+    
+          if (stockError) {
+            throw new Error("Could not load distributor's product stock.");
+          }
+    
+          setDistributorStock(stockData || []);
+        } catch (e: any) {
+          const errorMessage = e.message || "An unexpected error occurred.";
+          toast({ variant: "destructive", title: "Cannot Create Order", description: errorMessage });
+          setError(errorMessage);
+        } finally {
+          setLoading(false);
+        }
+      }, [user, open, toast]);
+    
+      useEffect(() => {
+        if (open) {
+          fetchData();
+        }
+      }, [open, fetchData]);
+
     useEffect(() => {
         if (!open) {
             form.reset({ items: [], payment_status: "Unpaid", amount_paid: 0 });
@@ -132,7 +134,7 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
     const watchedItems = form.watch("items");
     const watchedPaymentStatus = form.watch("payment_status");
     
-    const calculateItemTotals = (item: OrderFormValues['items'][number]) => {
+     const calculateItemTotals = (item: OrderFormValues['items'][number]) => {
         const stockInfo = distributorStock.find(s => s.sku_id === item.sku_id);
         if (!stockInfo || !stockInfo.mrp) {
             return {
@@ -160,26 +162,26 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
             totalPrice = perUnitPrice * item.quantity;
             discountPercentage = 0; // No discount for single units
         }
-
-        const finalTotalPrice = totalPrice * (1 - discountPercentage / 100);
-
+        
         return {
             unit_price: perUnitPrice,
             total_price: totalPrice,
-            final_total_price: finalTotalPrice,
-            scheme_discount_percentage: discountPercentage
+            scheme_discount_percentage: discountPercentage,
         };
     };
 
     const totals = useMemo(() => {
         return watchedItems.reduce((acc, item) => {
-            const { total_price, final_total_price } = calculateItemTotals(item);
-            acc.totalAmount += total_price || 0;
-            acc.finalTotal += final_total_price || 0;
-            const discount = (total_price || 0) - (final_total_price || 0);
-            acc.totalDiscount += discount;
+            const { total_price, scheme_discount_percentage } = calculateItemTotals(item);
+            const discountAmount = (total_price || 0) * (scheme_discount_percentage / 100);
+            const finalPrice = (total_price || 0) - discountAmount;
+            
+            acc.subtotal += total_price || 0;
+            acc.totalDiscount += discountAmount;
+            acc.finalTotal += finalPrice;
+            
             return acc;
-        }, { totalAmount: 0, totalDiscount: 0, finalTotal: 0 });
+        }, { subtotal: 0, totalDiscount: 0, finalTotal: 0 });
     }, [watchedItems, distributorStock]);
 
     const updateItemCalculations = (index: number) => {
@@ -196,51 +198,56 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
     
     const handleFieldChange = (index: number, field: keyof OrderFormValues['items'][0], value: any) => {
         const currentItem = form.getValues(`items.${index}`);
-        update(index, { ...currentItem, [field]: value });
-        updateItemCalculations(index);
+        // Create a new object to ensure re-render
+        const updatedItem = { ...currentItem, [field]: value };
+        update(index, updatedItem);
+        // Recalculate totals after state update
+        setTimeout(() => updateItemCalculations(index), 0);
     }
 
-    const onSubmit = async (data: OrderFormValues) => {
-        for (const item of data.items) {
-            const stockInfo = distributorStock.find(s => s.sku_id === item.sku_id);
-            if (!stockInfo) continue;
-            const stockNeeded = item.order_unit_type === 'cases'
-                ? item.quantity * (stockInfo.units_per_case || 1)
-                : item.quantity;
+    const onSubmit = (data: OrderFormValues) => {
+        startTransition(async () => {
+            for (const item of data.items) {
+                const stockInfo = distributorStock.find(s => s.sku_id === item.sku_id);
+                if (!stockInfo) continue;
+                const stockNeeded = item.order_unit_type === 'cases'
+                    ? item.quantity * (stockInfo.units_per_case || 1)
+                    : item.quantity;
 
-            if (stockNeeded > item.available_stock) {
-                toast({ variant: 'destructive', title: 'Insufficient Stock', description: `Not enough stock for ${stockInfo.skus.name}. Available: ${item.available_stock}, Needed: ${stockNeeded}` });
-                return;
-            }
-        }
-
-        const orderData = {
-            outlet_id: outlet.id,
-            total_amount: totals.finalTotal,
-            total_discount: totals.totalDiscount,
-            payment_status: data.payment_status,
-            amount_paid: data.payment_status === 'Paid' ? totals.finalTotal : (data.amount_paid || 0),
-            items: data.items.map(item => {
-                const { total_price } = calculateItemTotals(item);
-                return {
-                    sku_id: item.sku_id,
-                    quantity: item.quantity,
-                    unit_price: item.unit_price,
-                    total_price: total_price,
-                    order_unit_type: item.order_unit_type,
-                    scheme_discount_percentage: item.scheme_discount_percentage,
+                if (stockNeeded > item.available_stock) {
+                    toast({ variant: 'destructive', title: 'Insufficient Stock', description: `Not enough stock for ${stockInfo.skus.name}. Available: ${item.available_stock}, Needed: ${stockNeeded}` });
+                    return;
                 }
-            }),
-        };
+            }
 
-        const result = await createNewOrder(orderData, distributorStock[0].distributor_id);
-        if (result.success) {
-            toast({ title: "Order Placed!", description: `Order #${result.orderId} for ${outlet.name} has been placed.` });
-            onOrderPlaced();
-            setOpen(false);
-        } else {
-            toast({ variant: "destructive", title: "Failed to create order", description: result.error });
-        }
+            const orderData: OrderFormData = {
+                outlet_id: outlet.id,
+                total_amount: totals.finalTotal, // Final, post-discount amount
+                total_discount: totals.totalDiscount,
+                payment_status: data.payment_status,
+                amount_paid: data.payment_status === 'Paid' ? totals.finalTotal : (data.amount_paid || 0),
+                items: data.items.map(item => {
+                     const { total_price } = calculateItemTotals(item);
+                    return {
+                        sku_id: item.sku_id,
+                        quantity: item.quantity,
+                        unit_price: item.unit_price,
+                        total_price: total_price, // Pre-discount line total
+                        order_unit_type: item.order_unit_type,
+                        scheme_discount_percentage: item.scheme_discount_percentage,
+                    }
+                }),
+            };
+
+            const result = await createNewOrder(orderData, distributorStock[0].distributor_id);
+            if (result.success) {
+                toast({ title: "Order Placed!", description: `Order #${result.orderId} for ${outlet.name} has been placed.` });
+                onOrderPlaced();
+                setOpen(false);
+            } else {
+                toast({ variant: "destructive", title: "Failed to create order", description: result.error });
+            }
+        });
     };
     
     return (
@@ -287,7 +294,8 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
                                         {fields.map((field, index) => {
                                             const stockInfo = distributorStock.find(s => s.sku_id === watchedItems[index]?.sku_id);
                                             const isCases = watchedItems[index]?.order_unit_type === 'cases';
-                                            const { final_total_price } = calculateItemTotals(watchedItems[index]);
+                                            const { total_price, scheme_discount_percentage } = calculateItemTotals(watchedItems[index]);
+                                            const final_total_price = total_price * (1 - (scheme_discount_percentage / 100));
 
                                             return (
                                                 <TableRow key={field.id}>
@@ -312,15 +320,15 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
                                                             )}
                                                         />
                                                     </TableCell>
-                                                    <TableCell><Input type="number" min={1} value={watchedItems[index]?.quantity} onChange={(e) => handleFieldChange(index, 'quantity', e.target.value)} /></TableCell>
+                                                    <TableCell><Input type="number" min={1} value={watchedItems[index]?.quantity} onChange={(e) => handleFieldChange(index, 'quantity', parseInt(e.target.value) || 1)} /></TableCell>
                                                     <TableCell>{stockInfo?.stock_quantity ?? 'N/A'}</TableCell>
                                                     <TableCell>₹{watchedItems[index]?.unit_price.toFixed(2)}</TableCell>
-                                                    <TableCell>₹{watchedItems[index]?.total_price.toFixed(2)}</TableCell>
+                                                    <TableCell>₹{total_price.toFixed(2)}</TableCell>
                                                     <TableCell>
                                                         {isCases ? (
                                                             <div className="flex items-center gap-2">
                                                                 <Switch id={`scheme-${index}`} checked={watchedItems[index]?.apply_scheme} onCheckedChange={(checked) => handleFieldChange(index, 'apply_scheme', checked)} />
-                                                                <Label htmlFor={`scheme-${index}`}>{watchedItems[index]?.scheme_discount_percentage}%</Label>
+                                                                <Label htmlFor={`scheme-${index}`}>{scheme_discount_percentage}%</Label>
                                                             </div>
                                                         ) : 'N/A'}
                                                     </TableCell>
@@ -360,14 +368,14 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
                         )}
                         <DialogFooter className="mt-4 pt-4 border-t">
                             <div className="flex items-center gap-4 w-full justify-end">
-                                <div className="text-sm">Subtotal: <span className="line-through">₹{totals.totalAmount.toFixed(2)}</span></div>
+                                <div className="text-sm">Subtotal: <span className="line-through">₹{totals.subtotal.toFixed(2)}</span></div>
                                 <div className="text-sm">Discount: <span className="text-green-600">-₹{totals.totalDiscount.toFixed(2)}</span></div>
                                 <div className="text-right">
                                     <p className="text-muted-foreground">Total Order Value</p>
                                     <p className="text-2xl font-bold">₹{totals.finalTotal.toFixed(2)}</p>
                                 </div>
-                                <Button type="submit" size="lg" disabled={form.formState.isSubmitting || loading || !!error || fields.length === 0}>
-                                    {form.formState.isSubmitting ? "Placing Order..." : "Place Order"}
+                                <Button type="submit" size="lg" disabled={isSubmitting || loading || !!error || fields.length === 0}>
+                                    {isSubmitting ? "Placing Order..." : "Place Order"}
                                 </Button>
                             </div>
                         </DialogFooter>

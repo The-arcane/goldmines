@@ -104,8 +104,15 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
     const handleGenerateInvoice = () => {
         if (!order) return;
         startTransition(async () => {
-            // Pass orderId to generateInvoice
-            await generateInvoice(order.id);
+            toast({ title: "Generating Bill...", description: "Please wait a moment." });
+            const result = await generateInvoice(order.id);
+             if (result && result.error) {
+                toast({
+                    variant: "destructive",
+                    title: "Bill Generation Failed",
+                    description: result.error,
+                });
+            }
         });
     };
     
@@ -119,12 +126,7 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
         }
     }
     
-    const recalculatedTotal = items.reduce((sum, item) => {
-        if (outOfStockItems.has(item.id)) {
-            return sum;
-        }
-        return sum + item.total_price;
-    }, 0);
+    const subtotal = items.reduce((sum, item) => sum + item.total_price, 0);
 
 
     if (loading) {
@@ -165,10 +167,18 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
                             Mark as Delivered
                         </Button>
                     )}
-                    {(order.status === 'Delivered') && (
+                     {order.status === 'Delivered' && !order.is_invoice_created && (
                         <Button variant="outline" size="sm" onClick={handleGenerateInvoice} disabled={isPending}>
                             <FileText className="mr-2 h-4 w-4" />
                             Generate Bill
+                        </Button>
+                    )}
+                    {order.is_invoice_created && (
+                         <Button asChild variant="outline" size="sm">
+                            <a href={`/invoice/${order.invoices?.[0]?.id}`} target="_blank" rel="noopener noreferrer">
+                                <FileText className="mr-2 h-4 w-4" />
+                                View Bill
+                            </a>
                         </Button>
                     )}
                 </div>
@@ -226,11 +236,14 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
                             </Table>
                         </CardContent>
                          <CardFooter className="flex flex-col items-end gap-2 border-t bg-muted/50 px-6 py-3">
-                            <div className="text-sm text-muted-foreground line-through">
-                                Original Total: ₹{order.total_amount.toFixed(2)}
+                             <div className="text-sm">
+                                Subtotal: ₹{subtotal.toFixed(2)}
+                            </div>
+                             <div className="text-sm text-green-600">
+                                Discount: -₹{(order.total_discount || 0).toFixed(2)}
                             </div>
                             <div className="text-lg text-foreground">
-                                Adjusted Total: <span className="font-bold text-xl">₹{recalculatedTotal.toFixed(2)}</span>
+                                Final Total: <span className="font-bold text-xl">₹{order.total_amount.toFixed(2)}</span>
                             </div>
                         </CardFooter>
                     </Card>
@@ -264,10 +277,18 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
                         Mark as Delivered
                     </Button>
                 )}
-                 {(order.status === 'Delivered') && (
+                 {order.status === 'Delivered' && !order.is_invoice_created && (
                     <Button variant="outline" size="sm" onClick={handleGenerateInvoice} disabled={isPending} className="w-full">
                         <FileText className="mr-2 h-4 w-4" />
                         Generate Bill
+                    </Button>
+                )}
+                {order.is_invoice_created && (
+                    <Button asChild variant="default" size="sm" className="w-full">
+                        <a href={`/invoice/${order.invoices?.[0]?.id}`} target="_blank" rel="noopener noreferrer">
+                            <FileText className="mr-2 h-4 w-4" />
+                            View Bill
+                        </a>
                     </Button>
                 )}
             </div>

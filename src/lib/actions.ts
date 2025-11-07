@@ -225,7 +225,7 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
       distributor_id: distributorId,
       outlet_id: formData.outlet_id,
       status: 'Approved', // Sales exec orders are auto-approved
-      total_amount: formData.total_amount,
+      total_amount: formData.total_amount, // This is now the FINAL, post-discount amount
       total_discount: formData.total_discount,
       amount_paid: formData.amount_paid,
       payment_status: formData.payment_status,
@@ -246,7 +246,7 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
     sku_id: item.sku_id,
     quantity: item.quantity,
     unit_price: item.unit_price,
-    total_price: item.total_price,
+    total_price: item.total_price, // This is the pre-discount price for the line item
     order_unit_type: item.order_unit_type,
     scheme_discount_percentage: item.scheme_discount_percentage,
   }));
@@ -369,12 +369,8 @@ export async function createStockOrder(formData: StockOrderFormData, distributor
   return { success: true, stockOrderId: stockOrderData.id };
 }
 
-export async function updateOrderStatus(orderId: number, status: string) {
+export async function updateOrderStatus(orderId: number, status: 'Dispatched' | 'Rejected') {
     const supabase = createServerActionClient({ isAdmin: true });
-    
-    if (status === 'Delivered') {
-        return updateOrderAndStock(orderId, []); // Assuming no out-of-stock items when marking delivered from this flow.
-    }
     
     // Get order details to update outlet due if rejecting
     const { data: order, error: fetchError } = await supabase
@@ -571,25 +567,14 @@ export async function updateOrderAndStock(orderId: number, outOfStockItemIds: nu
         return { success: false, error: "Only dispatched orders can be marked as delivered." };
     }
 
-    if (outOfStockItemIds.length > 0) {
-        const { error: updateItemsError } = await supabase
-            .from('order_items')
-            .update({ is_out_of_stock: true })
-            .in('id', outOfStockItemIds);
-
-        if (updateItemsError) {
-            return { success: false, error: `Could not mark items as out of stock: ${updateItemsError.message}` };
-        }
-    }
-
-    const fulfilledItems = order.order_items.filter(item => !outOfStockItemIds.includes(item.id));
-    const newTotalAmount = fulfilledItems.reduce((sum, item) => sum + item.total_price, 0);
+    // This logic is now handled when the order is created.
+    // When marking as delivered, we just confirm the status.
+    // Out-of-stock adjustments are done *before* dispatch.
 
     const { error: updateOrderError } = await supabase
         .from('orders')
         .update({ 
             status: 'Delivered',
-            total_amount: newTotalAmount,
          })
         .eq('id', orderId);
 
@@ -631,7 +616,7 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
 
     const { data: order, error: orderError } = await supabase
         .from('stock_orders')
-        .select('*, stock_order_items(*, skus(*))') // Fetch full SKU details
+        .select('*, stock_order_items(*, skus(*))')
         .eq('id', orderId)
         .single();
     
@@ -644,7 +629,6 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
     for (const item of order.stock_order_items) {
         const totalUnitsToMove = item.quantity * (item.skus?.units_per_case || 1);
 
-        // 1. Check if stock record exists for distributor
         const { data: existingStock, error: fetchStockError } = await supabase
             .from('distributor_stock')
             .select('id, stock_quantity')
@@ -658,20 +642,18 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
         }
 
         if (existingStock) {
-            // Update existing stock
             const newStock = (existingStock.stock_quantity || 0) + totalUnitsToMove;
             const { error: updateStockError } = await supabase
                 .from('distributor_stock')
                 .update({ 
                     stock_quantity: newStock,
-                    case_price: item.case_price, // Also update pricing info
+                    case_price: item.case_price,
                     mrp: item.skus?.mrp,
                     units_per_case: item.skus?.units_per_case
                 })
                 .eq('id', existingStock.id);
             if (updateStockError) stockUpdateErrors.push(`Failed to update stock for SKU ${item.sku_id}: ${updateStockError.message}`);
         } else {
-            // Insert new stock record
             const { error: insertStockError } = await supabase
                 .from('distributor_stock')
                 .insert({
@@ -691,7 +673,6 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
         return { success: false, error: `Order status not updated. Stock update failed: ${stockUpdateErrors.join('; ')}` };
     }
 
-    // Finally, update the order status
     const { error: updateStatusError } = await supabase
         .from('stock_orders')
         .update({ status: 'Delivered' })
@@ -717,8 +698,7 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
     return { success: false, error: "An order ID or stock order ID is required." };
   }
 
-  // Check if an invoice already exists for this order/stockOrder
-  let existingInvoiceCheck = supabase.from('invoices').select('id');
+  let existingInvoiceCheck = supabase.from('invoices').select('id').limit(1);
   if (orderId) {
       existingInvoiceCheck = existingInvoiceCheck.eq('order_id', orderId);
   } else if (stockOrderId) {
@@ -751,7 +731,7 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
     
     totalAmount = data.total_amount;
     totalDiscount = data.total_discount || 0;
-    subTotal = totalAmount + totalDiscount;
+    subTotal = totalAmount + totalDiscount; // Re-calculate subtotal before discount
 
     itemsToStore = data.order_items.map(item => ({
         name: item.skus?.name,
@@ -759,7 +739,7 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
         weight: item.skus?.unit_type,
         quantity: `${item.quantity} ${item.order_unit_type}`,
         unit_price: item.unit_price,
-        total_price: item.total_price
+        total_price: item.total_price // pre-discount price
     }));
 
     const { error: updateError } = await supabase.from('orders').update({ is_invoice_created: true }).eq('id', orderId);
