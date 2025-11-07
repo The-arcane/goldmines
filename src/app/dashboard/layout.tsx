@@ -16,11 +16,13 @@ export default function DashboardLayout({
   const router = useRouter();
 
   useEffect(() => {
+    // Wait until the session is explicitly refreshed and loading is false
     if (!loading && sessionRefreshed && !user) {
       router.replace("/login");
     }
   }, [user, loading, sessionRefreshed, router]);
   
+  // Show loading spinner until the session is confirmed to be either present or not
   if (loading || !sessionRefreshed) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -29,6 +31,7 @@ export default function DashboardLayout({
     );
   }
 
+  // If session is refreshed but there's no user, it's safe to show a spinner while redirecting
   if (!user) {
     return (
       <div className="flex h-screen items-center justify-center">

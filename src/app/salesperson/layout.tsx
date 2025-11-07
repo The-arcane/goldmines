@@ -12,12 +12,12 @@ export default function SalespersonLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
+  const { user, loading, sessionRefreshed } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (loading) {
-      return; // Wait for the auth state to load
+    if (loading || !sessionRefreshed) {
+      return; // Wait for the auth state to load and session to be refreshed
     }
 
     if (!user) {
@@ -27,10 +27,10 @@ export default function SalespersonLayout({
       // If logged in but not a sales executive, redirect to the main login page
       router.replace("/login");
     }
-  }, [user, loading, router]);
+  }, [user, loading, sessionRefreshed, router]);
   
   // Show a loading spinner while checking auth or if the user is not the correct role yet
-  if (loading || !user || user.role !== 'sales_executive') {
+  if (loading || !sessionRefreshed || !user || user.role !== 'sales_executive') {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
