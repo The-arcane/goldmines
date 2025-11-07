@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useCallback, useTransition } from "react";
@@ -15,9 +16,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Trash2, PlusCircle, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { createNewOrder } from "@/lib/actions";
+import { createStockOrder } from "@/lib/actions";
 
 const formSchema = z.object({
     items: z.array(z.object({
@@ -26,11 +28,12 @@ const formSchema = z.object({
         case_price: z.number(),
         total_price: z.number(),
     })).min(1, "Please add at least one item to the order."),
+    notes: z.string().optional(),
 });
 
-type OrderFormValues = z.infer<typeof formSchema>;
+type StockOrderFormValues = z.infer<typeof formSchema>;
 
-export default function CreateDistributorOrderPage() {
+export default function CreateStockOrderPage() {
     const { user } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
@@ -39,7 +42,7 @@ export default function CreateDistributorOrderPage() {
     const [loading, setLoading] = useState(true);
     const [isSubmitting, startTransition] = useTransition();
 
-    const form = useForm<OrderFormValues>({
+    const form = useForm<StockOrderFormValues>({
         resolver: zodResolver(formSchema),
         defaultValues: { items: [] },
     });
@@ -112,31 +115,27 @@ export default function CreateDistributorOrderPage() {
          });
     }
 
-    const onSubmit = (data: OrderFormValues) => {
+    const onSubmit = (data: StockOrderFormValues) => {
         if (!distributor) return;
         
         startTransition(async () => {
-            const orderData = {
+            const stockOrderData = {
                 total_amount: totalValue,
-                items: data.items.map(item => {
-                    const skuDetails = getSkuDetails(item.sku_id);
-                     const unitPrice = (skuDetails?.units_per_case || 1) > 0 ? (item.case_price || 0) / (skuDetails?.units_per_case || 1) : 0;
-                    return {
-                        sku_id: item.sku_id,
-                        quantity: item.quantity * (skuDetails?.units_per_case || 1), // Convert cases to units
-                        unit_price: unitPrice,
-                        total_price: item.total_price,
-                    }
-                }),
-                payment_status: 'Unpaid' as const,
+                notes: data.notes,
+                items: data.items.map(item => ({
+                    sku_id: item.sku_id,
+                    quantity: item.quantity,
+                    case_price: item.case_price,
+                    total_price: item.total_price,
+                })),
             };
 
-            const result = await createNewOrder(orderData, distributor.id, true); // `isDistributorOrder` = true
+            const result = await createStockOrder(stockOrderData, distributor.id);
             if (result.success) {
-                toast({ title: "Order Submitted!", description: `Your stock order #${result.orderId} has been sent for approval.` });
-                router.push("/dashboard/distributor/orders");
+                toast({ title: "Stock Order Submitted!", description: `Your stock order #${result.stockOrderId} has been sent for approval.` });
+                router.push("/dashboard/distributor/stock-orders");
             } else {
-                toast({ variant: "destructive", title: "Failed to create order", description: result.error });
+                toast({ variant: "destructive", title: "Failed to create stock order", description: result.error });
             }
         });
     };
@@ -218,6 +217,27 @@ export default function CreateDistributorOrderPage() {
                                     <PlusCircle className="mr-2 h-4 w-4" /> Add Item
                                 </Button>
                                 <FormMessage>{form.formState.errors.items?.message}</FormMessage>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Notes</CardTitle>
+                                <CardDescription>Add any special instructions or notes for this order.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <FormField
+                                    control={form.control}
+                                    name="notes"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormControl>
+                                                <Textarea placeholder="e.g., Please expedite shipping." {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
                             </CardContent>
                         </Card>
                         

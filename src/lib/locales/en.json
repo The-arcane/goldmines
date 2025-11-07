@@ -1,3 +1,4 @@
+
 {
     "Dashboard": "Dashboard",
     "Analytics": "Analytics",
@@ -11,11 +12,14 @@
     "Route Plan": "Route Plan",
     "My Reports": "My Reports",
     "Orders": "Orders",
+    "Retail Orders": "Retail Orders",
     "Payments": "Payments",
     "SKU Management": "SKU & Inventory",
     "Manage Team": "Manage Team",
     "My Deliveries": "My Deliveries",
     "My Orders": "My Orders",
+    "Create Stock Order": "Create Stock Order",
+    "My Stock Orders": "My Stock Orders",
     "Distributor Dashboard": "Distributor Dashboard",
     "An overview of your organization's operations.": "An overview of your organization's operations.",
     "Recent Orders": "Recent Orders",

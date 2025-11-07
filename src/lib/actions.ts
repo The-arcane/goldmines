@@ -1,8 +1,9 @@
 
+
 "use server";
 
 import { flagAnomalousVisit } from "@/ai/flows/flag-anomalous-visits";
-import type { UserFormData, DistributorFormData, SkuFormData, OrderFormData, AttendanceData } from "./types";
+import type { UserFormData, DistributorFormData, SkuFormData, OrderFormData, AttendanceData, StockOrderFormData } from "./types";
 import { revalidatePath } from "next/cache";
 import { createServerActionClient } from "./supabaseServer";
 
@@ -297,6 +298,65 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
   revalidatePath("/salesperson/dashboard");
   revalidatePath("/salesperson/orders");
   return { success: true, orderId: orderData.id };
+}
+
+export async function createStockOrder(formData: StockOrderFormData, distributorId: number) {
+  const supabase = createServerActionClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: 'User not authenticated' };
+  }
+
+  const { data: userProfile } = await supabase
+    .from('users')
+    .select('id')
+    .eq('auth_id', user.id)
+    .single();
+
+  if (!userProfile) {
+    return { success: false, error: 'Could not find user profile.' };
+  }
+  
+  // 1. Create the main stock order record
+  const { data: stockOrderData, error: stockOrderError } = await supabase
+    .from("stock_orders")
+    .insert({
+      distributor_id: distributorId,
+      total_amount: formData.total_amount,
+      notes: formData.notes,
+      order_date: new Date().toISOString(),
+      created_by_user_id: userProfile.id,
+      status: 'Pending',
+    })
+    .select()
+    .single();
+
+  if (stockOrderError) {
+    console.error("Error creating stock order:", stockOrderError);
+    return { success: false, error: stockOrderError.message };
+  }
+
+  // 2. Prepare and insert stock order items
+  const stockOrderItems = formData.items.map(item => ({
+    stock_order_id: stockOrderData.id,
+    sku_id: item.sku_id,
+    quantity: item.quantity,
+    case_price: item.case_price,
+    total_price: item.total_price,
+  }));
+
+  const { error: itemsError } = await supabase.from("stock_order_items").insert(stockOrderItems);
+
+  if (itemsError) {
+    console.error("Error creating stock order items:", itemsError);
+    // Rollback logic
+    await supabase.from("stock_orders").delete().eq("id", stockOrderData.id);
+    return { success: false, error: `Stock order items could not be saved: ${itemsError.message}` };
+  }
+
+  revalidatePath('/dashboard/distributor/stock-orders');
+  return { success: true, stockOrderId: stockOrderData.id };
 }
 
 export async function updateOrderStatus(orderId: number, status: string) {

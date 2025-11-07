@@ -1,4 +1,5 @@
 
+
 export type UserRole = 'admin' | 'sales_executive' | 'distributor_admin' | 'delivery_partner';
 
 export type User = {
@@ -92,6 +93,27 @@ export type OrderItem = {
   skus?: { name: string, product_code: string }; // For joins
 };
 
+export type StockOrder = {
+  id: number;
+  distributor_id: number;
+  order_date: string;
+  total_amount: number;
+  status: string;
+  created_at: string;
+  created_by_user_id?: number;
+  notes?: string;
+};
+
+export type StockOrderItem = {
+  id: number;
+  stock_order_id: number;
+  sku_id: number;
+  quantity: number;
+  case_price: number;
+  total_price: number;
+};
+
+
 export type Attendance = {
     id: string;
     user_id: number;
@@ -150,6 +172,19 @@ export type OrderFormData = {
     total_price: number;
   }[];
 };
+
+// For creating a new stock order
+export type StockOrderFormData = {
+  total_amount: number;
+  notes?: string;
+  items: {
+    sku_id: number;
+    quantity: number; // in cases
+    case_price: number;
+    total_price: number;
+  }[];
+};
+
 
 // For marking attendance
 export type AttendanceData = {

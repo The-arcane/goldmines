@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -35,15 +36,16 @@ const navItems = {
   sales_executive: [
     { href: "/salesperson/dashboard", icon: Home, label: "Dashboard" },
     { href: "/salesperson/outlets", icon: Warehouse, label: "My Outlets" },
-    { href: "/salesperson/orders/create", icon: PlusCircle, label: "Create Order" },
+    { href: "/salesperson/orders", icon: ShoppingCart, label: "My Orders" },
     { href: "/salesperson/visits", icon: BarChart, label: "Visit History" },
     { href: "/salesperson/route", icon: Map, label: "Route Plan" },
     { href: "/salesperson/reports", icon: BarChart, label: "My Reports" },
   ],
   distributor_admin: [
     { href: "/dashboard/distributor", icon: Home, label: "Dashboard" },
-    { href: "/dashboard/distributor/create-order", icon: PlusCircle, label: "Create Order"},
-    { href: "/dashboard/distributor/orders", icon: ShoppingCart, label: "Orders" },
+    { href: "/dashboard/distributor/create-order", icon: PlusCircle, label: "Create Stock Order"},
+    { href: "/dashboard/distributor/stock-orders", icon: Package, label: "My Stock Orders"},
+    { href: "/dashboard/distributor/orders", icon: ShoppingCart, label: "Retail Orders" },
     { href: "/dashboard/distributor/payments", icon: Banknote, label: "Payments" },
     { href: "/dashboard/distributor/skus", icon: Box, label: "SKU Management" },
     { href: "/dashboard/distributor/users", icon: Users, label: "Manage Team" },

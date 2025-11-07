@@ -1,3 +1,4 @@
+
 {
     "Dashboard": "डैशबोर्ड",
     "Analytics": "विश्लेषिकी",
@@ -11,11 +12,14 @@
     "Route Plan": "मार्ग योजना",
     "My Reports": "मेरी रिपोर्ट",
     "Orders": "आदेश",
+    "Retail Orders": "खुदरा आदेश",
     "Payments": "भुगतान",
     "SKU Management": "SKU और इन्वेंटरी",
     "Manage Team": "टीम प्रबंधित करें",
     "My Deliveries": "मेरी डिलीवरी",
     "My Orders": "मेरे आर्डर",
+    "Create Stock Order": "स्टॉक ऑर्डर बनाएं",
+    "My Stock Orders": "मेरे स्टॉक ऑर्डर",
     "Distributor Dashboard": "वितरक डैशबोर्ड",
     "An overview of your organization's operations.": "आपके संगठन के संचालन का अवलोकन।",
     "Recent Orders": "हाल के आदेश",
