@@ -69,6 +69,7 @@ export type Sku = {
   stock_quantity: number;
   distributor_id: number | null; // This now refers to the brand's stock if null
   created_at: string;
+  weight?: string;
 };
 
 export type DistributorStock = {
@@ -109,7 +110,7 @@ export type OrderItem = {
   unit_price: number;
   total_price: number;
   is_out_of_stock: boolean; // new field
-  skus?: { name: string, product_code: string }; // For joins
+  skus?: { name: string, product_code: string, weight?: string }; // For joins
 };
 
 export type StockOrder = {
@@ -134,7 +135,7 @@ export type StockOrderItem = {
   quantity: number; // in cases
   case_price: number;
   total_price: number;
-  skus?: { name: string, product_code: string, units_per_case: number }; // For joins
+  skus?: { name: string, product_code: string, units_per_case: number, weight?: string }; // For joins
 };
 
 
@@ -156,6 +157,7 @@ export type Attendance = {
 export type InvoiceItem = {
     name: string;
     code: string;
+    weight?: string;
     quantity: string; // e.g., "10 units" or "2 cases"
     unit_price: number;
     total_price: number;
@@ -204,6 +206,7 @@ export type SkuFormData = {
   mrp?: number;
   ptr?: number;
   stock_quantity: number;
+  weight?: string;
 };
 
 // For creating a new Order

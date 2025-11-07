@@ -597,9 +597,13 @@ export async function updateOrderAndStock(orderId: number, outOfStockItemIds: nu
     // 5. Update stock for fulfilled items
     if (fulfilledItems.length > 0) {
         const stockUpdates = fulfilledItems.map(item => 
-            supabase.rpc('update_sku_stock', {
-                sku_id_to_update: item.sku_id,
-                quantity_to_decrement: item.quantity,
+            supabase.rpc('upsert_distributor_stock', {
+                p_distributor_id: order.distributor_id,
+                p_sku_id: item.sku_id,
+                p_quantity_change: -item.quantity, // Decrement stock
+                p_units_per_case: null, // Not needed for decrement
+                p_case_price: null, // Not needed for decrement
+                p_mrp: null // Not needed for decrement
             })
         );
         
@@ -661,6 +665,7 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
     for (const item of order.stock_order_items) {
         const totalUnits = item.quantity * (item.skus?.units_per_case || 1);
 
+        // Decrement brand's main stock
         const { data: mainSku, error: mainSkuError } = await supabase
             .from('skus')
             .select('stock_quantity')
@@ -683,10 +688,11 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
             continue;
         }
         
+        // Upsert distributor's stock
         const { error: rpcError } = await supabase.rpc('upsert_distributor_stock', {
             p_distributor_id: order.distributor_id,
             p_sku_id: item.sku_id,
-            p_quantity_change: totalUnits,
+            p_quantity_change: totalUnits, // Increment distributor stock
             p_units_per_case: item.skus?.units_per_case,
             p_case_price: item.case_price,
             p_mrp: item.skus ? (await supabase.from('skus').select('mrp').eq('id', item.sku_id).single()).data?.mrp : undefined
@@ -702,6 +708,7 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
         return { success: false, error: `Order status not updated. Stock update failed: ${stockUpdateErrors.join('; ')}` };
     }
 
+    // If all stock updates succeed, mark the order as delivered.
     const { error: updateStatusError } = await supabase
         .from('stock_orders')
         .update({ status: 'Delivered' })
@@ -733,7 +740,7 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
   if (orderId) {
     const { data, error } = await supabase
         .from('orders')
-        .select('total_amount, order_items(*, skus(name, product_code))')
+        .select('total_amount, order_items(*, skus(name, product_code, weight))')
         .eq('id', orderId)
         .single();
     if (error || !data) return { success: false, error: "Could not find retail order." };
@@ -741,6 +748,7 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
     itemsToStore = data.order_items.map(item => ({
         name: item.skus?.name,
         code: item.skus?.product_code,
+        weight: item.skus?.weight,
         quantity: `${item.quantity} units`,
         unit_price: item.unit_price,
         total_price: item.total_price
@@ -754,7 +762,7 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
   } else if (stockOrderId) {
     const { data, error } = await supabase
         .from('stock_orders')
-        .select('total_amount, stock_order_items(*, skus(name, product_code, units_per_case))')
+        .select('total_amount, stock_order_items(*, skus(name, product_code, weight, units_per_case))')
         .eq('id', stockOrderId)
         .single();
     if (error || !data) return { success: false, error: "Could not find stock order." };
@@ -762,6 +770,7 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
     itemsToStore = data.stock_order_items.map(item => ({
         name: item.skus?.name,
         code: item.skus?.product_code,
+        weight: item.skus?.weight,
         quantity: `${item.quantity} cases`,
         unit_price: item.case_price,
         total_price: item.total_price

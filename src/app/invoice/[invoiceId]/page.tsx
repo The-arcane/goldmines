@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useCallback, use } from "react";
@@ -136,6 +137,7 @@ export default function InvoicePage({ params }: { params: { invoiceId: string } 
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Item</TableHead>
+                                        <TableHead>Weight</TableHead>
                                         <TableHead className="text-center">Qty</TableHead>
                                         <TableHead className="text-right">Rate</TableHead>
                                         <TableHead className="text-right">Amount</TableHead>
@@ -148,6 +150,7 @@ export default function InvoicePage({ params }: { params: { invoiceId: string } 
                                                 <div className="font-medium">{item.name}</div>
                                                 <div className="text-xs text-muted-foreground">{item.code}</div>
                                             </TableCell>
+                                            <TableCell>{item.weight || 'N/A'}</TableCell>
                                             <TableCell className="text-center">{item.quantity}</TableCell>
                                             <TableCell className="text-right font-mono">₹{item.unit_price.toFixed(2)}</TableCell>
                                             <TableCell className="text-right font-mono">₹{item.total_price.toFixed(2)}</TableCell>
