@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useTransition } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { Order, Distributor } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
@@ -13,11 +13,15 @@ import { FileText } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
+import { generateInvoice } from "@/lib/actions";
+import { useToast } from "@/hooks/use-toast";
 
 export default function OrdersPage() {
     const { user, loading: authLoading } = useAuth();
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isPending, startTransition] = useTransition();
+    const { toast } = useToast();
 
     const fetchOrders = useCallback(async () => {
         if (!user) {
@@ -41,7 +45,7 @@ export default function OrdersPage() {
 
         const { data, error } = await supabase
             .from("orders")
-            .select("id, order_date, total_amount, status, outlets(name)")
+            .select("id, order_date, total_amount, status, outlets(name), is_invoice_created")
             .eq('distributor_id', distributorData.id)
             .order("order_date", { ascending: false });
 
@@ -59,6 +63,20 @@ export default function OrdersPage() {
             fetchOrders();
         }
     }, [authLoading, fetchOrders]);
+
+    const handleGenerateInvoice = (orderId: number) => {
+        startTransition(async () => {
+            const result = await generateInvoice(orderId);
+            // Redirect is handled by the server action
+            if (result && result.error) {
+                toast({
+                    variant: "destructive",
+                    title: "Invoice Generation Failed",
+                    description: result.error,
+                });
+            }
+        });
+    }
     
     const getStatusVariant = (status: string) => {
         switch (status) {
@@ -101,7 +119,7 @@ export default function OrdersPage() {
                                             <TableHead>Status</TableHead>
                                             <TableHead>Date</TableHead>
                                             <TableHead className="text-right">Value</TableHead>
-                                            <TableHead className="w-[100px] text-right">Actions</TableHead>
+                                            <TableHead className="text-right">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -112,11 +130,20 @@ export default function OrdersPage() {
                                                 <TableCell><Badge variant={getStatusVariant(order.status)}>{order.status}</Badge></TableCell>
                                                 <TableCell>{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
                                                 <TableCell className="text-right">₹{order.total_amount?.toFixed(2) || '0.00'}</TableCell>
-                                                <TableCell className="text-right">
+                                                <TableCell className="text-right space-x-2">
                                                     <Button asChild variant="outline" size="sm">
                                                         <Link href={`/dashboard/distributor/orders/${order.id}`}>
                                                             View
                                                         </Link>
+                                                    </Button>
+                                                     <Button 
+                                                        variant="outline" 
+                                                        size="sm"
+                                                        disabled={isPending || order.status !== 'Delivered' || order.is_invoice_created}
+                                                        onClick={() => handleGenerateInvoice(order.id)}
+                                                     >
+                                                        <FileText className="mr-2 h-4 w-4" />
+                                                        {order.is_invoice_created ? 'Billed' : 'Bill'}
                                                     </Button>
                                                 </TableCell>
                                             </TableRow>
@@ -142,11 +169,21 @@ export default function OrdersPage() {
                                             <div className="text-muted-foreground">{format(new Date(order.order_date), 'MMM d, yyyy')}</div>
                                             <div className="font-semibold text-lg">₹{order.total_amount?.toFixed(2) || '0.00'}</div>
                                         </CardContent>
-                                        <CardFooter>
-                                             <Button asChild variant="outline" size="sm" className="w-full">
+                                        <CardFooter className="flex gap-2">
+                                             <Button asChild variant="outline" size="sm" className="flex-1">
                                                 <Link href={`/dashboard/distributor/orders/${order.id}`}>
                                                     View Details
                                                 </Link>
+                                            </Button>
+                                             <Button 
+                                                variant="default" 
+                                                size="sm"
+                                                className="flex-1"
+                                                disabled={isPending || order.status !== 'Delivered' || order.is_invoice_created}
+                                                onClick={() => handleGenerateInvoice(order.id)}
+                                             >
+                                                <FileText className="mr-2 h-4 w-4" />
+                                                {order.is_invoice_created ? 'Billed' : 'Generate Bill'}
                                             </Button>
                                         </CardFooter>
                                     </Card>

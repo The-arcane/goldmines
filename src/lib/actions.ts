@@ -625,7 +625,6 @@ export async function updateStockOrderStatus(orderId: number, status: string) {
     const supabase = createServerActionClient({ isAdmin: true });
 
     if (status === 'Delivered') {
-        // We need to move stock from brand to distributor, this requires more logic.
         return updateStockAndMarkAsDelivered(orderId);
     }
 
@@ -647,7 +646,6 @@ export async function updateStockOrderStatus(orderId: number, status: string) {
 async function updateStockAndMarkAsDelivered(orderId: number) {
     const supabase = createServerActionClient({ isAdmin: true });
 
-    // Get order and items
     const { data: order, error: orderError } = await supabase
         .from('stock_orders')
         .select('*, stock_order_items(*, skus(units_per_case))')
@@ -663,7 +661,6 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
     for (const item of order.stock_order_items) {
         const totalUnits = item.quantity * (item.skus?.units_per_case || 1);
 
-        // 1. Decrement from brand's main stock (skus table)
         const { data: mainSku, error: mainSkuError } = await supabase
             .from('skus')
             .select('stock_quantity')
@@ -685,8 +682,7 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
             stockUpdateErrors.push(`Failed to update brand stock for SKU ID ${item.sku_id}.`);
             continue;
         }
-
-        // 2. Increment distributor's stock
+        
         const { error: rpcError } = await supabase.rpc('upsert_distributor_stock', {
             p_distributor_id: order.distributor_id,
             p_sku_id: item.sku_id,
@@ -706,15 +702,12 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
         return { success: false, error: `Order status not updated. Stock update failed: ${stockUpdateErrors.join('; ')}` };
     }
 
-    // 3. Finally, update the order status
     const { error: updateStatusError } = await supabase
         .from('stock_orders')
         .update({ status: 'Delivered' })
         .eq('id', orderId);
 
     if (updateStatusError) {
-        // This is a problematic state; stock was adjusted but status wasn't.
-        // A real-world app would need a rollback mechanism here.
         console.error("Critical error: stock adjusted but failed to update order status.", updateStatusError);
         return { success: false, error: `Critical error: Stock was updated, but failed to mark order as delivered. Please check manually. Error: ${updateStatusError.message}` };
     }
@@ -732,7 +725,6 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
     return { success: false, error: "An order ID or stock order ID is required." };
   }
 
-  // Generate a unique invoice number
   const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
   let totalAmount = 0;
@@ -754,6 +746,11 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
         total_price: item.total_price
     }));
 
+    // Set is_invoice_created to true for the order
+    const { error: updateError } = await supabase.from('orders').update({ is_invoice_created: true }).eq('id', orderId);
+    if (updateError) console.error("Failed to update invoice status for order:", updateError.message);
+
+
   } else if (stockOrderId) {
     const { data, error } = await supabase
         .from('stock_orders')
@@ -769,9 +766,12 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
         unit_price: item.case_price,
         total_price: item.total_price
     }));
+
+    // Set is_invoice_created to true for the stock order
+    const { error: updateError } = await supabase.from('stock_orders').update({ is_invoice_created: true }).eq('id', stockOrderId);
+    if (updateError) console.error("Failed to update invoice status for stock order:", updateError.message);
   }
 
-  // Insert into the new invoices table
   const { data: invoiceData, error: invoiceError } = await supabase.from('invoices')
     .insert({
       invoice_number: invoiceNumber,
@@ -790,5 +790,7 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
   }
 
   revalidatePath('/invoice');
+  revalidatePath('/dashboard/admin/stock-orders');
+  revalidatePath('/dashboard/distributor/orders');
   redirect(`/invoice/${invoiceData.id}`);
 }

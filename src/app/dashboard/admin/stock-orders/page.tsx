@@ -19,9 +19,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, CheckCircle, XCircle, Truck, Eye, Check } from "lucide-react";
+import { MoreHorizontal, CheckCircle, XCircle, Truck, Eye, Check, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { updateStockOrderStatus } from "@/lib/actions";
+import { updateStockOrderStatus, generateInvoice } from "@/lib/actions";
 
 export default function AdminStockOrdersPage() {
     const [orders, setOrders] = useState<StockOrder[]>([]);
@@ -69,6 +69,12 @@ export default function AdminStockOrdersPage() {
             } else {
                 toast({ variant: 'destructive', title: "Update failed", description: result.error});
             }
+        });
+    }
+
+    const handleGenerateInvoice = (orderId: number) => {
+        startTransition(async () => {
+            await generateInvoice(undefined, orderId);
         });
     }
 
@@ -124,25 +130,33 @@ export default function AdminStockOrdersPage() {
                                                             <Eye className="mr-2 h-4 w-4" />View Order
                                                         </Link>
                                                     </DropdownMenuItem>
+                                                    
+                                                     <DropdownMenuItem 
+                                                        disabled={isPending || order.status !== 'Delivered' || order.is_invoice_created}
+                                                        onClick={() => handleGenerateInvoice(order.id)}>
+                                                        <FileText className="mr-2 h-4 w-4" />
+                                                        {order.is_invoice_created ? 'Invoice Created' : 'Generate Invoice'}
+                                                    </DropdownMenuItem>
+                                                    
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuLabel>Change Status</DropdownMenuLabel>
                                                     <DropdownMenuItem 
-                                                        disabled={order.status !== 'Pending'}
+                                                        disabled={isPending || order.status !== 'Pending'}
                                                         onClick={() => handleStatusChange(order.id, 'Approved')}>
                                                         <CheckCircle className="mr-2 h-4 w-4" />Approve
                                                     </DropdownMenuItem>
                                                      <DropdownMenuItem 
-                                                        disabled={order.status !== 'Pending'}
+                                                        disabled={isPending || order.status !== 'Pending'}
                                                         onClick={() => handleStatusChange(order.id, 'Rejected')}>
                                                         <XCircle className="mr-2 h-4 w-4" />Reject
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem 
-                                                        disabled={order.status !== 'Approved'}
+                                                        disabled={isPending || order.status !== 'Approved'}
                                                         onClick={() => handleStatusChange(order.id, 'Shipped')}>
                                                         <Truck className="mr-2 h-4 w-4" />Mark as Shipped
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem 
-                                                        disabled={order.status !== 'Shipped'}
+                                                        disabled={isPending || order.status !== 'Shipped'}
                                                         onClick={() => handleStatusChange(order.id, 'Delivered')}>
                                                         <Check className="mr-2 h-4 w-4" />Mark as Delivered
                                                     </DropdownMenuItem>
