@@ -56,6 +56,7 @@ const navItems = {
   delivery_partner: [
     { href: "/dashboard/delivery", icon: Truck, label: "My Deliveries" },
     { href: "/dashboard/orders/create", icon: PlusCircle, label: "Create Order" },
+    { href: "/dashboard/stock-order-items/mark-as-delivered", icon: PlusCircle, label: "Mark as Delivered" },
   ],
 };
 

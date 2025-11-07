@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, CheckCircle, XCircle, Truck, Eye } from "lucide-react";
+import { MoreHorizontal, CheckCircle, XCircle, Truck, Eye, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { updateStockOrderStatus } from "@/lib/actions";
 
@@ -51,7 +51,8 @@ export default function AdminStockOrdersPage() {
     
     const getStatusVariant = (status: string) => {
         switch (status) {
-            case 'Shipped': return 'default';
+            case 'Delivered': return 'default';
+            case 'Shipped': return 'outline';
             case 'Pending': return 'destructive';
             case 'Rejected': return 'outline';
             case 'Approved': return 'secondary';
@@ -139,6 +140,11 @@ export default function AdminStockOrdersPage() {
                                                         disabled={order.status !== 'Approved'}
                                                         onClick={() => handleStatusChange(order.id, 'Shipped')}>
                                                         <Truck className="mr-2 h-4 w-4" />Mark as Shipped
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem 
+                                                        disabled={order.status !== 'Shipped'}
+                                                        onClick={() => handleStatusChange(order.id, 'Delivered')}>
+                                                        <Check className="mr-2 h-4 w-4" />Mark as Delivered
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>

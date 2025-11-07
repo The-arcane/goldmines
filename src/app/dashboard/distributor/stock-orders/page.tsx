@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useTransition } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { StockOrder, Distributor } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
@@ -12,11 +12,17 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
+import { Check } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { updateStockOrderStatus } from "@/lib/actions";
+
 
 export default function StockOrdersPage() {
     const { user, loading: authLoading } = useAuth();
     const [orders, setOrders] = useState<StockOrder[]>([]);
     const [loading, setLoading] = useState(true);
+    const { toast } = useToast();
+    const [isPending, startTransition] = useTransition();
 
     const fetchOrders = useCallback(async () => {
         if (!user) {
@@ -61,13 +67,27 @@ export default function StockOrdersPage() {
     
     const getStatusVariant = (status: string) => {
         switch (status) {
-            case 'Shipped': return 'default';
+            case 'Delivered': return 'default';
+            case 'Shipped': return 'outline';
             case 'Pending': return 'destructive';
             case 'Rejected': return 'outline';
             case 'Approved': return 'secondary';
             default: return 'secondary';
         }
     }
+    
+    const handleMarkAsDelivered = (orderId: number) => {
+        startTransition(async () => {
+            const result = await updateStockOrderStatus(orderId, 'Delivered');
+            if(result.success) {
+                toast({ title: "Order Delivered", description: `The stock order has been marked as delivered.`});
+                fetchOrders();
+            } else {
+                toast({ variant: 'destructive', title: "Update failed", description: result.error});
+            }
+        });
+    }
+
 
     return (
         <main className="flex flex-1 flex-col gap-4 md:gap-8">
@@ -95,7 +115,7 @@ export default function StockOrdersPage() {
                                     <TableHead>Date</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Value</TableHead>
-                                    <TableHead className="w-[100px] text-right">Actions</TableHead>
+                                    <TableHead className="w-[200px] text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -105,10 +125,21 @@ export default function StockOrdersPage() {
                                         <TableCell>{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
                                         <TableCell><Badge variant={getStatusVariant(order.status)}>{order.status}</Badge></TableCell>
                                         <TableCell className="text-right">₹{order.total_amount?.toFixed(2) || '0.00'}</TableCell>
-                                        <TableCell className="text-right">
+                                        <TableCell className="text-right space-x-2">
                                             <Button asChild variant="outline" size="sm">
                                                 <Link href={`/dashboard/stock-orders/${order.id}`}>View</Link>
                                             </Button>
+                                            {order.status === 'Shipped' && (
+                                                <Button 
+                                                    variant="default" 
+                                                    size="sm" 
+                                                    onClick={() => handleMarkAsDelivered(order.id)}
+                                                    disabled={isPending}
+                                                >
+                                                    <Check className="mr-2 h-4 w-4" />
+                                                    Mark as Delivered
+                                                </Button>
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 ))}

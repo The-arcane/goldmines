@@ -633,7 +633,8 @@ export async function updateStockOrderStatus(orderId: number, status: string) {
         return { success: false, error: `Failed to update status: ${updateError.message}` };
     }
 
-    if (status === 'Shipped') {
+    // Stock is only updated when the distributor confirms delivery
+    if (status === 'Delivered') {
         const { data: items, error: itemsError } = await supabase
             .from('stock_order_items')
             .select('*, skus(id, stock_quantity, units_per_case, case_price, mrp)')
@@ -649,50 +650,43 @@ export async function updateStockOrderStatus(orderId: number, status: string) {
 
         for (const item of items) {
             if (!item.skus) continue;
+            
+            const totalUnitsToTransfer = item.quantity * (item.skus.units_per_case || 1);
 
-            const totalUnitsToDecrement = item.quantity * (item.skus.units_per_case || 1);
-
-            // Decrement from brand's main stock
+            // 1. Decrement from brand's main stock (skus table)
             const { error: brandStockError } = await supabase.rpc('update_sku_stock', {
                 sku_id_to_update: item.sku_id,
-                quantity_to_decrement: totalUnitsToDecrement,
+                quantity_to_decrement: totalUnitsToTransfer,
             });
 
             if (brandStockError) {
                 stockUpdateErrors.push(`Failed to decrement brand stock for SKU ${item.sku_id}: ${brandStockError.message}`);
-                continue; // Skip updating distributor stock if brand stock fails
+                continue;
             }
 
-            // Upsert into distributor's stock
-            const { error: distributorStockError } = await supabase
-                .from('distributor_stock')
-                .upsert(
-                    {
-                        distributor_id: updatedOrder.distributor_id,
-                        sku_id: item.sku_id,
-                        stock_quantity: totalUnitsToDecrement,
-                        units_per_case: item.skus.units_per_case,
-                        case_price: item.skus.case_price,
-                        mrp: item.skus.mrp,
-                    },
-                    {
-                        onConflict: 'distributor_id,sku_id',
-                    }
-                )
-                .select();
+            // 2. Increment distributor's stock (distributor_stock table)
+            const { error: distributorStockError } = await supabase.rpc('increment_distributor_stock', {
+                p_distributor_id: updatedOrder.distributor_id,
+                p_sku_id: item.sku_id,
+                p_quantity: totalUnitsToTransfer,
+                p_units_per_case: item.skus.units_per_case,
+                p_case_price: item.skus.case_price,
+                p_mrp: item.skus.mrp,
+            });
                 
             if (distributorStockError) {
-                stockUpdateErrors.push(`Error upserting distributor stock for SKU ${item.sku_id}: ${distributorStockError.message}`);
+                 stockUpdateErrors.push(`Error upserting distributor stock for SKU ${item.sku_id}: ${distributorStockError.message}`);
             }
         }
 
         if (stockUpdateErrors.length > 0) {
             console.error('Stock update errors:', stockUpdateErrors);
-            return { success: false, error: `Order shipped, but failed to update stock: ${stockUpdateErrors.join(", ")}` };
+            return { success: false, error: `Order delivered, but failed to update stock: ${stockUpdateErrors.join(", ")}` };
         }
     }
 
     revalidatePath('/dashboard/admin/stock-orders');
     revalidatePath('/dashboard/distributor/skus');
+    revalidatePath('/dashboard/distributor/stock-orders');
     return { success: true };
 }
