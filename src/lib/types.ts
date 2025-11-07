@@ -139,7 +139,7 @@ export type SkuFormData = {
 
 // For creating a new Order
 export type OrderFormData = {
-  outlet_id: string;
+  outlet_id?: string; // Optional for distributor orders
   total_amount: number;
   payment_status: "Unpaid" | "Partially Paid" | "Paid";
   amount_paid?: number;
@@ -160,5 +160,3 @@ export type AttendanceData = {
     };
     selfie: string; // base64 data URI
 }
-
-    

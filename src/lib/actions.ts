@@ -181,7 +181,7 @@ export async function createNewSku(formData: SkuFormData, distributorId: number)
   return { success: true };
 }
 
-export async function createNewOrder(formData: OrderFormData, distributorId: number) {
+export async function createNewOrder(formData: OrderFormData, distributorId: number, isDistributorOrder = false) {
   const supabase = createServerActionClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -199,37 +199,44 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
     return { success: false, error: 'Could not find user profile.' };
   }
 
+  let finalStatus = 'Approved';
+  let finalOutletId = formData.outlet_id;
 
-  // 1. Check outlet credit limit
-  const { data: outlet, error: outletError } = await supabase
-    .from('outlets')
-    .select('credit_limit, current_due')
-    .eq('id', formData.outlet_id)
-    .single();
+  if (isDistributorOrder) {
+    finalStatus = 'Pending';
+    finalOutletId = undefined; // Distributor orders are not for a specific outlet
+  } else {
+    // This is a sales exec order for an outlet, check credit limit
+    const { data: outlet, error: outletError } = await supabase
+      .from('outlets')
+      .select('credit_limit, current_due')
+      .eq('id', finalOutletId)
+      .single();
 
-  if (outletError || !outlet) {
-    return { success: false, error: 'Could not find the selected outlet.' };
+    if (outletError || !outlet) {
+      return { success: false, error: 'Could not find the selected outlet.' };
+    }
+
+    const newDueAmount = (outlet.current_due || 0) + formData.total_amount - (formData.amount_paid || 0);
+
+    if (outlet.credit_limit > 0 && newDueAmount > outlet.credit_limit) {
+      return { success: false, error: 'This order exceeds the outlets credit limit.' };
+    }
   }
 
-  const newDueAmount = (outlet.current_due || 0) + formData.total_amount - (formData.amount_paid || 0);
 
-  if (outlet.credit_limit > 0 && newDueAmount > outlet.credit_limit) {
-    return { success: false, error: 'This order exceeds the outlets credit limit.' };
-  }
-
-
-  // 2. Create the main order record with "Approved" status directly
+  // 2. Create the main order record
   const { data: orderData, error: orderError } = await supabase
     .from("orders")
     .insert({
       distributor_id: distributorId,
-      outlet_id: formData.outlet_id,
-      status: "Approved", // Set status to Approved directly
+      outlet_id: finalOutletId,
+      status: finalStatus,
       total_amount: formData.total_amount,
       amount_paid: formData.amount_paid,
       payment_status: formData.payment_status,
       order_date: new Date().toISOString(),
-      created_by_user_id: userProfile.id, // Track who created the order using public user ID
+      created_by_user_id: userProfile.id,
     })
     .select()
     .single();
@@ -239,19 +246,20 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
     return { success: false, error: orderError.message };
   }
 
-  // 3. Since the order is auto-approved, update the outlet's due amount
-  const dueChange = formData.total_amount - (formData.amount_paid || 0);
-  if (dueChange !== 0) {
-      const { error: rpcError } = await supabase.rpc('update_outlet_due', {
-        outlet_uuid: orderData.outlet_id,
-        amount_change: dueChange
-      });
-    
-      if (rpcError) {
-          // Rollback the order creation if the due update fails, to maintain data integrity
-          await supabase.from("orders").delete().eq("id", orderData.id);
-          console.error("Error updating outlet due on order creation:", rpcError);
-          return { success: false, error: `Order could not be placed because outlet balance could not be updated: ${rpcError.message}` };
+  // For sales exec orders, update outlet due immediately since it's auto-approved
+  if (!isDistributorOrder && finalOutletId) {
+      const dueChange = formData.total_amount - (formData.amount_paid || 0);
+      if (dueChange !== 0) {
+          const { error: rpcError } = await supabase.rpc('update_outlet_due', {
+            outlet_uuid: finalOutletId,
+            amount_change: dueChange
+          });
+        
+          if (rpcError) {
+              await supabase.from("orders").delete().eq("id", orderData.id);
+              console.error("Error updating outlet due on order creation:", rpcError);
+              return { success: false, error: `Order could not be placed because outlet balance could not be updated: ${rpcError.message}` };
+          }
       }
   }
 
@@ -269,20 +277,23 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
 
   if (itemsError) {
     console.error("Error creating order items:", itemsError);
-    // Rollback the order and the due update
-     if (dueChange !== 0) {
-        await supabase.rpc('update_outlet_due', {
-            outlet_uuid: orderData.outlet_id,
-            amount_change: -dueChange
-        });
+    // Rollback logic
+     if (!isDistributorOrder && finalOutletId) {
+        const dueChange = formData.total_amount - (formData.amount_paid || 0);
+        if (dueChange !== 0) {
+            await supabase.rpc('update_outlet_due', {
+                outlet_uuid: finalOutletId,
+                amount_change: -dueChange
+            });
+        }
     }
     await supabase.from("orders").delete().eq("id", orderData.id);
     return { success: false, error: `Order items could not be saved: ${itemsError.message}` };
   }
 
-  revalidatePath("/dashboard/distributor/orders");
-  revalidatePath("/dashboard/distributor");
-  revalidatePath("/dashboard/outlets");
+  revalidatePath('/dashboard/distributor/orders');
+  revalidatePath('/dashboard/distributor');
+  revalidatePath('/dashboard/outlets');
   revalidatePath("/salesperson/dashboard");
   revalidatePath("/salesperson/orders");
   return { success: true, orderId: orderData.id };

@@ -42,6 +42,7 @@ const navItems = {
   ],
   distributor_admin: [
     { href: "/dashboard/distributor", icon: Home, label: "Dashboard" },
+    { href: "/dashboard/distributor/create-order", icon: PlusCircle, label: "Create Order"},
     { href: "/dashboard/distributor/orders", icon: ShoppingCart, label: "Orders" },
     { href: "/dashboard/distributor/payments", icon: Banknote, label: "Payments" },
     { href: "/dashboard/distributor/skus", icon: Box, label: "SKU Management" },
