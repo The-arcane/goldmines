@@ -13,13 +13,6 @@ import { ArrowLeft, Printer, Download } from "lucide-react";
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
 
-// Mock Brand Details (to be replaced with data from admin user profile)
-const BrandDetails = {
-    name: "Success Arrow Superfoods Pvt Ltd",
-    address: "456 FMCG Plaza, Corporate Towers, Gurgaon, Haryana, 122002",
-    gst_number: "06AABCU9567L1Z5"
-}
-
 type EnrichedInvoice = Invoice & {
     orders: (Order & {
         outlets: { name: string; address: string; };
@@ -35,12 +28,13 @@ export default function InvoicePage({ params }: { params: { invoiceId: string } 
     const invoiceId = parseInt(use(params).invoiceId, 10);
     const router = useRouter();
     const [invoice, setInvoice] = useState<EnrichedInvoice | null>(null);
+    const [brandDetails, setBrandDetails] = useState<Partial<User>>({});
     const [loading, setLoading] = useState(true);
 
     const fetchInvoiceData = useCallback(async () => {
         setLoading(true);
 
-        const { data, error } = await supabase
+        const invoicePromise = supabase
             .from('invoices')
             .select(`
                 *,
@@ -56,13 +50,35 @@ export default function InvoicePage({ params }: { params: { invoiceId: string } 
             `)
             .eq('id', invoiceId)
             .single();
+            
+        // Fetch the brand details from the admin user
+        const brandDetailsPromise = supabase
+            .from('users')
+            .select('company_name, company_address, company_gst_number')
+            .eq('role', 1) // role 1 is admin
+            .limit(1)
+            .single();
 
-        if (error || !data) {
-            console.error("Error fetching invoice:", error);
+        const [{ data: invoiceData, error: invoiceError }, { data: brandData, error: brandError }] = await Promise.all([invoicePromise, brandDetailsPromise]);
+
+
+        if (invoiceError || !invoiceData) {
+            console.error("Error fetching invoice:", invoiceError);
             router.push('/dashboard'); // Fallback redirect
-        } else {
-            setInvoice(data as EnrichedInvoice);
+            return;
         }
+        setInvoice(invoiceData as EnrichedInvoice);
+
+        if (brandError) {
+             console.error("Could not fetch brand details for invoice header:", brandError);
+        } else {
+            setBrandDetails({
+                name: brandData.company_name, // Using name to fit seller structure
+                company_address: brandData.company_address,
+                company_gst_number: brandData.company_gst_number,
+            });
+        }
+        
         setLoading(false);
     }, [invoiceId, router]);
 
@@ -81,7 +97,9 @@ export default function InvoicePage({ params }: { params: { invoiceId: string } 
     const orderData = isStockOrderInvoice ? invoice.stock_orders : invoice.orders;
     const items: InvoiceItem[] = invoice.items || [];
 
-    const seller = isStockOrderInvoice ? BrandDetails : orderData?.distributors;
+    const seller = isStockOrderInvoice 
+        ? { name: brandDetails.name, address: brandDetails.company_address, gst_number: brandDetails.company_gst_number }
+        : orderData?.distributors;
     const buyer = isStockOrderInvoice ? orderData?.distributors : orderData?.outlets;
     
     return (
