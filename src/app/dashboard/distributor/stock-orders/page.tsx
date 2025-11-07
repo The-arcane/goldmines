@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { updateStockOrderStatus } from "@/lib/actions";
+import { updateOrderStatus } from "@/lib/actions";
 
 
 export default function StockOrdersPage() {
@@ -78,9 +78,12 @@ export default function StockOrdersPage() {
     
     const handleMarkAsDelivered = (orderId: number) => {
         startTransition(async () => {
-            const result = await updateStockOrderStatus(orderId, 'Delivered');
+            // Note: This action is now handled by the admin. 
+            // A distributor would confirm delivery, which might trigger a different status update.
+            // For now, let's assume the distributor is confirming they received the order.
+            const result = await updateOrderStatus(orderId, 'Delivered');
             if(result.success) {
-                toast({ title: "Order Delivered", description: `The stock order has been marked as delivered.`});
+                toast({ title: "Order Received", description: `The stock order has been marked as received and your inventory is updated.`});
                 fetchOrders();
             } else {
                 toast({ variant: 'destructive', title: "Update failed", description: result.error});
@@ -137,7 +140,7 @@ export default function StockOrdersPage() {
                                                     disabled={isPending}
                                                 >
                                                     <Check className="mr-2 h-4 w-4" />
-                                                    Mark as Delivered
+                                                    Mark as Received
                                                 </Button>
                                             )}
                                         </TableCell>
@@ -155,3 +158,5 @@ export default function StockOrdersPage() {
         </main>
     );
 }
+
+    
