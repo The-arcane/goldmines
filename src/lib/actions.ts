@@ -6,6 +6,7 @@ import type { UserFormData, DistributorFormData, SkuFormData, OrderFormData, Att
 import { revalidatePath } from "next/cache";
 import { createServerActionClient } from "./supabaseServer";
 import { redirect } from 'next/navigation';
+import { useToast } from "@/hooks/use-toast";
 
 
 export async function checkVisitAnomaly(visitDetails: string, criteria: string) {
@@ -723,16 +724,15 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
   } else if (stockOrderId) {
       existingInvoiceCheck = existingInvoiceCheck.eq('stock_order_id', stockOrderId);
   }
-  const { data: existingInvoice, error: checkError } = await existingInvoiceCheck.limit(1).maybeSingle();
+  const { data: existingInvoice, error: checkError } = await existingInvoiceCheck.maybeSingle();
 
   if (checkError) {
       console.error("Error checking for existing invoice:", checkError);
       return { success: false, error: `Database error checking for invoice: ${checkError.message}` };
   }
-
   if (existingInvoice) {
       redirect(`/invoice/${existingInvoice.id}`);
-      return { success: true };
+      return { success: true, invoiceId: existingInvoice.id };
   }
 
   const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
@@ -750,8 +750,8 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
     if (error || !data) return { success: false, error: "Could not find retail order." };
     
     totalAmount = data.total_amount;
-    totalDiscount = data.total_discount;
-    subTotal = data.total_amount + data.total_discount;
+    totalDiscount = data.total_discount || 0;
+    subTotal = totalAmount + totalDiscount;
 
     itemsToStore = data.order_items.map(item => ({
         name: item.skus?.name,
