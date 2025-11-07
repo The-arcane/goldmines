@@ -63,29 +63,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    let isMounted = true;
-    
-    async function handleAuthStateChange(event: AuthChangeEvent, session: Session | null) {
-        if (!isMounted) return;
-
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
         const supabaseUser = session?.user ?? null;
         const profile = await fetchUserProfile(supabaseUser);
-
-        if (isMounted) {
-            setUser(profile);
-            setLoading(false);
-             // This is the key change: ensure sessionRefreshed is true after first check.
-            if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'SIGNED_OUT') {
-                setSessionRefreshed(true);
-            }
+        setUser(profile);
+        
+        // This will be true once the initial session is processed.
+        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+           setSessionRefreshed(true);
+           setLoading(false);
         }
-    }
+      }
+    );
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
-    
     return () => {
-        isMounted = false;
-        subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, [fetchUserProfile]);
 
@@ -93,7 +86,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
-    setSessionRefreshed(false);
     router.push('/login');
   };
   

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { AuthForm } from '@/components/auth/auth-form';
@@ -7,16 +8,16 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function LoginPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, sessionRefreshed } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && user) {
+    if (!loading && sessionRefreshed && user) {
       router.replace('/dashboard');
     }
-  }, [user, loading, router]);
+  }, [user, loading, sessionRefreshed, router]);
   
-  if (loading || user) {
+  if (loading || !sessionRefreshed || user) {
      return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
