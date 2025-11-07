@@ -33,7 +33,7 @@ export default function AdminStockOrdersPage() {
         setLoading(true);
         const { data, error } = await supabase
             .from("stock_orders")
-            .select("*, distributors(name)")
+            .select("*, distributors(name), invoices(id)")
             .order("order_date", { ascending: false });
 
         if (error) {
@@ -131,12 +131,20 @@ export default function AdminStockOrdersPage() {
                                                         </Link>
                                                     </DropdownMenuItem>
                                                     
-                                                     <DropdownMenuItem 
-                                                        disabled={isPending || order.status !== 'Delivered' || order.is_invoice_created}
-                                                        onClick={() => handleGenerateInvoice(order.id)}>
-                                                        <FileText className="mr-2 h-4 w-4" />
-                                                        {order.is_invoice_created ? 'Invoice Created' : 'Generate Invoice'}
-                                                    </DropdownMenuItem>
+                                                     {order.is_invoice_created ? (
+                                                        <DropdownMenuItem asChild>
+                                                            <Link href={`/invoice/${order.invoices?.[0]?.id}`}>
+                                                                <FileText className="mr-2 h-4 w-4" />View Invoice
+                                                            </Link>
+                                                        </DropdownMenuItem>
+                                                     ) : (
+                                                        <DropdownMenuItem 
+                                                            disabled={isPending || order.status !== 'Delivered'}
+                                                            onClick={() => handleGenerateInvoice(order.id)}>
+                                                            <FileText className="mr-2 h-4 w-4" />
+                                                            Generate Invoice
+                                                        </DropdownMenuItem>
+                                                     )}
                                                     
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuLabel>Change Status</DropdownMenuLabel>

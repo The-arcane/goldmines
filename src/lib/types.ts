@@ -98,6 +98,7 @@ export type Order = {
   outlets?: { name: string; address: string; }; // For joins
   distributors?: { name: string; address?: string; gst_number?: string }; // For joins
   is_invoice_created: boolean;
+  invoices?: { id: number }[]
 };
 
 export type OrderItem = {
@@ -123,6 +124,7 @@ export type StockOrder = {
   distributors?: { name: string, address?: string, gst_number?: string }; // For joins
   stock_order_items?: StockOrderItem[]; // For joins
   is_invoice_created: boolean;
+  invoices?: { id: number }[]; // To get the invoice id
 };
 
 export type StockOrderItem = {

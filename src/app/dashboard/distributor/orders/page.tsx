@@ -45,7 +45,7 @@ export default function OrdersPage() {
 
         const { data, error } = await supabase
             .from("orders")
-            .select("id, order_date, total_amount, status, outlets(name), is_invoice_created")
+            .select("id, order_date, total_amount, status, outlets(name), is_invoice_created, invoices(id)")
             .eq('distributor_id', distributorData.id)
             .order("order_date", { ascending: false });
 
@@ -136,15 +136,24 @@ export default function OrdersPage() {
                                                             View
                                                         </Link>
                                                     </Button>
-                                                     <Button 
-                                                        variant="outline" 
-                                                        size="sm"
-                                                        disabled={isPending || order.status !== 'Delivered' || order.is_invoice_created}
-                                                        onClick={() => handleGenerateInvoice(order.id)}
-                                                     >
-                                                        <FileText className="mr-2 h-4 w-4" />
-                                                        {order.is_invoice_created ? 'Billed' : 'Bill'}
-                                                    </Button>
+                                                     {order.is_invoice_created ? (
+                                                        <Button asChild variant="outline" size="sm">
+                                                            <Link href={`/invoice/${order.invoices?.[0]?.id}`}>
+                                                                <FileText className="mr-2 h-4 w-4" />
+                                                                View Bill
+                                                            </Link>
+                                                        </Button>
+                                                     ) : (
+                                                         <Button 
+                                                            variant="outline" 
+                                                            size="sm"
+                                                            disabled={isPending || order.status !== 'Delivered'}
+                                                            onClick={() => handleGenerateInvoice(order.id)}
+                                                         >
+                                                            <FileText className="mr-2 h-4 w-4" />
+                                                            Bill
+                                                        </Button>
+                                                     )}
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -175,16 +184,25 @@ export default function OrdersPage() {
                                                     View Details
                                                 </Link>
                                             </Button>
-                                             <Button 
-                                                variant="default" 
-                                                size="sm"
-                                                className="flex-1"
-                                                disabled={isPending || order.status !== 'Delivered' || order.is_invoice_created}
-                                                onClick={() => handleGenerateInvoice(order.id)}
-                                             >
-                                                <FileText className="mr-2 h-4 w-4" />
-                                                {order.is_invoice_created ? 'Billed' : 'Generate Bill'}
-                                            </Button>
+                                             {order.is_invoice_created ? (
+                                                <Button asChild variant="default" size="sm" className="flex-1">
+                                                    <Link href={`/invoice/${order.invoices?.[0]?.id}`}>
+                                                        <FileText className="mr-2 h-4 w-4" />
+                                                        View Bill
+                                                    </Link>
+                                                </Button>
+                                             ) : (
+                                                 <Button 
+                                                    variant="default" 
+                                                    size="sm"
+                                                    className="flex-1"
+                                                    disabled={isPending || order.status !== 'Delivered'}
+                                                    onClick={() => handleGenerateInvoice(order.id)}
+                                                 >
+                                                    <FileText className="mr-2 h-4 w-4" />
+                                                    Generate Bill
+                                                </Button>
+                                             )}
                                         </CardFooter>
                                     </Card>
                                 ))}
