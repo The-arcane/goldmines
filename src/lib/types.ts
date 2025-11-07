@@ -110,7 +110,7 @@ export type OrderItem = {
   unit_price: number;
   total_price: number;
   is_out_of_stock: boolean; // new field
-  skus?: { name: string, product_code: string, weight?: string }; // For joins
+  skus?: { name: string, product_code: string, unit_type?: string }; // For joins
 };
 
 export type StockOrder = {
@@ -135,7 +135,7 @@ export type StockOrderItem = {
   quantity: number; // in cases
   case_price: number;
   total_price: number;
-  skus?: { name: string, product_code: string, units_per_case: number, weight?: string }; // For joins
+  skus?: { name: string, product_code: string, units_per_case: number, unit_type?: string }; // For joins
 };
 
 

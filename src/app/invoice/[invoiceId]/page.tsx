@@ -118,7 +118,7 @@ export default function InvoicePage({ params }: { params: { invoiceId: string } 
                                 <h3 className="font-semibold mb-2">Bill To:</h3>
                                 <p className="font-medium">{buyer?.name}</p>
                                 <p className="text-muted-foreground">{buyer?.address}</p>
-                                {buyer?.gst_number && <p className="text-muted-foreground">GSTIN: {buyer?.gst_number}</p>}
+                                {isStockOrderInvoice && buyer?.gst_number && <p className="text-muted-foreground">GSTIN: {buyer?.gst_number}</p>}
                             </div>
                             <div className="text-left sm:text-right">
                                  <div className="grid grid-cols-2 sm:grid-cols-[120px_1fr] gap-x-2 gap-y-1">
@@ -137,7 +137,7 @@ export default function InvoicePage({ params }: { params: { invoiceId: string } 
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Item</TableHead>
-                                        <TableHead>Weight</TableHead>
+                                        <TableHead>Weight/Unit</TableHead>
                                         <TableHead className="text-center">Qty</TableHead>
                                         <TableHead className="text-right">Rate</TableHead>
                                         <TableHead className="text-right">Amount</TableHead>
@@ -183,4 +183,3 @@ export default function InvoicePage({ params }: { params: { invoiceId: string } 
         </div>
     );
 }
-

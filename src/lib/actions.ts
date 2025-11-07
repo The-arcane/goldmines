@@ -740,7 +740,7 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
   if (orderId) {
     const { data, error } = await supabase
         .from('orders')
-        .select('total_amount, order_items(*, skus(name, product_code, weight))')
+        .select('total_amount, order_items(*, skus(name, product_code, unit_type))')
         .eq('id', orderId)
         .single();
     if (error || !data) return { success: false, error: "Could not find retail order." };
@@ -748,7 +748,7 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
     itemsToStore = data.order_items.map(item => ({
         name: item.skus?.name,
         code: item.skus?.product_code,
-        weight: item.skus?.weight,
+        weight: item.skus?.unit_type,
         quantity: `${item.quantity} units`,
         unit_price: item.unit_price,
         total_price: item.total_price
@@ -762,7 +762,7 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
   } else if (stockOrderId) {
     const { data, error } = await supabase
         .from('stock_orders')
-        .select('total_amount, stock_order_items(*, skus(name, product_code, weight, units_per_case))')
+        .select('total_amount, stock_order_items(*, skus(name, product_code, unit_type, units_per_case))')
         .eq('id', stockOrderId)
         .single();
     if (error || !data) return { success: false, error: "Could not find stock order." };
@@ -770,7 +770,7 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
     itemsToStore = data.stock_order_items.map(item => ({
         name: item.skus?.name,
         code: item.skus?.product_code,
-        weight: item.skus?.weight,
+        weight: item.skus?.unit_type,
         quantity: `${item.quantity} cases`,
         unit_price: item.case_price,
         total_price: item.total_price
