@@ -13,10 +13,23 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && sessionRefreshed && user) {
-      router.replace('/dashboard');
+      // Redirect based on role if user is already logged in
+      switch (user.role) {
+        case "admin":
+        case "distributor_admin":
+        case "delivery_partner":
+          router.replace("/dashboard");
+          break;
+        case "sales_executive":
+          router.replace("/salesperson/dashboard");
+          break;
+        default:
+          break; // Stay on login if role is unknown
+      }
     }
   }, [user, loading, sessionRefreshed, router]);
   
+  // Show loading spinner while checking auth status or if already logged in and redirecting
   if (loading || !sessionRefreshed || user) {
      return (
       <div className="flex h-screen items-center justify-center">

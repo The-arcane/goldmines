@@ -40,6 +40,15 @@ export default function DashboardLayout({
     );
   }
 
+  // Prevent rendering for wrong roles while redirecting
+  if (user.role === 'sales_executive') {
+     return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <Sidebar userRole={user.role} />

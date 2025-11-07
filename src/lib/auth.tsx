@@ -63,19 +63,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        const supabaseUser = session?.user ?? null;
-        const profile = await fetchUserProfile(supabaseUser);
-        setUser(profile);
-        
-        // This will be true once the initial session is processed.
-        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-           setSessionRefreshed(true);
-           setLoading(false);
-        }
+    const handleAuthStateChange = async (event: AuthChangeEvent, session: Session | null) => {
+      setLoading(true);
+      const supabaseUser = session?.user ?? null;
+      const profile = await fetchUserProfile(supabaseUser);
+      setUser(profile);
+      
+      // This event fires once on initial load, and again on sign-in/out.
+      // This is our reliable signal that the session state is determined.
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
+         setSessionRefreshed(true);
       }
-    );
+      setLoading(false);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
 
     return () => {
       subscription.unsubscribe();

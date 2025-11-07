@@ -16,16 +16,13 @@ export default function SalespersonLayout({
   const router = useRouter();
 
   useEffect(() => {
-    if (loading || !sessionRefreshed) {
-      return; // Wait for the auth state to load and session to be refreshed
-    }
-
-    if (!user) {
-      // If not logged in, redirect to the salesperson login page
-      router.replace("/salesperson/login");
-    } else if (user.role !== 'sales_executive') {
-      // If logged in but not a sales executive, redirect to the main login page
-      router.replace("/login");
+    // Wait until the session is explicitly refreshed and loading is false
+    if (!loading && sessionRefreshed) {
+        if (!user) {
+            router.replace("/salesperson/login");
+        } else if (user.role !== 'sales_executive') {
+            router.replace("/login");
+        }
     }
   }, [user, loading, sessionRefreshed, router]);
   
