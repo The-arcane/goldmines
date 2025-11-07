@@ -4,14 +4,13 @@
 import { useEffect, useState, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import type { Invoice, Order, StockOrder, User } from "@/lib/types";
+import type { Invoice, Order, StockOrder, User, InvoiceItem } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ArrowLeft, Printer, Download } from "lucide-react";
 import { format } from "date-fns";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
 
 // Mock Brand Details (to be replaced with data from admin user profile)
 const BrandDetails = {
@@ -23,16 +22,10 @@ const BrandDetails = {
 type EnrichedInvoice = Invoice & {
     orders: (Order & {
         outlets: { name: string; address: string; };
-        order_items: ({
-            skus: { name: string; product_code: string; };
-        } & import("@/lib/types").OrderItem)[];
         distributors: { name: string; address: string; gst_number: string };
     }) | null;
     stock_orders: (StockOrder & {
         distributors: { name: string; address: string; gst_number: string; };
-        stock_order_items: ({
-            skus: { name: string; product_code: string; units_per_case: number; };
-        } & import("@/lib/types").StockOrderItem)[];
     }) | null;
 };
 
@@ -53,13 +46,11 @@ export default function InvoicePage({ params }: { params: { invoiceId: string } 
                 orders (
                     *,
                     outlets (name, address),
-                    distributors (name, address, gst_number),
-                    order_items (*, skus (name, product_code))
+                    distributors (name, address, gst_number)
                 ),
                 stock_orders (
                     *,
-                    distributors (name, address, gst_number),
-                    stock_order_items (*, skus (name, product_code, units_per_case))
+                    distributors (name, address, gst_number)
                 )
             `)
             .eq('id', invoiceId)
@@ -87,25 +78,11 @@ export default function InvoicePage({ params }: { params: { invoiceId: string } 
 
     const isStockOrderInvoice = !!invoice.stock_order_id;
     const orderData = isStockOrderInvoice ? invoice.stock_orders : invoice.orders;
-    const items = isStockOrderInvoice ? orderData?.stock_order_items : orderData?.order_items;
+    const items: InvoiceItem[] = invoice.items || [];
 
     const seller = isStockOrderInvoice ? BrandDetails : orderData?.distributors;
     const buyer = isStockOrderInvoice ? orderData?.distributors : orderData?.outlets;
     
-    const getQuantityText = (item: any) => {
-        if (isStockOrderInvoice) {
-            return `${item.quantity} case${item.quantity > 1 ? 's' : ''}`;
-        }
-        return `${item.quantity} unit${item.quantity > 1 ? 's' : ''}`;
-    }
-
-    const getUnitPrice = (item: any) => {
-         if (isStockOrderInvoice) {
-            return item.case_price;
-        }
-        return item.unit_price;
-    }
-
     return (
         <div className="bg-muted/40 p-4 sm:p-8">
             <div className="max-w-4xl mx-auto">
@@ -149,7 +126,7 @@ export default function InvoicePage({ params }: { params: { invoiceId: string } 
                                     <span className="font-semibold">Order Date:</span>
                                     <span>{format(new Date(orderData!.order_date), "MMM d, yyyy")}</span>
                                     <span className="font-semibold">Order ID:</span>
-                                    <span>#{orderData!.id}</span>
+                                    <span>#{isStockOrderInvoice ? invoice.stock_order_id : invoice.order_id}</span>
                                 </div>
                             </div>
                         </div>
@@ -165,14 +142,14 @@ export default function InvoicePage({ params }: { params: { invoiceId: string } 
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {items?.map((item: any) => (
-                                        <TableRow key={item.id}>
+                                    {items?.map((item: InvoiceItem, index: number) => (
+                                        <TableRow key={index}>
                                             <TableCell>
-                                                <div className="font-medium">{item.skus?.name}</div>
-                                                <div className="text-xs text-muted-foreground">{item.skus?.product_code}</div>
+                                                <div className="font-medium">{item.name}</div>
+                                                <div className="text-xs text-muted-foreground">{item.code}</div>
                                             </TableCell>
-                                            <TableCell className="text-center">{getQuantityText(item)}</TableCell>
-                                            <TableCell className="text-right font-mono">₹{getUnitPrice(item).toFixed(2)}</TableCell>
+                                            <TableCell className="text-center">{item.quantity}</TableCell>
+                                            <TableCell className="text-right font-mono">₹{item.unit_price.toFixed(2)}</TableCell>
                                             <TableCell className="text-right font-mono">₹{item.total_price.toFixed(2)}</TableCell>
                                         </TableRow>
                                     ))}

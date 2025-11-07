@@ -624,118 +624,106 @@ export async function updateOrderAndStock(orderId: number, outOfStockItemIds: nu
 export async function updateStockOrderStatus(orderId: number, status: string) {
     const supabase = createServerActionClient({ isAdmin: true });
 
-    const { data: updatedOrder, error: updateError } = await supabase
+    if (status === 'Delivered') {
+        // We need to move stock from brand to distributor, this requires more logic.
+        return updateStockAndMarkAsDelivered(orderId);
+    }
+
+    // For other statuses (Approved, Shipped, Rejected), just update the status.
+    const { error: updateError } = await supabase
         .from('stock_orders')
         .update({ status })
-        .eq('id', orderId)
-        .select()
-        .single();
+        .eq('id', orderId);
     
     if (updateError) {
         return { success: false, error: `Failed to update status: ${updateError.message}` };
     }
 
-    // Stock is only updated when the distributor confirms delivery
-    if (status === 'Delivered') {
-        const { data: items, error: itemsError } = await supabase
-            .from('stock_order_items')
-            .select('*, skus(id, stock_quantity, units_per_case, case_price, mrp)')
-            .eq('stock_order_id', orderId);
+    revalidatePath('/dashboard/admin/stock-orders');
+    revalidatePath('/dashboard/distributor/stock-orders');
+    return { success: true };
+}
 
-        if (itemsError) {
-            return { success: false, error: `Status updated, but failed to fetch items for stock update: ${itemsError.message}`};
+async function updateStockAndMarkAsDelivered(orderId: number) {
+    const supabase = createServerActionClient({ isAdmin: true });
+
+    // Get order and items
+    const { data: order, error: orderError } = await supabase
+        .from('stock_orders')
+        .select('*, stock_order_items(*, skus(units_per_case))')
+        .eq('id', orderId)
+        .single();
+    
+    if (orderError || !order) {
+        return { success: false, error: `Failed to fetch order details: ${orderError?.message}` };
+    }
+
+    const stockUpdateErrors = [];
+
+    for (const item of order.stock_order_items) {
+        const totalUnits = item.quantity * (item.skus?.units_per_case || 1);
+
+        // 1. Decrement from brand's main stock (skus table)
+        const { data: mainSku, error: mainSkuError } = await supabase
+            .from('skus')
+            .select('stock_quantity')
+            .eq('id', item.sku_id)
+            .single();
+        
+        if (mainSkuError || !mainSku) {
+            stockUpdateErrors.push(`Could not find brand SKU for ID ${item.sku_id}.`);
+            continue;
         }
 
-        if (!items) return { success: true };
+        const newBrandStock = (mainSku.stock_quantity || 0) - totalUnits;
+        const { error: brandStockError } = await supabase
+            .from('skus')
+            .update({ stock_quantity: newBrandStock })
+            .eq('id', item.sku_id);
 
-        const stockUpdateErrors = [];
-
-        for (const item of items) {
-            if (!item.skus) continue;
-            
-            const totalUnitsToTransfer = item.quantity * (item.skus.units_per_case || 1);
-
-            // 1. Decrement from brand's main stock (skus table)
-             const { data: sku, error: fetchSkuError } = await supabase
-              .from('skus')
-              .select('stock_quantity')
-              .eq('id', item.sku_id)
-              .single();
-
-            if (fetchSkuError || !sku) {
-                stockUpdateErrors.push(`Failed to fetch brand stock for SKU ${item.sku_id}.`);
-                continue;
-            }
-
-            const newBrandStock = (sku.stock_quantity || 0) - totalUnitsToTransfer;
-            const { error: brandStockError } = await supabase
-                .from('skus')
-                .update({ stock_quantity: newBrandStock })
-                .eq('id', item.sku_id);
-
-
-            if (brandStockError) {
-                stockUpdateErrors.push(`Failed to decrement brand stock for SKU ${item.sku_id}: ${brandStockError.message}`);
-                continue;
-            }
-
-            // 2. Increment distributor's stock (distributor_stock table)
-            const { data: distStock, error: fetchDistStockError } = await supabase
-                .from('distributor_stock')
-                .select('stock_quantity')
-                .eq('distributor_id', updatedOrder.distributor_id)
-                .eq('sku_id', item.sku_id)
-                .maybeSingle();
-            
-            if (fetchDistStockError) {
-                 stockUpdateErrors.push(`Failed to fetch distributor stock for SKU ${item.sku_id}: ${fetchDistStockError.message}`);
-                 continue;
-            }
-
-            if (distStock) {
-                // Update existing record
-                const newDistStock = (distStock.stock_quantity || 0) + totalUnitsToTransfer;
-                const { error: distStockUpdateError } = await supabase
-                    .from('distributor_stock')
-                    .update({ stock_quantity: newDistStock })
-                    .eq('distributor_id', updatedOrder.distributor_id)
-                    .eq('sku_id', item.sku_id);
-
-                if (distStockUpdateError) {
-                    stockUpdateErrors.push(`Failed to update distributor stock for SKU ${item.sku_id}: ${distStockUpdateError.message}`);
-                }
-            } else {
-                // Insert new record
-                const { error: distStockInsertError } = await supabase
-                    .from('distributor_stock')
-                    .insert({
-                        distributor_id: updatedOrder.distributor_id,
-                        sku_id: item.sku_id,
-                        stock_quantity: totalUnitsToTransfer,
-                        units_per_case: item.skus.units_per_case,
-                        case_price: item.skus.case_price,
-                        mrp: item.skus.mrp,
-                    });
-                
-                 if (distStockInsertError) {
-                    stockUpdateErrors.push(`Failed to create distributor stock record for SKU ${item.sku_id}: ${distStockInsertError.message}`);
-                }
-            }
+        if (brandStockError) {
+            stockUpdateErrors.push(`Failed to update brand stock for SKU ID ${item.sku_id}.`);
+            continue;
         }
 
-        if (stockUpdateErrors.length > 0) {
-            console.error('Stock update errors:', stockUpdateErrors);
-            // This is a partial failure, so we return the errors
-            return { success: false, error: `Order delivered, but failed to update stock: ${stockUpdateErrors.join(", ")}` };
+        // 2. Increment distributor's stock
+        const { error: rpcError } = await supabase.rpc('upsert_distributor_stock', {
+            p_distributor_id: order.distributor_id,
+            p_sku_id: item.sku_id,
+            p_quantity_change: totalUnits,
+            p_units_per_case: item.skus?.units_per_case,
+            p_case_price: item.case_price,
+            p_mrp: item.skus ? (await supabase.from('skus').select('mrp').eq('id', item.sku_id).single()).data?.mrp : undefined
+        });
+
+        if (rpcError) {
+             stockUpdateErrors.push(`Failed to upsert distributor stock for SKU ID ${item.sku_id}: ${rpcError.message}`);
         }
     }
 
+    if (stockUpdateErrors.length > 0) {
+        console.error("Stock update errors:", stockUpdateErrors);
+        return { success: false, error: `Order status not updated. Stock update failed: ${stockUpdateErrors.join('; ')}` };
+    }
+
+    // 3. Finally, update the order status
+    const { error: updateStatusError } = await supabase
+        .from('stock_orders')
+        .update({ status: 'Delivered' })
+        .eq('id', orderId);
+
+    if (updateStatusError) {
+        // This is a problematic state; stock was adjusted but status wasn't.
+        // A real-world app would need a rollback mechanism here.
+        console.error("Critical error: stock adjusted but failed to update order status.", updateStatusError);
+        return { success: false, error: `Critical error: Stock was updated, but failed to mark order as delivered. Please check manually. Error: ${updateStatusError.message}` };
+    }
+    
     revalidatePath('/dashboard/admin/stock-orders');
     revalidatePath('/dashboard/distributor/skus');
     revalidatePath('/dashboard/distributor/stock-orders');
     return { success: true };
 }
-
 
 export async function generateInvoice(orderId?: number, stockOrderId?: number) {
   const supabase = createServerActionClient({ isAdmin: true });
@@ -747,16 +735,40 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
   // Generate a unique invoice number
   const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
-  // Fetch the total amount from the correct order table
   let totalAmount = 0;
+  let itemsToStore = [];
+
   if (orderId) {
-    const { data, error } = await supabase.from('orders').select('total_amount').eq('id', orderId).single();
+    const { data, error } = await supabase
+        .from('orders')
+        .select('total_amount, order_items(*, skus(name, product_code))')
+        .eq('id', orderId)
+        .single();
     if (error || !data) return { success: false, error: "Could not find retail order." };
     totalAmount = data.total_amount;
+    itemsToStore = data.order_items.map(item => ({
+        name: item.skus?.name,
+        code: item.skus?.product_code,
+        quantity: `${item.quantity} units`,
+        unit_price: item.unit_price,
+        total_price: item.total_price
+    }));
+
   } else if (stockOrderId) {
-    const { data, error } = await supabase.from('stock_orders').select('total_amount').eq('id', stockOrderId).single();
+    const { data, error } = await supabase
+        .from('stock_orders')
+        .select('total_amount, stock_order_items(*, skus(name, product_code, units_per_case))')
+        .eq('id', stockOrderId)
+        .single();
     if (error || !data) return { success: false, error: "Could not find stock order." };
     totalAmount = data.total_amount;
+    itemsToStore = data.stock_order_items.map(item => ({
+        name: item.skus?.name,
+        code: item.skus?.product_code,
+        quantity: `${item.quantity} cases`,
+        unit_price: item.case_price,
+        total_price: item.total_price
+    }));
   }
 
   // Insert into the new invoices table
@@ -766,6 +778,7 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
       order_id: orderId,
       stock_order_id: stockOrderId,
       total_amount: totalAmount,
+      items: itemsToStore,
       issue_date: new Date().toISOString(),
     })
     .select('id')
@@ -777,7 +790,5 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
   }
 
   revalidatePath('/invoice');
-  // Instead of returning data, we'll redirect to the new invoice page.
-  // The page itself will be responsible for fetching all its data.
   redirect(`/invoice/${invoiceData.id}`);
 }

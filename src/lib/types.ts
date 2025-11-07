@@ -96,6 +96,7 @@ export type Order = {
   created_by_user_id?: number; // Track who created the order using public user ID
   order_items?: OrderItem[];
   outlets?: { name: string; address: string; }; // For joins
+  distributors?: { name: string; address?: string; gst_number?: string }; // For joins
 };
 
 export type OrderItem = {
@@ -148,6 +149,14 @@ export type Attendance = {
     created_at: string;
 }
 
+export type InvoiceItem = {
+    name: string;
+    code: string;
+    quantity: string; // e.g., "10 units" or "2 cases"
+    unit_price: number;
+    total_price: number;
+};
+
 export type Invoice = {
     id: number;
     invoice_number: string;
@@ -158,6 +167,7 @@ export type Invoice = {
     total_amount: number;
     tax_amount?: number | null;
     notes?: string | null;
+    items: InvoiceItem[]; // The denormalized items snapshot
     orders?: Order | null;
     stock_orders?: StockOrder | null;
 };
