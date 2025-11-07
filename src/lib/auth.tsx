@@ -64,32 +64,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
-    setLoading(true);
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    
+    async function handleAuthStateChange(event: AuthChangeEvent, session: Session | null) {
         if (!isMounted) return;
 
         const supabaseUser = session?.user ?? null;
         const profile = await fetchUserProfile(supabaseUser);
-        
+
         if (isMounted) {
             setUser(profile);
             setLoading(false);
+             // This is the key change: ensure sessionRefreshed is true after first check.
             if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'SIGNED_OUT') {
                 setSessionRefreshed(true);
             }
         }
+    }
 
-        if (event === 'SIGNED_OUT') {
-            router.push('/login');
-        }
-    });
-
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
+    
     return () => {
         isMounted = false;
         subscription.unsubscribe();
     };
-  }, [fetchUserProfile, router]);
+  }, [fetchUserProfile]);
+
 
   const logout = async () => {
     await supabase.auth.signOut();

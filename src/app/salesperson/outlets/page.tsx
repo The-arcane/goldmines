@@ -34,8 +34,11 @@ export default function MyOutletsPage() {
     }, [user]);
 
     useEffect(() => {
-        if(user && sessionRefreshed) {
+        if (user && sessionRefreshed) {
             fetchOutlets();
+        } else if (!user && sessionRefreshed) {
+            // If the session is refreshed but there's no user, stop loading.
+            setLoading(false);
         }
     }, [user, sessionRefreshed, fetchOutlets]);
 
@@ -85,7 +88,7 @@ export default function MyOutletsPage() {
                         </div>
                     )}
 
-                    {outlets.length > 0 && (
+                    {outlets.length > 0 && !loading && (
                         <div className="grid gap-4 md:hidden">
                             {outlets.map((outlet) => (
                                 <div key={outlet.id} className="rounded-lg border bg-card text-card-foreground p-4">

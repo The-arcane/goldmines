@@ -84,6 +84,8 @@ export default function SalespersonDashboardPage() {
     useEffect(() => {
         if (user && sessionRefreshed) {
             fetchDashboardData();
+        } else if (!user && sessionRefreshed) {
+            setLoading(false);
         }
     }, [user, sessionRefreshed, fetchDashboardData]);
     

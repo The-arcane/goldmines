@@ -32,8 +32,10 @@ export default function SalespersonVisitsPage() {
     }, [user]);
 
     useEffect(() => {
-        if(user && sessionRefreshed) {
+        if (user && sessionRefreshed) {
             fetchData();
+        } else if (!user && sessionRefreshed) {
+            setLoading(false);
         }
     }, [user, sessionRefreshed, fetchData]);
 

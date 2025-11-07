@@ -39,6 +39,8 @@ export default function MyOrdersPage() {
     useEffect(() => {
         if (user && sessionRefreshed) {
             fetchOrders();
+        } else if (!user && sessionRefreshed) {
+            setLoading(false);
         }
     }, [user, sessionRefreshed, fetchOrders]);
     
