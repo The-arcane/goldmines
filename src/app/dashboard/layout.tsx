@@ -20,8 +20,18 @@ export default function DashboardLayout({
     }
   }, [user, loading, router]);
   
-  if (loading || !user) {
+  if (loading) {
     return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    // This state can be hit briefly during redirection, so we show a loader
+    // instead of flashing the UI.
+     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>

@@ -23,10 +23,7 @@ const mapNumericRoleToString = (role: number): UserRole => {
         4: 'delivery_partner',
     };
     return roleMap[role] || 'sales_executive'; // Fallback role
-}
-
-// Helper function to introduce a delay
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -36,44 +33,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
     if (!supabaseUser) return null;
 
-    // Retry logic to handle the race condition with the DB trigger
-    for (let i = 0; i < 3; i++) {
+    try {
         const { data: profile, error } = await supabase
             .from('users')
             .select('*')
             .eq('auth_id', supabaseUser.id)
             .single();
 
-        if (error && error.code !== 'PGRST116') { // PGRST116 is "exact one row not found"
+        if (error) {
             console.error("Error fetching user profile:", error);
+            // This might happen if the profile isn't created yet by the trigger.
+            // Returning null is okay, the listener will try again on subsequent events.
             return null;
         }
         
-        if (profile) {
-            return {
-                id: profile.id,
-                auth_id: supabaseUser.id,
-                name: profile.name,
-                email: profile.email,
-                role: mapNumericRoleToString(profile.role),
-                avatar_url: profile.avatar_url,
-                created_at: profile.created_at,
-            };
-        }
-        
-        // If profile not found, wait and retry
-        await sleep(500 * (i + 1)); // Wait 500ms, then 1000ms
+        return {
+            id: profile.id,
+            auth_id: supabaseUser.id,
+            name: profile.name,
+            email: profile.email,
+            role: mapNumericRoleToString(profile.role),
+            avatar_url: profile.avatar_url,
+            created_at: profile.created_at,
+        };
+    } catch (e) {
+        console.error("Exception fetching user profile:", e);
+        return null;
     }
-
-    console.error("Error fetching user profile: Profile not found after multiple attempts.");
-    return null;
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-        const profile = await fetchUserProfile(session?.user ?? null);
-        setUser(profile);
-        setLoading(false);
+        if (!isMounted) {
+            return;
+        }
+
+        const supabaseUser = session?.user ?? null;
+        const profile = await fetchUserProfile(supabaseUser);
+        
+        if (isMounted) {
+            setUser(profile);
+            setLoading(false);
+        }
 
         if (event === 'SIGNED_OUT') {
             router.push('/login');
@@ -81,7 +85,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => {
-      subscription.unsubscribe();
+        isMounted = false;
+        subscription.unsubscribe();
     };
   }, [fetchUserProfile, router]);
 
