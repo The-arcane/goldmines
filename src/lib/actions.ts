@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import { flagAnomalousVisit } from "@/ai/flows/flag-anomalous-visits";
@@ -621,7 +622,6 @@ export async function updateOrderAndStock(orderId: number, outOfStockItemIds: nu
 export async function updateStockOrderStatus(orderId: number, status: string) {
     const supabase = createServerActionClient({ isAdmin: true });
 
-    // 1. Update the order status
     const { data: updatedOrder, error: updateError } = await supabase
         .from('stock_orders')
         .update({ status })
@@ -633,75 +633,62 @@ export async function updateStockOrderStatus(orderId: number, status: string) {
         return { success: false, error: `Failed to update status: ${updateError.message}` };
     }
 
-    // 2. If status is 'Shipped', update distributor's stock
     if (status === 'Shipped') {
         const { data: items, error: itemsError } = await supabase
             .from('stock_order_items')
-            .select('*, skus(units_per_case)')
+            .select('*, skus(id, stock_quantity, units_per_case, case_price, mrp)')
             .eq('stock_order_id', orderId);
 
         if (itemsError) {
             return { success: false, error: `Status updated, but failed to fetch items for stock update: ${itemsError.message}`};
         }
 
-        if (!items) {
-             return { success: true }; // No items to update
-        }
+        if (!items) return { success: true };
 
         const stockUpdateErrors = [];
 
         for (const item of items) {
-            const totalUnits = item.quantity * (item.skus?.units_per_case || 1);
-            if (totalUnits <= 0) continue;
+            if (!item.skus) continue;
 
-            const { data: existingSku, error: fetchSkuError } = await supabase
-                .from('skus')
-                .select('id, stock_quantity')
-                .eq('distributor_id', updatedOrder.distributor_id)
-                .eq('product_code', item.skus?.product_code) // Assuming product_code is unique for a base product
-                .single();
+            const totalUnitsToDecrement = item.quantity * (item.skus.units_per_case || 1);
 
-            if (fetchSkuError && fetchSkuError.code !== 'PGRST116') { // Ignore "not found" error
-                stockUpdateErrors.push(`Error fetching existing SKU for item ${item.sku_id}: ${fetchSkuError.message}`);
-                continue;
+            // Decrement from brand's main stock
+            const { error: brandStockError } = await supabase.rpc('update_sku_stock', {
+                sku_id_to_update: item.sku_id,
+                quantity_to_decrement: totalUnitsToDecrement,
+            });
+
+            if (brandStockError) {
+                stockUpdateErrors.push(`Failed to decrement brand stock for SKU ${item.sku_id}: ${brandStockError.message}`);
+                continue; // Skip updating distributor stock if brand stock fails
             }
 
-            if (existingSku) {
-                // Update existing stock
-                const { error: updateStockError } = await supabase
-                    .from('skus')
-                    .update({ stock_quantity: existingSku.stock_quantity + totalUnits })
-                    .eq('id', existingSku.id);
-                if (updateStockError) {
-                    stockUpdateErrors.push(`Error updating stock for SKU ${item.sku_id}: ${updateStockError.message}`);
-                }
-            } else {
-                 // Sku doesn't exist for this distributor, so we should create it
-                 // We need more info from the base sku to create a new one.
-                 const { data: baseSku, error: baseSkuError } = await supabase.from('skus').select('*').eq('id', item.sku_id).single();
-                 if(baseSkuError || !baseSku) {
-                    stockUpdateErrors.push(`Could not find base SKU to create new entry for distributor. SKU ID: ${item.sku_id}`);
-                    continue;
-                 }
-                 // Create a new SKU for the distributor
-                 const { error: createStockError } = await supabase
-                    .from('skus')
-                    .insert({
-                        ...baseSku,
-                        id: undefined, // let db generate new id
-                        created_at: new Date().toISOString(),
+            // Upsert into distributor's stock
+            const { error: distributorStockError } = await supabase
+                .from('distributor_stock')
+                .upsert(
+                    {
                         distributor_id: updatedOrder.distributor_id,
-                        stock_quantity: totalUnits,
-                    });
-                if (createStockError) {
-                     stockUpdateErrors.push(`Error creating stock for SKU ${item.sku_id}: ${createStockError.message}`);
-                }
+                        sku_id: item.sku_id,
+                        stock_quantity: totalUnitsToDecrement,
+                        units_per_case: item.skus.units_per_case,
+                        case_price: item.skus.case_price,
+                        mrp: item.skus.mrp,
+                    },
+                    {
+                        onConflict: 'distributor_id,sku_id',
+                    }
+                )
+                .select();
+                
+            if (distributorStockError) {
+                stockUpdateErrors.push(`Error upserting distributor stock for SKU ${item.sku_id}: ${distributorStockError.message}`);
             }
         }
 
         if (stockUpdateErrors.length > 0) {
             console.error('Stock update errors:', stockUpdateErrors);
-            return { success: false, error: `Order shipped, but failed to update stock for some items: ${stockUpdateErrors.join(", ")}` };
+            return { success: false, error: `Order shipped, but failed to update stock: ${stockUpdateErrors.join(", ")}` };
         }
     }
 

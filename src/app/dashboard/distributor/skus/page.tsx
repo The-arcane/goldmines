@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import type { Sku, Distributor } from "@/lib/types";
+import type { DistributorStock, Distributor } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -14,7 +14,7 @@ import { useTranslation } from "@/components/i18n/provider";
 export default function SkusPage() {
     const { user } = useAuth();
     const { t } = useTranslation();
-    const [skus, setSkus] = useState<Sku[]>([]);
+    const [distributorStock, setDistributorStock] = useState<DistributorStock[]>([]);
     const [distributor, setDistributor] = useState<Distributor | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -36,15 +36,15 @@ export default function SkusPage() {
         setDistributor(distributorData);
 
         const { data, error } = await supabase
-            .from("skus")
-            .select("*")
-            .or(`distributor_id.eq.${distributorData.id},distributor_id.is.null`)
-            .order("name", { ascending: true });
+            .from("distributor_stock")
+            .select("*, skus(name, product_code, unit_type)")
+            .eq('distributor_id', distributorData.id)
+            .order("created_at", { ascending: false });
 
         if (error) {
-            console.error("Error fetching SKUs:", error);
+            console.error("Error fetching distributor stock:", error);
         } else {
-            setSkus(data || []);
+            setDistributorStock(data || []);
         }
         setLoading(false);
     }, [user]);
@@ -65,6 +65,8 @@ export default function SkusPage() {
                            {t('A list of all products in your inventory.')}
                         </CardDescription>
                     </div>
+                    {/* The ability for a distributor to add a base SKU might need to be re-evaluated.
+                        For now, disabling it as they receive stock from the brand.
                     <div className="ml-auto">
                         {distributor && (
                             <AddSkuDialog 
@@ -73,11 +75,12 @@ export default function SkusPage() {
                             />
                         )}
                     </div>
+                    */}
                 </CardHeader>
                 <CardContent>
                     {loading ? (
-                        <div className="text-center p-8">Loading SKUs...</div>
-                    ) : skus.length > 0 ? (
+                        <div className="text-center p-8">Loading your inventory...</div>
+                    ) : distributorStock.length > 0 ? (
                         <>
                             {/* Desktop Table View */}
                             <div className="hidden md:block">
@@ -95,25 +98,25 @@ export default function SkusPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {skus.map((sku) => {
-                                            const perItemCost = (sku.case_price && sku.units_per_case && sku.units_per_case > 0) 
-                                                ? sku.case_price / sku.units_per_case 
+                                        {distributorStock.map((stockItem) => {
+                                            const perItemCost = (stockItem.case_price && stockItem.units_per_case && stockItem.units_per_case > 0) 
+                                                ? stockItem.case_price / stockItem.units_per_case 
                                                 : 0;
 
                                             return (
-                                                <TableRow key={sku.id}>
-                                                    <TableCell className="font-medium">{sku.name}</TableCell>
-                                                    <TableCell>{sku.product_code || 'N/A'}</TableCell>
+                                                <TableRow key={stockItem.id}>
+                                                    <TableCell className="font-medium">{stockItem.skus?.name}</TableCell>
+                                                    <TableCell>{stockItem.skus?.product_code || 'N/A'}</TableCell>
                                                     <TableCell className="text-right">
-                                                        <Badge variant={sku.stock_quantity < 10 ? 'destructive' : 'secondary'}>
-                                                            {sku.stock_quantity}
+                                                        <Badge variant={stockItem.stock_quantity < 10 ? 'destructive' : 'secondary'}>
+                                                            {stockItem.stock_quantity}
                                                         </Badge>
                                                     </TableCell>
-                                                    <TableCell>{sku.unit_type || 'N/A'}</TableCell>
-                                                    <TableCell className="text-right">{sku.units_per_case || 'N/A'}</TableCell>
-                                                    <TableCell className="text-right">₹{sku.case_price?.toFixed(2) || '0.00'}</TableCell>
+                                                    <TableCell>{stockItem.skus?.unit_type || 'N/A'}</TableCell>
+                                                    <TableCell className="text-right">{stockItem.units_per_case || 'N/A'}</TableCell>
+                                                    <TableCell className="text-right">₹{stockItem.case_price?.toFixed(2) || '0.00'}</TableCell>
                                                     <TableCell className="text-right">₹{perItemCost.toFixed(2)}</TableCell>
-                                                    <TableCell className="text-right">₹{sku.mrp?.toFixed(2) || '0.00'}</TableCell>
+                                                    <TableCell className="text-right">₹{stockItem.mrp?.toFixed(2) || '0.00'}</TableCell>
                                                 </TableRow>
                                             );
                                         })}
@@ -123,35 +126,35 @@ export default function SkusPage() {
                             
                             {/* Mobile Card View */}
                             <div className="grid gap-4 md:hidden">
-                                {skus.map((sku) => {
-                                    const perItemCost = (sku.case_price && sku.units_per_case && sku.units_per_case > 0) 
-                                        ? sku.case_price / sku.units_per_case 
+                                {distributorStock.map((stockItem) => {
+                                    const perItemCost = (stockItem.case_price && stockItem.units_per_case && stockItem.units_per_case > 0) 
+                                        ? stockItem.case_price / stockItem.units_per_case 
                                         : 0;
 
                                     return (
-                                        <Card key={sku.id}>
+                                        <Card key={stockItem.id}>
                                             <CardHeader>
-                                                <CardTitle className="text-base">{sku.name}</CardTitle>
-                                                <CardDescription>SKU: {sku.product_code || 'N/A'}</CardDescription>
+                                                <CardTitle className="text-base">{stockItem.skus?.name}</CardTitle>
+                                                <CardDescription>SKU: {stockItem.skus?.product_code || 'N/A'}</CardDescription>
                                             </CardHeader>
                                             <CardContent className="grid gap-4 text-sm">
                                                 <div className="flex justify-between">
                                                     <span className="text-muted-foreground">{t('Stock')}</span>
-                                                    <Badge variant={sku.stock_quantity < 10 ? 'destructive' : 'secondary'}>
-                                                        {sku.stock_quantity}
+                                                    <Badge variant={stockItem.stock_quantity < 10 ? 'destructive' : 'secondary'}>
+                                                        {stockItem.stock_quantity}
                                                     </Badge>
                                                 </div>
                                                  <div className="flex justify-between">
                                                     <span className="text-muted-foreground">{t('Unit')}</span>
-                                                    <span>{sku.unit_type || 'N/A'}</span>
+                                                    <span>{stockItem.skus?.unit_type || 'N/A'}</span>
                                                 </div>
                                                  <div className="flex justify-between">
                                                     <span className="text-muted-foreground">{t('Units/Case')}</span>
-                                                    <span>{sku.units_per_case || 'N/A'}</span>
+                                                    <span>{stockItem.units_per_case || 'N/A'}</span>
                                                 </div>
                                                  <div className="flex justify-between font-medium">
                                                     <span className="text-muted-foreground">{t('Case Price')}</span>
-                                                    <span>₹{sku.case_price?.toFixed(2) || '0.00'}</span>
+                                                    <span>₹{stockItem.case_price?.toFixed(2) || '0.00'}</span>
                                                 </div>
                                                 <div className="flex justify-between font-medium">
                                                     <span className="text-muted-foreground">{t('Per Item Cost')}</span>
@@ -159,7 +162,7 @@ export default function SkusPage() {
                                                 </div>
                                                 <div className="flex justify-between font-medium">
                                                     <span className="text-muted-foreground">{t('MRP')}</span>
-                                                    <span>₹{sku.mrp?.toFixed(2) || '0.00'}</span>
+                                                    <span>₹{stockItem.mrp?.toFixed(2) || '0.00'}</span>
                                                 </div>
                                             </CardContent>
                                         </Card>

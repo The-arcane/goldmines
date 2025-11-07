@@ -1,4 +1,5 @@
 
+
 export type UserRole = 'admin' | 'sales_executive' | 'distributor_admin' | 'delivery_partner';
 
 export type User = {
@@ -61,9 +62,20 @@ export type Sku = {
   mrp?: number;
   ptr?: number;
   stock_quantity: number;
-  distributor_id: number | null;
+  distributor_id: number | null; // This now refers to the brand's stock if null
   created_at: string;
 };
+
+export type DistributorStock = {
+    id: number;
+    distributor_id: number;
+    sku_id: number;
+    stock_quantity: number;
+    units_per_case?: number;
+    case_price?: number;
+    mrp?: number;
+    skus?: Sku; // For joins to get name, etc.
+}
 
 export type Order = {
   id: number;
@@ -112,7 +124,7 @@ export type StockOrderItem = {
   quantity: number; // in cases
   case_price: number;
   total_price: number;
-  skus?: { name: string, units_per_case: number }; // For joins
+  skus?: { name: string, product_code: string, units_per_case: number }; // For joins
 };
 
 
