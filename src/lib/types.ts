@@ -1,5 +1,4 @@
 
-
 export type UserRole = 'admin' | 'sales_executive' | 'distributor_admin' | 'delivery_partner';
 
 export type User = {
@@ -77,10 +76,10 @@ export type DistributorStock = {
     distributor_id: number;
     sku_id: number;
     stock_quantity: number;
-    units_per_case?: number;
-    case_price?: number;
-    mrp?: number;
-    skus?: Sku; // For joins to get name, etc.
+    units_per_case: number;
+    case_price: number;
+    mrp: number;
+    skus: Sku; // For joins to get name, etc.
 }
 
 export type Order = {
@@ -89,6 +88,7 @@ export type Order = {
   outlet_id: string;
   order_date: string;
   total_amount: number;
+  total_discount: number;
   status: string;
   amount_paid: number;
   payment_status: string;
@@ -109,7 +109,10 @@ export type OrderItem = {
   quantity: number;
   unit_price: number;
   total_price: number;
-  is_out_of_stock: boolean; // new field
+  order_unit_type: 'units' | 'cases';
+  scheme_discount_percentage: number;
+  final_total_price: number;
+  is_out_of_stock: boolean;
   skus?: { name: string, product_code: string, unit_type?: string }; // For joins
 };
 
@@ -213,6 +216,7 @@ export type SkuFormData = {
 export type OrderFormData = {
   outlet_id?: string; // Optional for distributor orders
   total_amount: number;
+  total_discount: number;
   payment_status: "Unpaid" | "Partially Paid" | "Paid";
   amount_paid?: number;
   items: {
@@ -220,6 +224,9 @@ export type OrderFormData = {
     quantity: number;
     unit_price: number;
     total_price: number;
+    order_unit_type: 'units' | 'cases';
+    scheme_discount_percentage: number;
+    final_total_price: number;
   }[];
 };
 

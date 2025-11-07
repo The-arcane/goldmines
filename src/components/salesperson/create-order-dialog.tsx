@@ -1,13 +1,13 @@
 
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/auth";
-import type { Outlet, Sku, Distributor } from "@/lib/types";
+import type { Outlet, DistributorStock } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -27,13 +27,19 @@ import { useToast } from "@/hooks/use-toast";
 import { createNewOrder } from "@/lib/actions";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 
 const formSchema = z.object({
     items: z.array(z.object({
         sku_id: z.coerce.number().min(1, "SKU must be selected."),
-        quantity: z.coerce.number().int().min(1, "Quantity must be at least 1 case."),
-        case_price: z.number(),
+        order_unit_type: z.enum(['units', 'cases']).default('units'),
+        quantity: z.coerce.number().int().min(1, "Quantity must be at least 1."),
+        unit_price: z.number(),
         total_price: z.number(),
+        scheme_discount_percentage: z.number().default(0),
+        apply_scheme: z.boolean().default(true),
+        final_total_price: z.number(),
+        available_stock: z.number(),
     })).min(1, "Please add at least one item to the order."),
     payment_status: z.enum(["Unpaid", "Partially Paid", "Paid"]),
     amount_paid: z.coerce.number().optional(),
@@ -59,8 +65,7 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
     const { user } = useAuth();
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
-    const [distributor, setDistributor] = useState<Distributor | null>(null);
-    const [skus, setSkus] = useState<Sku[]>([]);
+    const [distributorStock, setDistributorStock] = useState<DistributorStock[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -69,7 +74,7 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
         defaultValues: { items: [], payment_status: "Unpaid" },
     });
 
-    const { fields, append, remove, update } = useFieldArray({
+    const { fields, append, remove, update, replace } = useFieldArray({
         control: form.control,
         name: "items",
     });
@@ -91,19 +96,15 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
             }
             
             const distributorId = (userData as any).distributor_id[0].distributor_id;
-            const { data: distributorData, error: distError } = await supabase.from('distributors').select('*').eq('id', distributorId).single();
-
-            if (distError || !distributorData) {
-                throw new Error("Could not load distributor information.");
-            }
-            setDistributor(distributorData);
-
-            const { data: skusRes, error: skusError } = await supabase.from("skus").select("*").or(`distributor_id.eq.${distributorData.id},distributor_id.is.null`);
             
-            if (skusError) {
-                throw new Error("Could not load product SKUs.");
-            }
-            setSkus(skusRes || []);
+            const { data: stockData, error: stockError } = await supabase
+                .from('distributor_stock')
+                .select('*, skus(*)')
+                .eq('distributor_id', distributorId);
+
+            if (stockError) throw new Error("Could not load distributor's product stock.");
+            
+            setDistributorStock(stockData || []);
 
         } catch (e: any) {
             const errorMessage = e.message || "An unexpected error occurred.";
@@ -126,74 +127,88 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
 
     const watchedItems = form.watch("items");
     const watchedPaymentStatus = form.watch("payment_status");
-    const totalAmount = watchedItems.reduce((sum, item) => sum + (item.total_price || 0), 0);
+    
+    const totals = useMemo(() => {
+        return watchedItems.reduce((acc, item) => {
+            acc.totalAmount += item.total_price || 0;
+            const discount = item.total_price * (item.scheme_discount_percentage / 100);
+            acc.totalDiscount += discount;
+            acc.finalTotal += item.final_total_price || 0;
+            return acc;
+        }, { totalAmount: 0, totalDiscount: 0, finalTotal: 0 });
+    }, [watchedItems]);
 
-    const handleSkuChange = (index: number, skuId: string) => {
-        const selectedSku = skus.find(s => s.id === parseInt(skuId));
-        if (selectedSku) {
-            const currentItem = form.getValues(`items.${index}`);
-            const casePrice = selectedSku.case_price || 0;
+    const updateItemCalculations = (index: number) => {
+        const item = form.getValues(`items.${index}`);
+        const stockInfo = distributorStock.find(s => s.sku_id === item.sku_id);
+        if (!stockInfo) return;
 
-            update(index, { 
-                ...currentItem, 
-                sku_id: selectedSku.id, 
-                case_price: casePrice,
-                total_price: casePrice * (currentItem.quantity || 1)
-            });
+        let unitPrice = 0;
+        let totalPrice = 0;
+        let discountPercentage = 0;
+        
+        if (item.order_unit_type === 'cases') {
+            unitPrice = stockInfo.case_price;
+            totalPrice = unitPrice * item.quantity;
+            if (item.apply_scheme) {
+                if (item.quantity >= 21) discountPercentage = 3;
+                else if (item.quantity >= 6) discountPercentage = 2;
+                else if (item.quantity >= 1) discountPercentage = 1;
+            }
+        } else { // units
+            unitPrice = stockInfo.mrp / 1.3;
+            totalPrice = unitPrice * item.quantity;
         }
+
+        const finalTotalPrice = totalPrice * (1 - discountPercentage / 100);
+
+        update(index, {
+            ...item,
+            unit_price: unitPrice,
+            total_price: totalPrice,
+            scheme_discount_percentage: discountPercentage,
+            final_total_price: finalTotalPrice,
+        });
     };
     
-    const handleQuantityChange = (index: number, quantity: string) => {
-         const currentItem = form.getValues(`items.${index}`);
-         const newQuantity = parseInt(quantity) || 0;
-         update(index, {
-            ...currentItem,
-            quantity: newQuantity,
-            total_price: (currentItem.case_price || 0) * newQuantity
-         });
+    const handleFieldChange = (index: number, field: keyof OrderFormValues['items'][0], value: any) => {
+        const currentItem = form.getValues(`items.${index}`);
+        update(index, { ...currentItem, [field]: value });
+        updateItemCalculations(index);
     }
-    
-    const getSkuDetails = (skuId: number) => skus.find(s => s.id === skuId);
 
     const onSubmit = async (data: OrderFormValues) => {
-        if (!distributor) {
-            toast({ variant: "destructive", title: "Error", description: "Distributor information is missing." });
-            return;
+        for (const item of data.items) {
+            const stockNeeded = item.order_unit_type === 'cases'
+                ? item.quantity * (distributorStock.find(s => s.sku_id === item.sku_id)?.units_per_case || 1)
+                : item.quantity;
+            if (stockNeeded > item.available_stock) {
+                toast({ variant: 'destructive', title: 'Insufficient Stock', description: `Not enough stock for ${distributorStock.find(s => s.sku_id === item.sku_id)?.skus.name}. Available: ${item.available_stock}, Needed: ${stockNeeded}` });
+                return;
+            }
         }
 
-        let amountPaid = 0;
-        if (data.payment_status === 'Paid') {
-            amountPaid = totalAmount;
-        } else if (data.payment_status === 'Partially Paid') {
-            amountPaid = data.amount_paid || 0;
-        }
-
-        if (data.payment_status === 'Partially Paid' && amountPaid >= totalAmount) {
-            form.setError("amount_paid", { message: "Partial payment cannot be equal to or exceed the total amount." });
-            return;
-        }
-        
         const orderData = {
             outlet_id: outlet.id,
-            total_amount: totalAmount,
-            amount_paid: amountPaid,
+            total_amount: totals.finalTotal,
+            total_discount: totals.totalDiscount,
             payment_status: data.payment_status,
-            items: data.items.map(item => {
-                const skuDetails = getSkuDetails(item.sku_id);
-                 const unitPrice = (skuDetails?.units_per_case || 1) > 0 ? (item.case_price || 0) / (skuDetails?.units_per_case || 1) : 0;
-                return {
-                    sku_id: item.sku_id,
-                    quantity: item.quantity * (skuDetails?.units_per_case || 1), 
-                    unit_price: unitPrice,
-                    total_price: item.total_price,
-                }
-            })
+            amount_paid: data.payment_status === 'Paid' ? totals.finalTotal : (data.amount_paid || 0),
+            items: data.items.map(item => ({
+                sku_id: item.sku_id,
+                quantity: item.quantity,
+                unit_price: item.unit_price,
+                total_price: item.total_price,
+                order_unit_type: item.order_unit_type,
+                scheme_discount_percentage: item.scheme_discount_percentage,
+                final_total_price: item.final_total_price,
+            })),
         };
 
-        const result = await createNewOrder(orderData, distributor.id);
+        const result = await createNewOrder(orderData, distributorStock[0].distributor_id);
         if (result.success) {
             toast({ title: "Order Placed!", description: `Order #${result.orderId} for ${outlet.name} has been placed.` });
-            onOrderPlaced(); // Re-fetch dashboard data
+            onOrderPlaced();
             setOpen(false);
         } else {
             toast({ variant: "destructive", title: "Failed to create order", description: result.error });
@@ -210,7 +225,7 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
                     <form onSubmit={form.handleSubmit(onSubmit)}>
                         <DialogHeader>
                             <DialogTitle>New Order for: {outlet.name}</DialogTitle>
-                            <DialogDescription>Add products and payment details. Click save when you're done.</DialogDescription>
+                            <DialogDescription>Add products, select order type, and set payment details.</DialogDescription>
                         </DialogHeader>
 
                         {loading ? (
@@ -229,124 +244,97 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="w-[30%]">SKU</TableHead>
-                                            <TableHead className="w-[120px]">Qty (Cases)</TableHead>
-                                            <TableHead className="text-right">Units/Case</TableHead>
-                                            <TableHead className="text-right">MRP</TableHead>
-                                            <TableHead className="text-right">Per Item Cost</TableHead>
-                                            <TableHead className="text-right font-medium">Case Price</TableHead>
-                                            <TableHead className="text-right font-medium">Total Price</TableHead>
-                                            <TableHead className="w-[50px]"><span className="sr-only">Actions</span></TableHead>
+                                            <TableHead className="w-[25%]">SKU</TableHead>
+                                            <TableHead>Type</TableHead>
+                                            <TableHead>Qty</TableHead>
+                                            <TableHead>Available</TableHead>
+                                            <TableHead>Price</TableHead>
+                                            <TableHead>Total</TableHead>
+                                            <TableHead>Scheme</TableHead>
+                                            <TableHead>Final Total</TableHead>
+                                            <TableHead><span className="sr-only">Actions</span></TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {fields.map((field, index) => {
-                                            const skuDetails = getSkuDetails(watchedItems[index]?.sku_id);
-                                            const perItemCost = skuDetails && skuDetails.case_price && skuDetails.units_per_case 
-                                                ? skuDetails.case_price / skuDetails.units_per_case 
-                                                : 0;
+                                            const stockInfo = distributorStock.find(s => s.sku_id === watchedItems[index]?.sku_id);
+                                            const isCases = watchedItems[index]?.order_unit_type === 'cases';
                                             return (
                                                 <TableRow key={field.id}>
                                                     <TableCell>
-                                                        <Controller
-                                                            control={form.control}
-                                                            name={`items.${index}.sku_id`}
-                                                            render={({ field }) => (
-                                                                <Select onValueChange={(value) => { field.onChange(value); handleSkuChange(index, value); }} defaultValue={String(field.value)}>
-                                                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a SKU" /></SelectTrigger></FormControl>
-                                                                    <SelectContent>
-                                                                        {skus.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
-                                                                    </SelectContent>
+                                                         <Controller
+                                                            control={form.control} name={`items.${index}.sku_id`}
+                                                            render={({ field: controllerField }) => (
+                                                                <Select onValueChange={(value) => { handleFieldChange(index, 'sku_id', parseInt(value)); handleFieldChange(index, 'available_stock', distributorStock.find(s => s.sku_id === parseInt(value))?.stock_quantity ?? 0) }} defaultValue={String(controllerField.value)}>
+                                                                    <FormControl><SelectTrigger><SelectValue placeholder="Select SKU" /></SelectTrigger></FormControl>
+                                                                    <SelectContent>{distributorStock.map(s => <SelectItem key={s.id} value={String(s.sku_id)}>{s.skus.name}</SelectItem>)}</SelectContent>
                                                                 </Select>
                                                             )}
                                                         />
                                                     </TableCell>
                                                     <TableCell>
-                                                        <Controller
-                                                            control={form.control}
-                                                            name={`items.${index}.quantity`}
-                                                            render={({ field }) => (
-                                                                <Input type="number" {...field} onChange={(e) => { field.onChange(e); handleQuantityChange(index, e.target.value); }} placeholder="Cases" />
+                                                        <Controller control={form.control} name={`items.${index}.order_unit_type`}
+                                                            render={({ field: controllerField }) => (
+                                                                <Select onValueChange={(value) => handleFieldChange(index, 'order_unit_type', value)} defaultValue={controllerField.value}>
+                                                                    <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                                                    <SelectContent><SelectItem value="units">Units</SelectItem><SelectItem value="cases">Cases</SelectItem></SelectContent>
+                                                                </Select>
                                                             )}
                                                         />
                                                     </TableCell>
-                                                    <TableCell className="text-right">{skuDetails?.units_per_case || 'N/A'}</TableCell>
-                                                    <TableCell className="text-right font-mono">₹{skuDetails?.mrp?.toFixed(2) || '0.00'}</TableCell>
-                                                    <TableCell className="text-right font-mono">₹{perItemCost.toFixed(2)}</TableCell>
-                                                    <TableCell className="text-right font-mono font-medium">₹{skuDetails?.case_price?.toFixed(2) || '0.00'}</TableCell>
-                                                    <TableCell className="text-right font-mono font-medium">₹{watchedItems[index]?.total_price.toFixed(2) || '0.00'}</TableCell>
+                                                    <TableCell><Input type="number" min={1} value={watchedItems[index]?.quantity} onChange={(e) => handleFieldChange(index, 'quantity', e.target.value)} /></TableCell>
+                                                    <TableCell>{stockInfo?.stock_quantity ?? 'N/A'}</TableCell>
+                                                    <TableCell>₹{watchedItems[index]?.unit_price.toFixed(2)}</TableCell>
+                                                    <TableCell>₹{watchedItems[index]?.total_price.toFixed(2)}</TableCell>
                                                     <TableCell>
-                                                        <Button variant="ghost" size="icon" onClick={() => remove(index)}>
-                                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                                        </Button>
+                                                        {isCases ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <Switch id={`scheme-${index}`} checked={watchedItems[index]?.apply_scheme} onCheckedChange={(checked) => handleFieldChange(index, 'apply_scheme', checked)} />
+                                                                <Label htmlFor={`scheme-${index}`}>{watchedItems[index]?.scheme_discount_percentage}%</Label>
+                                                            </div>
+                                                        ) : 'N/A'}
                                                     </TableCell>
+                                                    <TableCell className="font-bold">₹{watchedItems[index]?.final_total_price.toFixed(2)}</TableCell>
+                                                    <TableCell><Button variant="ghost" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                                                 </TableRow>
                                             );
                                         })}
                                     </TableBody>
                                 </Table>
-                                <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => append({ sku_id: 0, quantity: 1, case_price: 0, total_price: 0 })}>
+                                <Button type="button" variant="outline" size="sm" onClick={() => append({ sku_id: 0, order_unit_type: 'units', quantity: 1, unit_price: 0, total_price: 0, scheme_discount_percentage: 0, apply_scheme: true, final_total_price: 0, available_stock: 0 })}>
                                     <PlusCircle className="mr-2 h-4 w-4" /> Add Item
                                 </Button>
                                 <FormMessage>{form.formState.errors.items?.message}</FormMessage>
                                 
                                 <Separator className="my-4" />
-
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                     <FormField
-                                        control={form.control}
-                                        name="payment_status"
+                                     <FormField control={form.control} name="payment_status"
                                         render={({ field }) => (
                                             <FormItem className="space-y-3">
                                                 <FormLabel>Payment Status</FormLabel>
                                                 <FormControl>
-                                                    <RadioGroup
-                                                    onValueChange={field.onChange}
-                                                    defaultValue={field.value}
-                                                    className="flex flex-col space-y-1"
-                                                    >
-                                                    <FormItem className="flex items-center space-x-3 space-y-0">
-                                                        <FormControl><RadioGroupItem value="Unpaid" /></FormControl>
-                                                        <FormLabel className="font-normal">Unpaid</FormLabel>
-                                                    </FormItem>
-                                                    <FormItem className="flex items-center space-x-3 space-y-0">
-                                                        <FormControl><RadioGroupItem value="Paid" /></FormControl>
-                                                        <FormLabel className="font-normal">Fully Paid (₹{totalAmount.toFixed(2)})</FormLabel>
-                                                    </FormItem>
-                                                    <FormItem className="flex items-center space-x-3 space-y-0">
-                                                        <FormControl><RadioGroupItem value="Partially Paid" /></FormControl>
-                                                        <FormLabel className="font-normal">Partially Paid</FormLabel>
-                                                    </FormItem>
+                                                    <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex flex-col space-y-1">
+                                                        <FormItem className="flex items-center space-x-3 space-y-0"><FormControl><RadioGroupItem value="Unpaid" /></FormControl><FormLabel className="font-normal">Unpaid</FormLabel></FormItem>
+                                                        <FormItem className="flex items-center space-x-3 space-y-0"><FormControl><RadioGroupItem value="Paid" /></FormControl><FormLabel className="font-normal">Fully Paid (₹{totals.finalTotal.toFixed(2)})</FormLabel></FormItem>
+                                                        <FormItem className="flex items-center space-x-3 space-y-0"><FormControl><RadioGroupItem value="Partially Paid" /></FormControl><FormLabel className="font-normal">Partially Paid</FormLabel></FormItem>
                                                     </RadioGroup>
-                                                </FormControl>
-                                                <FormMessage />
+                                                </FormControl><FormMessage />
                                             </FormItem>
                                         )}
                                     />
                                     {watchedPaymentStatus === 'Partially Paid' && (
-                                        <FormField
-                                            control={form.control}
-                                            name="amount_paid"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Amount Paid</FormLabel>
-                                                    <FormControl>
-                                                        <Input type="number" placeholder="Enter amount" {...field} />
-                                                    </FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
+                                        <FormField control={form.control} name="amount_paid" render={({ field }) => (<FormItem><FormLabel>Amount Paid</FormLabel><FormControl><Input type="number" placeholder="Enter amount" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                     )}
                                 </div>
                             </div>
                         )}
-                        
                         <DialogFooter className="mt-4 pt-4 border-t">
                             <div className="flex items-center gap-4 w-full justify-end">
+                                <div className="text-sm">Subtotal: <span className="line-through">₹{totals.totalAmount.toFixed(2)}</span></div>
+                                <div className="text-sm">Discount: <span className="text-green-600">-₹{totals.totalDiscount.toFixed(2)}</span></div>
                                 <div className="text-right">
                                     <p className="text-muted-foreground">Total Order Value</p>
-                                    <p className="text-2xl font-bold">₹{totalAmount.toFixed(2)}</p>
+                                    <p className="text-2xl font-bold">₹{totals.finalTotal.toFixed(2)}</p>
                                 </div>
                                 <Button type="submit" size="lg" disabled={form.formState.isSubmitting || loading || !!error || fields.length === 0}>
                                     {form.formState.isSubmitting ? "Placing Order..." : "Place Order"}
@@ -359,5 +347,3 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
         </Dialog>
     );
 }
-
-    

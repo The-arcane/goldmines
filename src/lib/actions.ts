@@ -1,5 +1,4 @@
 
-
 "use server";
 
 import { flagAnomalousVisit } from "@/ai/flows/flag-anomalous-visits";
@@ -184,8 +183,8 @@ export async function createNewSku(formData: SkuFormData, distributorId: number)
   return { success: true };
 }
 
-export async function createNewOrder(formData: OrderFormData, distributorId: number, isDistributorOrder = false) {
-  const supabase = createServerActionClient();
+export async function createNewOrder(formData: OrderFormData, distributorId: number) {
+  const supabase = createServerActionClient({ isAdmin: true });
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -201,41 +200,32 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
   if (!userProfile) {
     return { success: false, error: 'Could not find user profile.' };
   }
+  
+  // 1. Check credit limit
+  const { data: outlet, error: outletError } = await supabase
+    .from('outlets')
+    .select('credit_limit, current_due')
+    .eq('id', formData.outlet_id)
+    .single();
 
-  let finalStatus = 'Approved';
-  let finalOutletId = formData.outlet_id;
-
-  if (isDistributorOrder) {
-    finalStatus = 'Pending';
-    finalOutletId = undefined; // Distributor orders are not for a specific outlet
-  } else {
-    // This is a sales exec order for an outlet, check credit limit
-    const { data: outlet, error: outletError } = await supabase
-      .from('outlets')
-      .select('credit_limit, current_due')
-      .eq('id', finalOutletId)
-      .single();
-
-    if (outletError || !outlet) {
-      return { success: false, error: 'Could not find the selected outlet.' };
-    }
-
-    const newDueAmount = (outlet.current_due || 0) + formData.total_amount - (formData.amount_paid || 0);
-
-    if (outlet.credit_limit > 0 && newDueAmount > outlet.credit_limit) {
-      return { success: false, error: 'This order exceeds the outlets credit limit.' };
-    }
+  if (outletError || !outlet) {
+    return { success: false, error: 'Could not find the selected outlet.' };
   }
 
+  const newDueAmount = (outlet.current_due || 0) + formData.total_amount - (formData.amount_paid || 0);
+  if (outlet.credit_limit > 0 && newDueAmount > outlet.credit_limit) {
+    return { success: false, error: 'This order exceeds the outlets credit limit.' };
+  }
 
   // 2. Create the main order record
   const { data: orderData, error: orderError } = await supabase
     .from("orders")
     .insert({
       distributor_id: distributorId,
-      outlet_id: finalOutletId,
-      status: finalStatus,
+      outlet_id: formData.outlet_id,
+      status: 'Approved', // Sales exec orders are auto-approved
       total_amount: formData.total_amount,
+      total_discount: formData.total_discount,
       amount_paid: formData.amount_paid,
       payment_status: formData.payment_status,
       order_date: new Date().toISOString(),
@@ -249,49 +239,55 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
     return { success: false, error: orderError.message };
   }
 
-  // For sales exec orders, update outlet due immediately since it's auto-approved
-  if (!isDistributorOrder && finalOutletId) {
-      const dueChange = formData.total_amount - (formData.amount_paid || 0);
-      if (dueChange !== 0) {
-          const { error: rpcError } = await supabase.rpc('update_outlet_due', {
-            outlet_uuid: finalOutletId,
-            amount_change: dueChange
-          });
-        
-          if (rpcError) {
-              await supabase.from("orders").delete().eq("id", orderData.id);
-              console.error("Error updating outlet due on order creation:", rpcError);
-              return { success: false, error: `Order could not be placed because outlet balance could not be updated: ${rpcError.message}` };
-          }
-      }
-  }
-
-
-  // 4. Prepare and insert order items
+  // 3. Prepare and insert order items
   const orderItems = formData.items.map(item => ({
     order_id: orderData.id,
     sku_id: item.sku_id,
     quantity: item.quantity,
     unit_price: item.unit_price,
     total_price: item.total_price,
+    order_unit_type: item.order_unit_type,
+    scheme_discount_percentage: item.scheme_discount_percentage,
+    final_total_price: item.final_total_price,
   }));
 
   const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
 
   if (itemsError) {
     console.error("Error creating order items:", itemsError);
-    // Rollback logic
-     if (!isDistributorOrder && finalOutletId) {
-        const dueChange = formData.total_amount - (formData.amount_paid || 0);
-        if (dueChange !== 0) {
-            await supabase.rpc('update_outlet_due', {
-                outlet_uuid: finalOutletId,
-                amount_change: -dueChange
-            });
-        }
-    }
     await supabase.from("orders").delete().eq("id", orderData.id);
     return { success: false, error: `Order items could not be saved: ${itemsError.message}` };
+  }
+
+  // 4. Update distributor stock
+  const { data: stockItems, error: stockItemsError } = await supabase
+    .from("distributor_stock")
+    .select("sku_id, units_per_case")
+    .in("sku_id", formData.items.map(i => i.sku_id));
+    
+  if (stockItemsError) {
+      console.error("Could not fetch stock items for update:", stockItemsError.message);
+  } else {
+      const stockUpdates = formData.items.map(item => {
+        const stockItem = stockItems.find(s => s.sku_id === item.sku_id);
+        const quantityToDecrement = item.order_unit_type === 'cases' ? item.quantity * (stockItem?.units_per_case || 1) : item.quantity;
+        return supabase.rpc('update_distributor_stock_quantity', {
+            p_distributor_id: distributorId,
+            p_sku_id: item.sku_id,
+            p_quantity_change: -quantityToDecrement
+        });
+      });
+      await Promise.all(stockUpdates);
+  }
+
+  // 5. Update outlet due
+  const dueChange = formData.total_amount - (formData.amount_paid || 0);
+  if (dueChange !== 0) {
+      const { error: rpcError } = await supabase.rpc('update_outlet_due', {
+        outlet_uuid: formData.outlet_id,
+        amount_change: dueChange
+      });
+      if (rpcError) console.error("Failed to update outlet due:", rpcError.message);
   }
 
   revalidatePath('/dashboard/distributor/orders');
@@ -386,11 +382,7 @@ export async function updateOrderStatus(orderId: number, status: string) {
         return { success: false, error: error.message };
     }
 
-    // This logic is now mostly for status changes other than Approved/Rejected by distributor
-    // e.g., Dispatched, Delivered etc.
-    // The credit logic is handled during order creation.
     if (status === 'Rejected' && order.status === 'Approved') {
-        // If an approved order is rejected, decrease the outlet's due
         const { error: rpcError } = await supabase.rpc('update_outlet_due', {
             outlet_uuid: order.outlet_id,
             amount_change: -order.total_amount
@@ -586,7 +578,6 @@ export async function updateOrderAndStock(orderId: number, outOfStockItemIds: nu
         .update({ 
             status: 'Delivered',
             total_amount: newTotalAmount,
-            // You might also want to adjust amount_paid or payment_status if logic requires
          })
         .eq('id', orderId);
 
@@ -600,10 +591,10 @@ export async function updateOrderAndStock(orderId: number, outOfStockItemIds: nu
             supabase.rpc('upsert_distributor_stock', {
                 p_distributor_id: order.distributor_id,
                 p_sku_id: item.sku_id,
-                p_quantity_change: -item.quantity, // Decrement stock
-                p_units_per_case: null, // Not needed for decrement
-                p_case_price: null, // Not needed for decrement
-                p_mrp: null // Not needed for decrement
+                p_quantity_change: -item.quantity, 
+                p_units_per_case: null,
+                p_case_price: null,
+                p_mrp: null
             })
         );
         
@@ -611,9 +602,6 @@ export async function updateOrderAndStock(orderId: number, outOfStockItemIds: nu
         const rpcErrors = results.filter(res => res.error);
 
         if (rpcErrors.length > 0) {
-            // This is tricky; the order is delivered but stock might not be updated.
-            // A more robust system would use a transactional queue.
-            // For now, we return an error indicating partial success.
             console.error('Stock update RPC errors:', rpcErrors);
             return { success: false, error: "Order marked as delivered, but failed to update stock for some items." };
         }
@@ -632,7 +620,6 @@ export async function updateStockOrderStatus(orderId: number, status: string) {
         return updateStockAndMarkAsDelivered(orderId);
     }
 
-    // For other statuses (Approved, Shipped, Rejected), just update the status.
     const { error: updateError } = await supabase
         .from('stock_orders')
         .update({ status })
@@ -652,7 +639,7 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
 
     const { data: order, error: orderError } = await supabase
         .from('stock_orders')
-        .select('*, stock_order_items(*, skus(units_per_case))')
+        .select('*, stock_order_items(*, skus(units_per_case, mrp))')
         .eq('id', orderId)
         .single();
     
@@ -663,12 +650,10 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
     const stockUpdateErrors = [];
 
     for (const item of order.stock_order_items) {
-        const totalUnits = item.quantity * (item.skus?.units_per_case || 1);
-
         // Decrement brand's main stock
         const { data: mainSku, error: mainSkuError } = await supabase
             .from('skus')
-            .select('stock_quantity')
+            .select('stock_quantity, units_per_case')
             .eq('id', item.sku_id)
             .single();
         
@@ -677,7 +662,9 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
             continue;
         }
 
-        const newBrandStock = (mainSku.stock_quantity || 0) - totalUnits;
+        const totalUnitsToMove = item.quantity * (mainSku.units_per_case || 1);
+        const newBrandStock = (mainSku.stock_quantity || 0) - totalUnitsToMove;
+        
         const { error: brandStockError } = await supabase
             .from('skus')
             .update({ stock_quantity: newBrandStock })
@@ -692,10 +679,10 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
         const { error: rpcError } = await supabase.rpc('upsert_distributor_stock', {
             p_distributor_id: order.distributor_id,
             p_sku_id: item.sku_id,
-            p_quantity_change: totalUnits, // Increment distributor stock
-            p_units_per_case: item.skus?.units_per_case,
+            p_quantity_change: totalUnitsToMove, // Increment distributor stock
+            p_units_per_case: mainSku.units_per_case,
             p_case_price: item.case_price,
-            p_mrp: item.skus ? (await supabase.from('skus').select('mrp').eq('id', item.sku_id).single()).data?.mrp : undefined
+            p_mrp: item.skus ? item.skus.mrp : undefined
         });
 
         if (rpcError) {
@@ -708,7 +695,6 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
         return { success: false, error: `Order status not updated. Stock update failed: ${stockUpdateErrors.join('; ')}` };
     }
 
-    // If all stock updates succeed, mark the order as delivered.
     const { error: updateStatusError } = await supabase
         .from('stock_orders')
         .update({ status: 'Delivered' })
