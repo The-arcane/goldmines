@@ -555,7 +555,7 @@ export async function updateOrderAndStock(orderId: number, outOfStockItemIds: nu
     // 1. Fetch the order and its items
     const { data: order, error: fetchError } = await supabase
         .from('orders')
-        .select('*, order_items(*)')
+        .select('*, order_items(*, skus(units_per_case))')
         .eq('id', orderId)
         .single();
     
@@ -596,27 +596,40 @@ export async function updateOrderAndStock(orderId: number, outOfStockItemIds: nu
         return { success: false, error: `Could not update order status: ${updateOrderError.message}` };
     }
 
-    // 5. Update stock for fulfilled items
-    if (fulfilledItems.length > 0) {
-        const stockUpdates = fulfilledItems.map(item => 
-            supabase.rpc('upsert_distributor_stock', {
-                p_distributor_id: order.distributor_id,
-                p_sku_id: item.sku_id,
-                p_quantity_change: -item.quantity, 
-                p_units_per_case: null,
-                p_case_price: null,
-                p_mrp: null
-            })
-        );
-        
-        const results = await Promise.all(stockUpdates);
-        const rpcErrors = results.filter(res => res.error);
+    // 5. Update stock for fulfilled items (This part was incorrect)
+    for (const item of fulfilledItems) {
+        const { data: stockItem, error: stockFetchError } = await supabase
+            .from('distributor_stock')
+            .select('stock_quantity')
+            .eq('distributor_id', order.distributor_id)
+            .eq('sku_id', item.sku_id)
+            .single();
 
-        if (rpcErrors.length > 0) {
-            console.error('Stock update RPC errors:', rpcErrors);
-            return { success: false, error: "Order marked as delivered, but failed to update stock for some items." };
+        if (stockFetchError || !stockItem) {
+            console.error(`Could not fetch stock for SKU ${item.sku_id} for distributor ${order.distributor_id}. Skipping stock update.`);
+            continue; // Or handle more robustly
+        }
+
+        const quantityToDecrement = item.order_unit_type === 'cases' 
+            ? item.quantity * (item.skus?.units_per_case || 1) 
+            : item.quantity;
+        
+        const newStock = stockItem.stock_quantity - quantityToDecrement;
+
+        const { error: stockUpdateError } = await supabase
+            .from('distributor_stock')
+            .update({ stock_quantity: newStock })
+            .eq('distributor_id', order.distributor_id)
+            .eq('sku_id', item.sku_id);
+        
+        if (stockUpdateError) {
+            // This is where the original error message was coming from.
+            console.error("Stock update failed for item:", item.id, stockUpdateError);
+            // Even if one fails, we should continue trying to update others, but report the failure.
+             return { success: false, error: "Order marked as delivered, but failed to update stock for some items." };
         }
     }
+
 
     revalidatePath(`/dashboard/distributor/orders/${orderId}`);
     revalidatePath('/dashboard/distributor/orders');
@@ -800,3 +813,5 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
   revalidatePath('/dashboard/distributor/orders');
   redirect(`/invoice/${invoiceData.id}`);
 }
+
+    
