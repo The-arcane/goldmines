@@ -141,30 +141,32 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
     const updateItemCalculations = (index: number) => {
         const item = form.getValues(`items.${index}`);
         const stockInfo = distributorStock.find(s => s.sku_id === item.sku_id);
-        if (!stockInfo) return;
+        if (!stockInfo || !stockInfo.mrp) return;
 
-        let unitPrice = 0;
-        let totalPrice = 0;
         let discountPercentage = 0;
+        const perUnitPrice = stockInfo.mrp / 1.3;
+        
+        let totalPrice = 0;
         
         if (item.order_unit_type === 'cases') {
-            unitPrice = stockInfo.case_price;
-            totalPrice = unitPrice * item.quantity;
+            const totalUnits = item.quantity * (stockInfo.units_per_case || 1);
+            totalPrice = perUnitPrice * totalUnits;
+            
             if (item.apply_scheme) {
                 if (item.quantity >= 21) discountPercentage = 3;
                 else if (item.quantity >= 6) discountPercentage = 2;
                 else if (item.quantity >= 1) discountPercentage = 1;
             }
         } else { // units
-            unitPrice = stockInfo.mrp / 1.3;
-            totalPrice = unitPrice * item.quantity;
+            totalPrice = perUnitPrice * item.quantity;
+            discountPercentage = 0; // No discount for single units
         }
 
         const finalTotalPrice = totalPrice * (1 - discountPercentage / 100);
 
         update(index, {
             ...item,
-            unit_price: unitPrice,
+            unit_price: perUnitPrice, // Price per single unit
             total_price: totalPrice,
             scheme_discount_percentage: discountPercentage,
             final_total_price: finalTotalPrice,
@@ -179,11 +181,14 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
 
     const onSubmit = async (data: OrderFormValues) => {
         for (const item of data.items) {
+            const stockInfo = distributorStock.find(s => s.sku_id === item.sku_id);
+            if (!stockInfo) continue;
             const stockNeeded = item.order_unit_type === 'cases'
-                ? item.quantity * (distributorStock.find(s => s.sku_id === item.sku_id)?.units_per_case || 1)
+                ? item.quantity * (stockInfo.units_per_case || 1)
                 : item.quantity;
+
             if (stockNeeded > item.available_stock) {
-                toast({ variant: 'destructive', title: 'Insufficient Stock', description: `Not enough stock for ${distributorStock.find(s => s.sku_id === item.sku_id)?.skus.name}. Available: ${item.available_stock}, Needed: ${stockNeeded}` });
+                toast({ variant: 'destructive', title: 'Insufficient Stock', description: `Not enough stock for ${stockInfo.skus.name}. Available: ${item.available_stock}, Needed: ${stockNeeded}` });
                 return;
             }
         }
@@ -347,3 +352,5 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
         </Dialog>
     );
 }
+
+    
