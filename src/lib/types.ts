@@ -172,6 +172,8 @@ export type Invoice = {
     stock_order_id?: number | null;
     issue_date: string;
     due_date?: string | null;
+    subtotal: number;
+    total_discount: number;
     total_amount: number;
     tax_amount?: number | null;
     notes?: string | null;

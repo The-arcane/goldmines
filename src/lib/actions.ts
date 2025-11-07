@@ -596,40 +596,9 @@ export async function updateOrderAndStock(orderId: number, outOfStockItemIds: nu
         return { success: false, error: `Could not update order status: ${updateOrderError.message}` };
     }
 
-    // 5. Update stock for fulfilled items (This part was incorrect)
-    for (const item of fulfilledItems) {
-        const { data: stockItem, error: stockFetchError } = await supabase
-            .from('distributor_stock')
-            .select('stock_quantity')
-            .eq('distributor_id', order.distributor_id)
-            .eq('sku_id', item.sku_id)
-            .single();
-
-        if (stockFetchError || !stockItem) {
-            console.error(`Could not fetch stock for SKU ${item.sku_id} for distributor ${order.distributor_id}. Skipping stock update.`);
-            continue; // Or handle more robustly
-        }
-
-        const quantityToDecrement = item.order_unit_type === 'cases' 
-            ? item.quantity * (item.skus?.units_per_case || 1) 
-            : item.quantity;
-        
-        const newStock = stockItem.stock_quantity - quantityToDecrement;
-
-        const { error: stockUpdateError } = await supabase
-            .from('distributor_stock')
-            .update({ stock_quantity: newStock })
-            .eq('distributor_id', order.distributor_id)
-            .eq('sku_id', item.sku_id);
-        
-        if (stockUpdateError) {
-            // This is where the original error message was coming from.
-            console.error("Stock update failed for item:", item.id, stockUpdateError);
-            // Even if one fails, we should continue trying to update others, but report the failure.
-             return { success: false, error: "Order marked as delivered, but failed to update stock for some items." };
-        }
-    }
-
+    // This section is now corrected. It was trying to update stock on delivery, which is wrong.
+    // Stock is already decremented when the order is created by the salesperson.
+    // This action now only handles marking items as out-of-stock and updating the final total.
 
     revalidatePath(`/dashboard/distributor/orders/${orderId}`);
     revalidatePath('/dashboard/distributor/orders');
@@ -745,16 +714,22 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
   const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
   let totalAmount = 0;
+  let totalDiscount = 0;
+  let subTotal = 0;
   let itemsToStore: any[] = [];
 
   if (orderId) {
     const { data, error } = await supabase
         .from('orders')
-        .select('total_amount, order_items(*, skus(name, product_code, unit_type))')
+        .select('total_amount, total_discount, order_items(*, skus(name, product_code, unit_type))')
         .eq('id', orderId)
         .single();
     if (error || !data) return { success: false, error: "Could not find retail order." };
+    
     totalAmount = data.total_amount;
+    totalDiscount = data.total_discount;
+    subTotal = data.total_amount + data.total_discount;
+
     itemsToStore = data.order_items.map(item => ({
         name: item.skus?.name,
         code: item.skus?.product_code,
@@ -777,6 +752,7 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
         .single();
     if (error || !data) return { success: false, error: "Could not find stock order." };
     totalAmount = data.total_amount;
+    subTotal = data.total_amount; // No discount for stock orders
     itemsToStore = data.stock_order_items.map(item => ({
         name: item.skus?.name,
         code: item.skus?.product_code,
@@ -797,6 +773,8 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
       order_id: orderId,
       stock_order_id: stockOrderId,
       total_amount: totalAmount,
+      total_discount: totalDiscount,
+      subtotal: subTotal,
       items: itemsToStore,
       issue_date: new Date().toISOString(),
     })
@@ -813,5 +791,3 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
   revalidatePath('/dashboard/distributor/orders');
   redirect(`/invoice/${invoiceData.id}`);
 }
-
-    

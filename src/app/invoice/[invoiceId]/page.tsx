@@ -181,9 +181,11 @@ export default function InvoicePage({ params }: { params: { invoiceId: string } 
                     <CardFooter className="flex-col items-end p-0 mt-8 space-y-2">
                         <div className="w-full sm:w-1/2 ml-auto grid grid-cols-2 gap-x-2 gap-y-1 text-sm">
                             <span className="text-muted-foreground">Subtotal:</span>
-                            <span className="text-right font-mono">₹{invoice.total_amount.toFixed(2)}</span>
+                            <span className="text-right font-mono">₹{invoice.subtotal.toFixed(2)}</span>
+                             <span className="text-muted-foreground">Discount:</span>
+                            <span className="text-right font-mono text-green-600">-₹{invoice.total_discount.toFixed(2)}</span>
                              <span className="text-muted-foreground">Tax (GST):</span>
-                            <span className="text-right font-mono">₹0.00</span>
+                            <span className="text-right font-mono">₹{invoice.tax_amount?.toFixed(2) || '0.00'}</span>
                         </div>
                          <Separator className="my-4 sm:w-1/2 ml-auto" />
                          <div className="w-full sm:w-1/2 ml-auto grid grid-cols-2 gap-x-2 text-lg">
