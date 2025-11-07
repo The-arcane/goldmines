@@ -11,6 +11,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   logout: () => Promise<void>;
+  sessionRefreshed: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,6 +29,7 @@ const mapNumericRoleToString = (role: number): UserRole => {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionRefreshed, setSessionRefreshed] = useState(false);
   const router = useRouter();
 
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
@@ -42,8 +44,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (error) {
             console.error("Error fetching user profile:", error);
-            // This might happen if the profile isn't created yet by the trigger.
-            // Returning null is okay, the listener will try again on subsequent events.
             return null;
         }
         
@@ -67,9 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-        if (!isMounted) {
-            return;
-        }
+        if (!isMounted) return;
 
         const supabaseUser = session?.user ?? null;
         const profile = await fetchUserProfile(supabaseUser);
@@ -77,6 +75,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (isMounted) {
             setUser(profile);
             setLoading(false);
+            if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'SIGNED_OUT') {
+                setSessionRefreshed(true);
+            }
         }
 
         if (event === 'SIGNED_OUT') {
@@ -93,10 +94,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    setSessionRefreshed(false);
     router.push('/login');
   };
   
-  const value = { user, loading, logout };
+  const value = { user, loading, logout, sessionRefreshed };
 
   return (
     <AuthContext.Provider value={value}>

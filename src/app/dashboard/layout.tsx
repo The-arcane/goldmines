@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useAuth } from "@/lib/auth";
@@ -11,16 +12,16 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
+  const { user, loading, sessionRefreshed } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!loading && sessionRefreshed && !user) {
       router.replace("/login");
     }
-  }, [user, loading, router]);
+  }, [user, loading, sessionRefreshed, router]);
   
-  if (loading) {
+  if (loading || !sessionRefreshed) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -29,9 +30,7 @@ export default function DashboardLayout({
   }
 
   if (!user) {
-    // This state can be hit briefly during redirection, so we show a loader
-    // instead of flashing the UI.
-     return (
+    return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>

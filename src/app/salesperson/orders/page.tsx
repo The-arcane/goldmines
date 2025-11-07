@@ -14,7 +14,7 @@ import Link from "next/link";
 import { Loader2 } from "lucide-react";
 
 export default function MyOrdersPage() {
-    const { user } = useAuth();
+    const { user, sessionRefreshed } = useAuth();
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -37,10 +37,10 @@ export default function MyOrdersPage() {
     }, [user]);
 
     useEffect(() => {
-        if (user) {
+        if (user && sessionRefreshed) {
             fetchOrders();
         }
-    }, [user, fetchOrders]);
+    }, [user, sessionRefreshed, fetchOrders]);
     
     const getStatusVariant = (status: string) => {
         switch (status) {
@@ -111,5 +111,3 @@ export default function MyOrdersPage() {
         </main>
     );
 }
-
-    

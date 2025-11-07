@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { format, parseISO } from 'date-fns';
 
 export default function SalespersonVisitsPage() {
-    const { user } = useAuth();
+    const { user, sessionRefreshed } = useAuth();
     const [visits, setVisits] = useState<Visit[]>([]);
     const [outlets, setOutlets] = useState<Outlet[]>([]);
     const [loading, setLoading] = useState(true);
@@ -32,10 +32,10 @@ export default function SalespersonVisitsPage() {
     }, [user]);
 
     useEffect(() => {
-        if(user) {
+        if(user && sessionRefreshed) {
             fetchData();
         }
-    }, [user, fetchData]);
+    }, [user, sessionRefreshed, fetchData]);
 
     const getOutletName = (outletId: string) => outlets.find(o => o.id === outletId)?.name || 'Unknown Outlet';
 

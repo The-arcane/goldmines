@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { AddSalespersonOutletDialog } from "@/components/salesperson/add-outlet-dialog";
 
 export default function MyOutletsPage() {
-    const { user } = useAuth();
+    const { user, sessionRefreshed } = useAuth();
     const [outlets, setOutlets] = useState<Outlet[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -34,10 +34,10 @@ export default function MyOutletsPage() {
     }, [user]);
 
     useEffect(() => {
-        if(user) {
+        if(user && sessionRefreshed) {
             fetchOutlets();
         }
-    }, [user, fetchOutlets]);
+    }, [user, sessionRefreshed, fetchOutlets]);
 
     return (
         <main className="flex flex-1 flex-col gap-4 md:gap-8">

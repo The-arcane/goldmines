@@ -20,7 +20,7 @@ import { useTranslation } from "@/components/i18n/provider";
 
 
 export default function SalespersonDashboardPage() {
-    const { user } = useAuth();
+    const { user, sessionRefreshed } = useAuth();
     const { toast } = useToast();
     const { t } = useTranslation();
     const [attendance, setAttendance] = useState<Attendance | null>(null);
@@ -82,10 +82,10 @@ export default function SalespersonDashboardPage() {
     }, [user, toast]);
 
     useEffect(() => {
-        if (user) {
+        if (user && sessionRefreshed) {
             fetchDashboardData();
         }
-    }, [user, fetchDashboardData]);
+    }, [user, sessionRefreshed, fetchDashboardData]);
     
     const activeOutlets = useMemo(() => {
         if (!coords || allOutlets.length === 0) {
