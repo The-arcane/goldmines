@@ -260,25 +260,37 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
   }
 
   // 4. Update distributor stock
-  const { data: stockItems, error: stockItemsError } = await supabase
-    .from("distributor_stock")
-    .select("sku_id, units_per_case")
-    .in("sku_id", formData.items.map(i => i.sku_id));
+  for (const item of formData.items) {
+    const { data: stockItem, error: stockFetchError } = await supabase
+      .from('distributor_stock')
+      .select('stock_quantity, units_per_case')
+      .eq('distributor_id', distributorId)
+      .eq('sku_id', item.sku_id)
+      .single();
+
+    if (stockFetchError || !stockItem) {
+      console.error(`Could not fetch stock for SKU ${item.sku_id} for distributor ${distributorId}. Skipping stock update for this item.`);
+      continue;
+    }
     
-  if (stockItemsError) {
-      console.error("Could not fetch stock items for update:", stockItemsError.message);
-  } else {
-      const stockUpdates = formData.items.map(item => {
-        const stockItem = stockItems.find(s => s.sku_id === item.sku_id);
-        const quantityToDecrement = item.order_unit_type === 'cases' ? item.quantity * (stockItem?.units_per_case || 1) : item.quantity;
-        return supabase.rpc('update_distributor_stock_quantity', {
-            p_distributor_id: distributorId,
-            p_sku_id: item.sku_id,
-            p_quantity_change: -quantityToDecrement
-        });
-      });
-      await Promise.all(stockUpdates);
+    const quantityToDecrement = item.order_unit_type === 'cases' 
+      ? item.quantity * (stockItem.units_per_case || 1) 
+      : item.quantity;
+      
+    const newStockQuantity = (stockItem.stock_quantity || 0) - quantityToDecrement;
+
+    const { error: stockUpdateError } = await supabase
+      .from('distributor_stock')
+      .update({ stock_quantity: newStockQuantity })
+      .eq('distributor_id', distributorId)
+      .eq('sku_id', item.sku_id);
+      
+    if (stockUpdateError) {
+       console.error(`Failed to update stock for SKU ${item.sku_id} for distributor ${distributorId}:`, stockUpdateError);
+       // In a real app, you might want to add more robust error handling or rollback logic here.
+    }
   }
+
 
   // 5. Update outlet due
   const dueChange = formData.total_amount - (formData.amount_paid || 0);
@@ -721,7 +733,7 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
   const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
 
   let totalAmount = 0;
-  let itemsToStore = [];
+  let itemsToStore: any[] = [];
 
   if (orderId) {
     const { data, error } = await supabase
@@ -735,7 +747,7 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
         name: item.skus?.name,
         code: item.skus?.product_code,
         weight: item.skus?.unit_type,
-        quantity: `${item.quantity} units`,
+        quantity: `${item.quantity} ${item.order_unit_type}`,
         unit_price: item.unit_price,
         total_price: item.total_price
     }));
