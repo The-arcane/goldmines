@@ -8,11 +8,11 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function LoginPage() {
-  const { user, loading, sessionRefreshed } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && sessionRefreshed && user) {
+    if (!loading && user) {
       // Redirect based on role if user is already logged in
       switch (user.role) {
         case "admin":
@@ -27,10 +27,10 @@ export default function LoginPage() {
           break; // Stay on login if role is unknown
       }
     }
-  }, [user, loading, sessionRefreshed, router]);
+  }, [user, loading, router]);
   
-  // Show loading spinner while checking auth status or if already logged in and redirecting
-  if (loading || !sessionRefreshed || user) {
+  // Show a loading spinner while checking auth status or if already logged in and redirecting
+  if (loading || user) {
      return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -38,6 +38,7 @@ export default function LoginPage() {
     );
   }
 
+  // If loading is false and there is no user, show the login form
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">

@@ -8,18 +8,18 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 export default function SalespersonLoginPage() {
-  const { user, loading, sessionRefreshed } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     // If loading is done and we have a user who is a sales executive
-    if (!loading && sessionRefreshed && user && user.role === 'sales_executive') {
+    if (!loading && user && user.role === 'sales_executive') {
       router.replace('/salesperson/dashboard');
     }
-  }, [user, loading, sessionRefreshed, router]);
+  }, [user, loading, router]);
 
   // Show a loading spinner while checking auth or if redirecting
-  if (loading || !sessionRefreshed || (user && user.role === 'sales_executive')) {
+  if (loading || (user && user.role === 'sales_executive')) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />

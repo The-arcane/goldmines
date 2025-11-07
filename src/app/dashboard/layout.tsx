@@ -12,18 +12,25 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading, sessionRefreshed } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    // Wait until the session is explicitly refreshed and loading is false
-    if (!loading && sessionRefreshed && !user) {
-      router.replace("/login");
+    // Wait until loading is finished
+    if (!loading) {
+      if (!user) {
+        // If there's no user, redirect to login
+        router.replace("/login");
+      } else if (user.role === 'sales_executive') {
+        // If user has the wrong role for this layout, redirect
+        router.replace("/salesperson/dashboard");
+      }
     }
-  }, [user, loading, sessionRefreshed, router]);
+  }, [user, loading, router]);
   
-  // Show loading spinner until the session is confirmed to be either present or not
-  if (loading || !sessionRefreshed) {
+  // While loading, or if the user is null/incorrect role (before redirect happens), show a spinner.
+  // This is the key fix: we don't render children until we are sure the user is authenticated and has the correct role.
+  if (loading || !user || user.role === 'sales_executive') {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -31,24 +38,7 @@ export default function DashboardLayout({
     );
   }
 
-  // If session is refreshed but there's no user, it's safe to show a spinner while redirecting
-  if (!user) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
-
-  // Prevent rendering for wrong roles while redirecting
-  if (user.role === 'sales_executive') {
-     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
-
+  // If loading is false and we have a valid user for this layout, render the dashboard.
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <Sidebar userRole={user.role} />

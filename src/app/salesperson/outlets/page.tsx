@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { AddSalespersonOutletDialog } from "@/components/salesperson/add-outlet-dialog";
 
 export default function MyOutletsPage() {
-    const { user, sessionRefreshed } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const [outlets, setOutlets] = useState<Outlet[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -34,13 +34,14 @@ export default function MyOutletsPage() {
     }, [user]);
 
     useEffect(() => {
-        if (user && sessionRefreshed) {
+        // Only fetch data if auth is settled and we have a user.
+        if (!authLoading && user) {
             fetchOutlets();
-        } else if (!user && sessionRefreshed) {
-            // If the session is refreshed but there's no user, stop loading.
+        } else if (!authLoading && !user) {
+            // If auth is settled and there's no user, stop loading.
             setLoading(false);
         }
-    }, [user, sessionRefreshed, fetchOutlets]);
+    }, [user, authLoading, fetchOutlets]);
 
     return (
         <main className="flex flex-1 flex-col gap-4 md:gap-8">

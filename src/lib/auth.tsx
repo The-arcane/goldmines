@@ -11,7 +11,8 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   logout: () => Promise<void>;
-  sessionRefreshed: boolean;
+  // sessionRefreshed is now implicitly handled by the `loading` state.
+  // When loading is false, the session is considered refreshed and settled.
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,8 +29,7 @@ const mapNumericRoleToString = (role: number): UserRole => {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [sessionRefreshed, setSessionRefreshed] = useState(false);
+  const [loading, setLoading] = useState(true); // Start as true
   const router = useRouter();
 
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
@@ -44,6 +44,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (error) {
             console.error("Error fetching user profile:", error);
+            // If profile not found, it might be a transient issue or a real problem.
+            // Sign out to prevent being stuck in a logged-in-but-no-profile state.
+            await supabase.auth.signOut();
             return null;
         }
         
@@ -63,21 +66,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const handleAuthStateChange = async (event: AuthChangeEvent, session: Session | null) => {
-      setLoading(true);
-      const supabaseUser = session?.user ?? null;
-      const profile = await fetchUserProfile(supabaseUser);
-      setUser(profile);
-      
-      // This event fires once on initial load, and again on sign-in/out.
-      // This is our reliable signal that the session state is determined.
-      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'SIGNED_OUT') {
-         setSessionRefreshed(true);
-      }
-      setLoading(false);
-    };
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        setLoading(true);
+        const supabaseUser = session?.user ?? null;
+        if (supabaseUser) {
+            const profile = await fetchUserProfile(supabaseUser);
+            setUser(profile);
+        } else {
+            setUser(null);
+        }
+        // Only set loading to false after all async operations are done.
+        setLoading(false);
+    });
 
     return () => {
       subscription.unsubscribe();
@@ -86,13 +86,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
   const logout = async () => {
+    setLoading(true);
     await supabase.auth.signOut();
     setUser(null);
     router.push('/login');
+    setLoading(false);
   };
   
-  const value = { user, loading, logout, sessionRefreshed };
+  const value = { user, loading, logout };
 
+  // Render children only when loading is false. This prevents rendering with incomplete auth state.
+  // The loading spinner is handled by the layouts themselves.
   return (
     <AuthContext.Provider value={value}>
       {children}
