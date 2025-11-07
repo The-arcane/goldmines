@@ -1,3 +1,4 @@
+
 "use client";
 
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -69,26 +70,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      const profile = await fetchUserProfile(session?.user ?? null);
-      setUser(profile);
-      setLoading(false);
-    };
-
-    getInitialSession();
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
         const profile = await fetchUserProfile(session?.user ?? null);
         setUser(profile);
-        if (event !== 'INITIAL_SESSION') {
-          setLoading(false);
-        }
+        setLoading(false);
 
         if (event === 'SIGNED_OUT') {
             router.push('/login');
-        } else if (event === 'SIGNED_IN') {
-            // This logic can be simplified if redirects are handled on dashboard pages
         }
     });
 
