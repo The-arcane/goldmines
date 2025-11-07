@@ -39,7 +39,6 @@ const formSchema = z.object({
         total_price: z.number(),
         scheme_discount_percentage: z.number().default(0),
         apply_scheme: z.boolean().default(true),
-        final_total_price: z.number(),
         available_stock: z.number(),
     })).min(1, "Please add at least one item to the order."),
     payment_status: z.enum(["Unpaid", "Partially Paid", "Paid"]),
@@ -133,24 +132,19 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
     const watchedItems = form.watch("items");
     const watchedPaymentStatus = form.watch("payment_status");
     
-    const totals = useMemo(() => {
-        return watchedItems.reduce((acc, item) => {
-            acc.totalAmount += item.total_price || 0;
-            const discount = item.total_price * (item.scheme_discount_percentage / 100);
-            acc.totalDiscount += discount;
-            acc.finalTotal += item.final_total_price || 0;
-            return acc;
-        }, { totalAmount: 0, totalDiscount: 0, finalTotal: 0 });
-    }, [watchedItems]);
-
-    const updateItemCalculations = (index: number) => {
-        const item = form.getValues(`items.${index}`);
+    const calculateItemTotals = (item: OrderFormValues['items'][number]) => {
         const stockInfo = distributorStock.find(s => s.sku_id === item.sku_id);
-        if (!stockInfo || !stockInfo.mrp) return;
+        if (!stockInfo || !stockInfo.mrp) {
+            return {
+                unit_price: 0,
+                total_price: 0,
+                final_total_price: 0,
+                scheme_discount_percentage: 0
+            };
+        }
 
         let discountPercentage = 0;
         const perUnitPrice = stockInfo.mrp / 1.3;
-        
         let totalPrice = 0;
         
         if (item.order_unit_type === 'cases') {
@@ -169,12 +163,34 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
 
         const finalTotalPrice = totalPrice * (1 - discountPercentage / 100);
 
+        return {
+            unit_price: perUnitPrice,
+            total_price: totalPrice,
+            final_total_price: finalTotalPrice,
+            scheme_discount_percentage: discountPercentage
+        };
+    };
+
+    const totals = useMemo(() => {
+        return watchedItems.reduce((acc, item) => {
+            const { total_price, final_total_price } = calculateItemTotals(item);
+            acc.totalAmount += total_price || 0;
+            acc.finalTotal += final_total_price || 0;
+            const discount = (total_price || 0) - (final_total_price || 0);
+            acc.totalDiscount += discount;
+            return acc;
+        }, { totalAmount: 0, totalDiscount: 0, finalTotal: 0 });
+    }, [watchedItems, distributorStock]);
+
+    const updateItemCalculations = (index: number) => {
+        const item = form.getValues(`items.${index}`);
+        const { unit_price, total_price, scheme_discount_percentage } = calculateItemTotals(item);
+
         update(index, {
             ...item,
-            unit_price: perUnitPrice, // Price per single unit
-            total_price: totalPrice,
-            scheme_discount_percentage: discountPercentage,
-            final_total_price: finalTotalPrice,
+            unit_price: unit_price,
+            total_price: total_price,
+            scheme_discount_percentage: scheme_discount_percentage,
         });
     };
     
@@ -204,15 +220,17 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
             total_discount: totals.totalDiscount,
             payment_status: data.payment_status,
             amount_paid: data.payment_status === 'Paid' ? totals.finalTotal : (data.amount_paid || 0),
-            items: data.items.map(item => ({
-                sku_id: item.sku_id,
-                quantity: item.quantity,
-                unit_price: item.unit_price,
-                total_price: item.total_price,
-                order_unit_type: item.order_unit_type,
-                scheme_discount_percentage: item.scheme_discount_percentage,
-                final_total_price: item.final_total_price,
-            })),
+            items: data.items.map(item => {
+                const { total_price } = calculateItemTotals(item);
+                return {
+                    sku_id: item.sku_id,
+                    quantity: item.quantity,
+                    unit_price: item.unit_price,
+                    total_price: total_price,
+                    order_unit_type: item.order_unit_type,
+                    scheme_discount_percentage: item.scheme_discount_percentage,
+                }
+            }),
         };
 
         const result = await createNewOrder(orderData, distributorStock[0].distributor_id);
@@ -269,6 +287,8 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
                                         {fields.map((field, index) => {
                                             const stockInfo = distributorStock.find(s => s.sku_id === watchedItems[index]?.sku_id);
                                             const isCases = watchedItems[index]?.order_unit_type === 'cases';
+                                            const { final_total_price } = calculateItemTotals(watchedItems[index]);
+
                                             return (
                                                 <TableRow key={field.id}>
                                                     <TableCell>
@@ -304,14 +324,14 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
                                                             </div>
                                                         ) : 'N/A'}
                                                     </TableCell>
-                                                    <TableCell className="font-bold">₹{watchedItems[index]?.final_total_price.toFixed(2)}</TableCell>
+                                                    <TableCell className="font-bold">₹{final_total_price.toFixed(2)}</TableCell>
                                                     <TableCell><Button variant="ghost" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
                                                 </TableRow>
                                             );
                                         })}
                                     </TableBody>
                                 </Table>
-                                <Button type="button" variant="outline" size="sm" onClick={() => append({ sku_id: 0, order_unit_type: 'units', quantity: 1, unit_price: 0, total_price: 0, scheme_discount_percentage: 0, apply_scheme: true, final_total_price: 0, available_stock: 0 })}>
+                                <Button type="button" variant="outline" size="sm" onClick={() => append({ sku_id: 0, order_unit_type: 'units', quantity: 1, unit_price: 0, total_price: 0, scheme_discount_percentage: 0, apply_scheme: true, available_stock: 0 })}>
                                     <PlusCircle className="mr-2 h-4 w-4" /> Add Item
                                 </Button>
                                 <FormMessage>{form.formState.errors.items?.message}</FormMessage>

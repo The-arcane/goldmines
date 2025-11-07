@@ -111,7 +111,6 @@ export type OrderItem = {
   total_price: number;
   order_unit_type: 'units' | 'cases';
   scheme_discount_percentage: number;
-  final_total_price: number;
   is_out_of_stock: boolean;
   skus?: { name: string, product_code: string, unit_type?: string }; // For joins
 };
@@ -226,7 +225,6 @@ export type OrderFormData = {
     total_price: number;
     order_unit_type: 'units' | 'cases';
     scheme_discount_percentage: number;
-    final_total_price: number;
   }[];
 };
 

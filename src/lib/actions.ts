@@ -248,7 +248,6 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
     total_price: item.total_price,
     order_unit_type: item.order_unit_type,
     scheme_discount_percentage: item.scheme_discount_percentage,
-    final_total_price: item.final_total_price,
   }));
 
   const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
