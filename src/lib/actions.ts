@@ -654,10 +654,22 @@ export async function updateStockOrderStatus(orderId: number, status: string) {
             const totalUnitsToTransfer = item.quantity * (item.skus.units_per_case || 1);
 
             // 1. Decrement from brand's main stock (skus table)
-            const { error: brandStockError } = await supabase.rpc('update_sku_stock', {
-                sku_id_to_update: item.sku_id,
-                quantity_to_decrement: totalUnitsToTransfer,
-            });
+            const { data: sku, error: fetchSkuError } = await supabase
+              .from('skus')
+              .select('stock_quantity')
+              .eq('id', item.sku_id)
+              .single();
+
+            if (fetchSkuError || !sku) {
+                stockUpdateErrors.push(`Failed to fetch brand stock for SKU ${item.sku_id}.`);
+                continue;
+            }
+
+            const newBrandStock = (sku.stock_quantity || 0) - totalUnitsToTransfer;
+            const { error: brandStockError } = await supabase
+                .from('skus')
+                .update({ stock_quantity: newBrandStock })
+                .eq('id', item.sku_id);
 
             if (brandStockError) {
                 stockUpdateErrors.push(`Failed to decrement brand stock for SKU ${item.sku_id}: ${brandStockError.message}`);
@@ -665,22 +677,52 @@ export async function updateStockOrderStatus(orderId: number, status: string) {
             }
 
             // 2. Increment distributor's stock (distributor_stock table)
-            const { error: distributorStockError } = await supabase.rpc('increment_distributor_stock', {
-                p_distributor_id: updatedOrder.distributor_id,
-                p_sku_id: item.sku_id,
-                p_quantity: totalUnitsToTransfer,
-                p_units_per_case: item.skus.units_per_case,
-                p_case_price: item.skus.case_price,
-                p_mrp: item.skus.mrp,
-            });
+            const { data: distStock, error: fetchDistStockError } = await supabase
+                .from('distributor_stock')
+                .select('stock_quantity')
+                .eq('distributor_id', updatedOrder.distributor_id)
+                .eq('sku_id', item.sku_id)
+                .maybeSingle();
+            
+            if (fetchDistStockError) {
+                 stockUpdateErrors.push(`Failed to fetch distributor stock for SKU ${item.sku_id}: ${fetchDistStockError.message}`);
+                 continue;
+            }
+
+            if (distStock) {
+                // Update existing record
+                const newDistStock = (distStock.stock_quantity || 0) + totalUnitsToTransfer;
+                const { error: distStockUpdateError } = await supabase
+                    .from('distributor_stock')
+                    .update({ stock_quantity: newDistStock })
+                    .eq('distributor_id', updatedOrder.distributor_id)
+                    .eq('sku_id', item.sku_id);
+
+                if (distStockUpdateError) {
+                    stockUpdateErrors.push(`Failed to update distributor stock for SKU ${item.sku_id}: ${distStockUpdateError.message}`);
+                }
+            } else {
+                // Insert new record
+                const { error: distStockInsertError } = await supabase
+                    .from('distributor_stock')
+                    .insert({
+                        distributor_id: updatedOrder.distributor_id,
+                        sku_id: item.sku_id,
+                        stock_quantity: totalUnitsToTransfer,
+                        units_per_case: item.skus.units_per_case,
+                        case_price: item.skus.case_price,
+                        mrp: item.skus.mrp,
+                    });
                 
-            if (distributorStockError) {
-                 stockUpdateErrors.push(`Error upserting distributor stock for SKU ${item.sku_id}: ${distributorStockError.message}`);
+                 if (distStockInsertError) {
+                    stockUpdateErrors.push(`Failed to create distributor stock record for SKU ${item.sku_id}: ${distStockInsertError.message}`);
+                }
             }
         }
 
         if (stockUpdateErrors.length > 0) {
             console.error('Stock update errors:', stockUpdateErrors);
+            // This is a partial failure, so we return the errors
             return { success: false, error: `Order delivered, but failed to update stock: ${stockUpdateErrors.join(", ")}` };
         }
     }
