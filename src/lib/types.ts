@@ -10,6 +10,9 @@ export type User = {
   role: UserRole | number; 
   avatar_url: string;
   created_at: string;
+  company_name?: string;
+  company_address?: string;
+  company_gst_number?: string;
 };
 
 export type Distributor = {
@@ -17,6 +20,8 @@ export type Distributor = {
     name: string;
     created_at: string;
     admin_user_id: number | null;
+    address?: string;
+    gst_number?: string;
 }
 
 export type Outlet = {
@@ -113,7 +118,7 @@ export type StockOrder = {
   created_at: string;
   created_by_user_id?: number;
   notes?: string;
-  distributors?: { name: string }; // For joins
+  distributors?: { name: string, address?: string, gst_number?: string }; // For joins
   stock_order_items?: StockOrderItem[]; // For joins
 };
 
@@ -142,6 +147,20 @@ export type Attendance = {
     status: 'Online' | 'Offline';
     created_at: string;
 }
+
+export type Invoice = {
+    id: number;
+    invoice_number: string;
+    order_id?: number | null;
+    stock_order_id?: number | null;
+    issue_date: string;
+    due_date?: string | null;
+    total_amount: number;
+    tax_amount?: number | null;
+    notes?: string | null;
+    orders?: Order | null;
+    stock_orders?: StockOrder | null;
+};
 
 
 // For the generic new user creation form

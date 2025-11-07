@@ -12,16 +12,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { updateOrderStatus, updateOrderAndStock } from "@/lib/actions";
+import { updateOrderStatus, updateOrderAndStock, generateInvoice } from "@/lib/actions";
 import { ArrowLeft, FileText, CheckCircle, XCircle, Truck, ShoppingCart } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 
 export default function OrderDetailsPage({ params }: { params: { id: string } }) {
-    const { id } = use(params);
-    const { user } = useAuth();
     const router = useRouter();
+    const id = parseInt(use(params).id, 10);
+    const { user } = useAuth();
     const { toast } = useToast();
     const [order, setOrder] = useState<Order | null>(null);
     const [items, setItems] = useState<OrderItem[]>([]);
@@ -100,6 +100,13 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
             }
         });
     }
+
+    const handleGenerateInvoice = () => {
+        if (!order) return;
+        startTransition(async () => {
+            await generateInvoice(order.id);
+        });
+    };
     
     const getStatusVariant = (status: string) => {
         switch (status) {
@@ -158,7 +165,10 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
                         </Button>
                     )}
                     {(order.status === 'Delivered') && (
-                        <Button variant="outline" size="sm"><FileText className="mr-2 h-4 w-4" />Generate Bill</Button>
+                        <Button variant="outline" size="sm" onClick={handleGenerateInvoice} disabled={isPending}>
+                            <FileText className="mr-2 h-4 w-4" />
+                            Generate Bill
+                        </Button>
                     )}
                 </div>
             </div>
@@ -251,6 +261,12 @@ export default function OrderDetailsPage({ params }: { params: { id: string } })
                     <Button size="sm" onClick={handleDeliverOrder} disabled={isPending} className="w-full">
                         <CheckCircle className="mr-2 h-4 w-4" />
                         Mark as Delivered
+                    </Button>
+                )}
+                 {(order.status === 'Delivered') && (
+                    <Button variant="outline" size="sm" onClick={handleGenerateInvoice} disabled={isPending} className="w-full">
+                        <FileText className="mr-2 h-4 w-4" />
+                        Generate Bill
                     </Button>
                 )}
             </div>

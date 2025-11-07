@@ -6,6 +6,8 @@ import { flagAnomalousVisit } from "@/ai/flows/flag-anomalous-visits";
 import type { UserFormData, DistributorFormData, SkuFormData, OrderFormData, AttendanceData, StockOrderFormData } from "./types";
 import { revalidatePath } from "next/cache";
 import { createServerActionClient } from "./supabaseServer";
+import { redirect } from 'next/navigation';
+
 
 export async function checkVisitAnomaly(visitDetails: string, criteria: string) {
   try {
@@ -654,7 +656,7 @@ export async function updateStockOrderStatus(orderId: number, status: string) {
             const totalUnitsToTransfer = item.quantity * (item.skus.units_per_case || 1);
 
             // 1. Decrement from brand's main stock (skus table)
-            const { data: sku, error: fetchSkuError } = await supabase
+             const { data: sku, error: fetchSkuError } = await supabase
               .from('skus')
               .select('stock_quantity')
               .eq('id', item.sku_id)
@@ -670,6 +672,7 @@ export async function updateStockOrderStatus(orderId: number, status: string) {
                 .from('skus')
                 .update({ stock_quantity: newBrandStock })
                 .eq('id', item.sku_id);
+
 
             if (brandStockError) {
                 stockUpdateErrors.push(`Failed to decrement brand stock for SKU ${item.sku_id}: ${brandStockError.message}`);
@@ -731,4 +734,50 @@ export async function updateStockOrderStatus(orderId: number, status: string) {
     revalidatePath('/dashboard/distributor/skus');
     revalidatePath('/dashboard/distributor/stock-orders');
     return { success: true };
+}
+
+
+export async function generateInvoice(orderId?: number, stockOrderId?: number) {
+  const supabase = createServerActionClient({ isAdmin: true });
+
+  if (!orderId && !stockOrderId) {
+    return { success: false, error: "An order ID or stock order ID is required." };
+  }
+
+  // Generate a unique invoice number
+  const invoiceNumber = `INV-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+
+  // Fetch the total amount from the correct order table
+  let totalAmount = 0;
+  if (orderId) {
+    const { data, error } = await supabase.from('orders').select('total_amount').eq('id', orderId).single();
+    if (error || !data) return { success: false, error: "Could not find retail order." };
+    totalAmount = data.total_amount;
+  } else if (stockOrderId) {
+    const { data, error } = await supabase.from('stock_orders').select('total_amount').eq('id', stockOrderId).single();
+    if (error || !data) return { success: false, error: "Could not find stock order." };
+    totalAmount = data.total_amount;
+  }
+
+  // Insert into the new invoices table
+  const { data: invoiceData, error: invoiceError } = await supabase.from('invoices')
+    .insert({
+      invoice_number: invoiceNumber,
+      order_id: orderId,
+      stock_order_id: stockOrderId,
+      total_amount: totalAmount,
+      issue_date: new Date().toISOString(),
+    })
+    .select('id')
+    .single();
+
+  if (invoiceError) {
+    console.error("Error creating invoice:", invoiceError);
+    return { success: false, error: `Failed to create invoice: ${invoiceError.message}` };
+  }
+
+  revalidatePath('/invoice');
+  // Instead of returning data, we'll redirect to the new invoice page.
+  // The page itself will be responsible for fetching all its data.
+  redirect(`/invoice/${invoiceData.id}`);
 }
