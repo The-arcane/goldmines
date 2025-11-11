@@ -23,7 +23,7 @@ export default function SalespersonLayout({
       router.replace("/login");
       return;
     }
-    if (user?.role !== 'sales_executive') {
+    if (user?.role !== 2) { // 2 = sales_executive
       router.replace("/login");
       return;
     }
@@ -39,7 +39,7 @@ export default function SalespersonLayout({
   
   // If loading is done but conditions aren't met, useEffect handles redirect.
   // Rendering null prevents brief layout flash.
-  if (!session || user?.role !== 'sales_executive') {
+  if (!session || user?.role !== 2) { // 2 = sales_executive
      return null;
   }
 

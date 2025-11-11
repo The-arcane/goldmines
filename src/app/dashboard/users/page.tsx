@@ -12,23 +12,21 @@ import { format } from "date-fns";
 import { AddUserDialog } from "@/components/dashboard/users/add-user-dialog";
 import { useAuth } from "@/lib/auth";
 
-// Admins can create Sales Execs and Delivery Partners directly.
-// Distributor Admins are created via the Distributors page.
 const adminAllowedRoles: { value: UserRole, label: string }[] = [
+    { value: 'admin', label: 'Super Admin' },
     { value: 'sales_executive', label: 'Sales Executive' },
-    { value: 'delivery_partner', label: 'Delivery Partner' },
     { value: 'distributor_admin', label: 'Distributor Admin' },
-    // Note: 'admin' role is omitted for safety. New admins should be created via Supabase dashboard.
+    { value: 'delivery_partner', label: 'Delivery Partner' },
 ];
 
-const mapNumericRoleToString = (role: number): UserRole => {
-    const roleMap: { [key: number]: UserRole } = {
-        1: 'admin',
-        2: 'sales_executive',
-        3: 'distributor_admin',
-        4: 'delivery_partner',
+const mapNumericRoleToString = (role: number): string => {
+    const roleMap: { [key: number]: string } = {
+        1: 'Super Admin',
+        2: 'Sales Executive',
+        3: 'Distributor Admin',
+        4: 'Delivery Partner',
     };
-    return roleMap[role] || 'sales_executive'; // Fallback role
+    return roleMap[role] || 'Unknown';
 }
 
 export default function UsersPage() {
@@ -69,18 +67,6 @@ export default function UsersPage() {
         }
         return names[0].substring(0, 2);
     };
-    
-    const mapRoleToString = (role: UserRole | number) => {
-        let roleString: UserRole;
-        if (typeof role === 'number') {
-            roleString = mapNumericRoleToString(role);
-        } else {
-            roleString = role;
-        }
-        if (!roleString) return 'Unknown';
-        return roleString.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    };
-
 
     return (
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -126,7 +112,7 @@ export default function UsersPage() {
                                         </TableCell>
                                         <TableCell>{user.email}</TableCell>
                                         <TableCell>
-                                            <Badge variant="secondary">{mapRoleToString(user.role)}</Badge>
+                                            <Badge variant="secondary">{mapNumericRoleToString(user.role)}</Badge>
                                         </TableCell>
                                         <TableCell className="text-right">{format(new Date(user.created_at), 'MMM d, yyyy')}</TableCell>
                                     </TableRow>

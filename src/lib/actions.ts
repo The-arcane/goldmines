@@ -29,7 +29,7 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
       case 'sales_executive': return 2;
       case 'distributor_admin': return 3;
       case 'delivery_partner': return 4;
-      default: return 2;
+      default: return 2; // Default to sales executive
     }
   })();
   
@@ -169,7 +169,7 @@ export async function createDistributorWithAdmin(formData: DistributorFormData) 
     return { success: true };
 }
 
-export async function createNewSku(formData: SkuFormData, distributorId: number) {
+export async function createNewSku(formData: SkuFormData, distributorId: number | null) {
   const supabase = createServerActionClient({ isAdmin: true });
 
   const { error } = await supabase.from("skus").insert({
@@ -183,6 +183,7 @@ export async function createNewSku(formData: SkuFormData, distributorId: number)
   }
 
   revalidatePath("/dashboard/distributor/skus");
+  revalidatePath("/dashboard/skus");
   return { success: true };
 }
 

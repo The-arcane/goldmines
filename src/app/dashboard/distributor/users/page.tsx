@@ -18,14 +18,14 @@ const distributorAllowedRoles: { value: UserRole, label: string }[] = [
     { value: 'sales_executive', label: 'Sales Executive' },
 ];
 
-const mapNumericRoleToString = (role: number): UserRole => {
-    const roleMap: { [key: number]: UserRole } = {
-        1: 'admin',
-        2: 'sales_executive',
-        3: 'distributor_admin',
-        4: 'delivery_partner',
+const mapNumericRoleToString = (role: number): string => {
+    const roleMap: { [key: number]: string } = {
+        1: 'Super Admin',
+        2: 'Sales Executive',
+        3: 'Distributor Admin',
+        4: 'Delivery Partner',
     };
-    return roleMap[role] || 'sales_executive'; // Fallback role
+    return roleMap[role] || 'Unknown';
 }
 
 export default function DistributorUsersPage() {
@@ -112,17 +112,6 @@ export default function DistributorUsersPage() {
         }
         return names[0].substring(0, 2);
     };
-    
-    const mapRoleToString = (role: UserRole | number) => {
-        let roleString: UserRole;
-        if (typeof role === 'number') {
-            roleString = mapNumericRoleToString(role);
-        } else {
-            roleString = role;
-        }
-        if (!roleString) return 'Unknown';
-        return roleString.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    };
 
     return (
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
@@ -174,7 +163,7 @@ export default function DistributorUsersPage() {
                                                 </TableCell>
                                                 <TableCell>{member.email}</TableCell>
                                                 <TableCell>
-                                                    <Badge variant="secondary">{mapRoleToString(member.role)}</Badge>
+                                                    <Badge variant="secondary">{mapNumericRoleToString(member.role)}</Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right">{format(new Date(member.created_at), 'MMM d, yyyy')}</TableCell>
                                             </TableRow>
@@ -200,7 +189,7 @@ export default function DistributorUsersPage() {
                                             </div>
                                         </CardHeader>
                                         <CardFooter className="flex justify-between text-sm">
-                                             <Badge variant="secondary">{mapRoleToString(member.role)}</Badge>
+                                             <Badge variant="secondary">{mapNumericRoleToString(member.role)}</Badge>
                                              <span className="text-muted-foreground">{t('Joined')}: {format(new Date(member.created_at), 'MMM d, yyyy')}</span>
                                         </CardFooter>
                                     </Card>

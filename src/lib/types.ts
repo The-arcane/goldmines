@@ -6,7 +6,7 @@ export type User = {
   auth_id: string;
   name: string;
   email: string;
-  role: UserRole | number; 
+  role: number; // Use number to align with the database
   avatar_url: string;
   created_at: string;
   company_name?: string;
