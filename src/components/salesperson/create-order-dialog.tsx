@@ -76,56 +76,56 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
         defaultValues: { items: [], payment_status: "Unpaid" },
     });
 
-    const { fields, append, remove, update, replace } = useFieldArray({
+    const { fields, append, remove, update } = useFieldArray({
         control: form.control,
         name: "items",
     });
     
     const fetchData = useCallback(async () => {
-        if (!user) return;
-        setLoading(true);
-        setError(null);
-    
-        try {
-          // Step 1: Find the distributor_id for the current sales executive
-          const { data: distributorLink, error: distributorLinkError } = await supabase
-            .from('distributor_users')
-            .select('distributor_id')
-            .eq('user_id', user.id)
-            .single();
-    
-          if (distributorLinkError || !distributorLink) {
-            throw new Error("You are not assigned to a distributor.");
-          }
-          
-          const distributorId = distributorLink.distributor_id;
-    
-          // Step 2: Fetch the stock for that distributor
-          const { data: stockData, error: stockError } = await supabase
-            .from('distributor_stock')
-            .select('*, skus(*)') // Ensure you have RLS for users to read skus table
-            .eq('distributor_id', distributorId);
-    
-          if (stockError) {
-            console.error("Stock fetch error:", stockError);
-            throw new Error("Could not load distributor's product stock.");
-          }
-    
-          setDistributorStock(stockData || []);
-        } catch (e: any) {
-          const errorMessage = e.message || "An unexpected error occurred.";
-          toast({ variant: "destructive", title: "Cannot Create Order", description: errorMessage });
-          setError(errorMessage);
-        } finally {
-          setLoading(false);
+      if (!user) return;
+      setLoading(true);
+      setError(null);
+  
+      try {
+        const { data: distributorLink, error: distributorLinkError } = await supabase
+          .from('distributor_users')
+          .select('distributor_id')
+          .eq('user_id', user.id)
+          .single();
+  
+        if (distributorLinkError || !distributorLink) {
+          throw new Error("You are not assigned to a distributor.");
         }
-      }, [user, toast]);
-    
-      useEffect(() => {
-        if (open && user && sessionRefreshed) {
-          fetchData();
+        
+        const distributorId = distributorLink.distributor_id;
+  
+        const { data: stockData, error: stockError } = await supabase
+          .from('distributor_stock')
+          .select('*, skus!inner(*)') // Use inner join to ensure skus is not null
+          .eq('distributor_id', distributorId)
+          .gt('stock_quantity', 0); // Only fetch items that are in stock
+  
+        if (stockError) {
+          console.error("Stock fetch error:", stockError);
+          throw new Error("Could not load the distributor's product stock.");
         }
-      }, [open, user, sessionRefreshed, fetchData]);
+        
+        setDistributorStock(stockData || []);
+  
+      } catch (e: any) {
+        const errorMessage = e.message || "An unexpected error occurred.";
+        toast({ variant: "destructive", title: "Cannot Create Order", description: errorMessage });
+        setError(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    }, [user, toast]);
+    
+    useEffect(() => {
+      if (open && user && sessionRefreshed) {
+        fetchData();
+      }
+    }, [open, user, sessionRefreshed, fetchData]);
 
     useEffect(() => {
         if (!open) {
@@ -242,6 +242,11 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
                     }
                 }),
             };
+
+            if (distributorStock.length === 0 || !distributorStock[0].distributor_id) {
+                 toast({ variant: "destructive", title: "Cannot create order", description: "Distributor information is missing." });
+                 return;
+            }
 
             const result = await createNewOrder(orderData, distributorStock[0].distributor_id);
             if (result.success) {
