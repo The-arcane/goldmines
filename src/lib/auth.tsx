@@ -18,16 +18,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const mapNumericRoleToString = (role: number): UserRole => {
-    const roleMap: { [key: number]: UserRole } = {
-        1: 'admin',
-        2: 'sales_executive',
-        3: 'distributor_admin',
-        4: 'delivery_partner',
-    };
-    return roleMap[role] || 'sales_executive'; // Fallback role
-};
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<SupabaseSession | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -48,15 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .single();
         
         if (profileData) {
-          setUser({
-              id: profileData.id,
-              auth_id: profileData.auth_id,
-              name: profileData.name,
-              email: profileData.email,
-              role: profileData.role, // Keep it as a number
-              avatar_url: profileData.avatar_url,
-              created_at: profileData.created_at,
-          });
+          setUser(profileData as User);
         } else {
           setUser(null);
         }

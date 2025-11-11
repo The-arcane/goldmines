@@ -22,16 +22,16 @@ export default function DashboardPage() {
 
     // If user is loaded, redirect based on role
     switch (user.role) {
-      case 1: // admin
+      case 'super_admin':
         router.replace("/dashboard/admin");
         break;
-      case 2: // sales_executive
+      case 'sales_executive':
         router.replace("/salesperson/dashboard");
         break;
-      case 3: // distributor_admin
+      case 'distributor_admin':
         router.replace("/dashboard/distributor");
         break;
-      case 4: // delivery_partner
+      case 'delivery_partner':
         router.replace("/dashboard/delivery");
         break;
       default:

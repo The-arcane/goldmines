@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth";
 import { MobileSidebar } from "./mobile-sidebar";
 import { LanguageSwitcher } from "../i18n/language-switcher";
 import { useRouter } from "next/navigation";
+import type { UserRole } from "@/lib/types";
 
 export function Header() {
   const { user } = useAuth();
@@ -31,7 +32,7 @@ export function Header() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="flex flex-col p-0">
-          <MobileSidebar userRole={user.role} />
+          <MobileSidebar userRole={user.role as UserRole} />
         </SheetContent>
       </Sheet>
       <div className="w-full flex-1">

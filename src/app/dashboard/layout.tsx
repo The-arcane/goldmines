@@ -8,17 +8,6 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { UserRole } from "@/lib/types";
 
-const mapNumericRoleToString = (role: number): UserRole => {
-    const roleMap: { [key: number]: UserRole } = {
-        1: 'admin',
-        2: 'sales_executive',
-        3: 'distributor_admin',
-        4: 'delivery_partner',
-    };
-    return roleMap[role] || 'sales_executive'; // Fallback role
-};
-
-
 export default function DashboardLayout({
   children,
 }: {
@@ -35,7 +24,7 @@ export default function DashboardLayout({
       router.replace("/login");
       return;
     }
-    if (user?.role === 2) { // sales_executive
+    if (user?.role === 'sales_executive') {
       router.replace("/salesperson/dashboard");
       return;
     }
@@ -51,14 +40,14 @@ export default function DashboardLayout({
 
   // If loading is done but there is no session or the user is a sales exec,
   // the useEffect will handle the redirect. Rendering null prevents a brief flash.
-  if (!session || user?.role === 2) { // sales_executive
+  if (!session || user?.role === 'sales_executive') {
     return null;
   }
 
   // Only render the layout if loading is false and we have a valid user session
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-      <Sidebar userRole={mapNumericRoleToString(user.role)} />
+      <Sidebar userRole={user.role} />
       <div className="flex flex-col">
         <Header />
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6 bg-muted/40">

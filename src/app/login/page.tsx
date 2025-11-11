@@ -19,12 +19,12 @@ export default function LoginPage() {
     if (session && user) {
       // Redirect based on role if user is already logged in
       switch (user.role) {
-        case 1: // admin
-        case 3: // distributor_admin
-        case 4: // delivery_partner
+        case 'super_admin':
+        case 'distributor_admin':
+        case 'delivery_partner':
           router.replace("/dashboard");
           break;
-        case 2: // sales_executive
+        case 'sales_executive':
           router.replace("/salesperson/dashboard");
           break;
         default:

@@ -27,7 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/components/i18n/provider";
 
 const navItems = {
-  admin: [
+  super_admin: [
     { href: "/dashboard/admin", icon: Home, label: "Dashboard" },
     { href: "/dashboard/analytics", icon: LineChart, label: "Analytics" },
     { href: "/dashboard/distributors", icon: Building, label: "Distributors" },

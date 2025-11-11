@@ -18,15 +18,13 @@ const distributorAllowedRoles: { value: UserRole, label: string }[] = [
     { value: 'sales_executive', label: 'Sales Executive' },
 ];
 
-const mapNumericRoleToString = (role: number): string => {
-    const roleMap: { [key: number]: string } = {
-        1: 'Super Admin',
-        2: 'Sales Executive',
-        3: 'Distributor Admin',
-        4: 'Delivery Partner',
-    };
-    return roleMap[role] || 'Unknown';
-}
+const roleDisplayNames: Record<UserRole, string> = {
+    super_admin: 'Super Admin',
+    sales_executive: 'Sales Executive',
+    distributor_admin: 'Distributor Admin',
+    delivery_partner: 'Delivery Partner',
+};
+
 
 export default function DistributorUsersPage() {
     const { user } = useAuth();
@@ -163,7 +161,7 @@ export default function DistributorUsersPage() {
                                                 </TableCell>
                                                 <TableCell>{member.email}</TableCell>
                                                 <TableCell>
-                                                    <Badge variant="secondary">{mapNumericRoleToString(member.role)}</Badge>
+                                                    <Badge variant="secondary">{roleDisplayNames[member.role] || 'Unknown'}</Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right">{format(new Date(member.created_at), 'MMM d, yyyy')}</TableCell>
                                             </TableRow>
@@ -189,7 +187,7 @@ export default function DistributorUsersPage() {
                                             </div>
                                         </CardHeader>
                                         <CardFooter className="flex justify-between text-sm">
-                                             <Badge variant="secondary">{mapNumericRoleToString(member.role)}</Badge>
+                                             <Badge variant="secondary">{roleDisplayNames[member.role] || 'Unknown'}</Badge>
                                              <span className="text-muted-foreground">{t('Joined')}: {format(new Date(member.created_at), 'MMM d, yyyy')}</span>
                                         </CardFooter>
                                     </Card>

@@ -1,12 +1,12 @@
 
-export type UserRole = 'admin' | 'sales_executive' | 'distributor_admin' | 'delivery_partner';
+export type UserRole = 'super_admin' | 'sales_executive' | 'distributor_admin' | 'delivery_partner';
 
 export type User = {
   id: number;
   auth_id: string;
   name: string;
   email: string;
-  role: number; // Use number to align with the database
+  role: UserRole; 
   avatar_url: string;
   created_at: string;
   company_name?: string;

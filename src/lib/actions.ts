@@ -2,7 +2,7 @@
 "use server";
 
 import { flagAnomalousVisit } from "@/ai/flows/flag-anomalous-visits";
-import type { UserFormData, DistributorFormData, SkuFormData, OrderFormData, AttendanceData, StockOrderFormData } from "./types";
+import type { UserFormData, DistributorFormData, SkuFormData, OrderFormData, AttendanceData, StockOrderFormData, UserRole } from "./types";
 import { revalidatePath } from "next/cache";
 import { createServerActionClient } from "./supabaseServer";
 import { redirect } from 'next/navigation';
@@ -23,19 +23,9 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export async function createNewUser(formData: UserFormData, distributorId?: string) {
   const supabaseAdmin = createServerActionClient({ isAdmin: true });
 
-  const roleInt = (() => {
-    switch (formData.role) {
-      case 'admin': return 1;
-      case 'sales_executive': return 2;
-      case 'distributor_admin': return 3;
-      case 'delivery_partner': return 4;
-      default: return 2; // Default to sales executive
-    }
-  })();
-  
   const userMetadata: {[key: string]: any} = {
       name: formData.name,
-      role: roleInt,
+      role: formData.role, // Pass the role string directly
       avatar_url: `https://picsum.photos/seed/${formData.email}/100/100`,
   };
   
@@ -44,11 +34,7 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
     email: formData.email,
     password: formData.password,
     email_confirm: true, // Auto-confirm email
-    user_metadata: {
-      name: formData.name,
-      role: roleInt,
-      avatar_url: userMetadata.avatar_url,
-    }
+    user_metadata: userMetadata,
   });
 
   if (authError) {
@@ -85,7 +71,8 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
   }
 
   // Step 3: If it's a distributor user, link them in the junction table
-  if ((formData.role === 'delivery_partner' || formData.role === 'distributor_admin' || formData.role === 'sales_executive') && distributorId) {
+  const distributorRoles: UserRole[] = ['delivery_partner', 'distributor_admin', 'sales_executive'];
+  if (distributorRoles.includes(formData.role) && distributorId) {
     const { error: linkError } = await supabaseAdmin
       .from('distributor_users')
       .insert({
@@ -132,7 +119,7 @@ export async function createDistributorWithAdmin(formData: DistributorFormData) 
         name: formData.adminName,
         email: formData.adminEmail,
         password: formData.adminPassword,
-        role: 'distributor_admin', // This string will be correctly mapped to 3 in createNewUser
+        role: 'distributor_admin',
     }, String(distributorData.id));
 
 
