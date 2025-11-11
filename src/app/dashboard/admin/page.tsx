@@ -23,6 +23,13 @@ import { useTranslation } from "@/components/i18n/provider";
 import { translateText } from "@/ai/flows/translate-text";
 import { useAuth } from "@/lib/auth";
 
+type AdminStats = {
+  totalOutlets: number;
+  activeUsers: number;
+  visitsToday: number;
+  successfulVisits: number;
+};
+
 export default function AdminDashboardPage() {
   const { user, loading: authLoading, refetchKey } = useAuth();
   const { t, locale } = useTranslation();
@@ -30,23 +37,65 @@ export default function AdminDashboardPage() {
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [stats, setStats] = useState<AdminStats>({
+    totalOutlets: 0,
+    activeUsers: 0,
+    visitsToday: 0,
+    successfulVisits: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [translatedStatuses, setTranslatedStatuses] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
+      const today = new Date().toISOString().split('T')[0];
+
       const visitsPromise = supabase.from("visits").select("*").order("entry_time", { ascending: false }).limit(5);
       const ordersPromise = supabase.from("orders").select("*, outlets(name)").order("order_date", { ascending: false }).limit(5);
       const outletsPromise = supabase.from("outlets").select("*");
       const usersPromise = supabase.from("users").select("*");
+      
+      const outletsCountPromise = supabase.from("outlets").select('*', { count: 'exact', head: true });
+      const usersCountPromise = supabase.from("users").select('*', { count: 'exact', head: true }).in('role', [2, 4]); // sales_executive, delivery_partner
+      const visitsTodayCountPromise = supabase.from("visits").select('*', { count: 'exact', head: true }).gte('entry_time', `${today}T00:00:00.000Z`);
+      const ordersTodayCountPromise = supabase.from("orders").select('id', { count: 'exact', head: true }).gte('order_date', `${today}T00:00:00.000Z`);
 
-      const [visitsRes, ordersRes, outletsRes, usersRes] = await Promise.all([visitsPromise, ordersPromise, outletsPromise, usersPromise]);
+
+      const [
+        visitsRes, 
+        ordersRes, 
+        outletsRes, 
+        usersRes,
+        outletsCountRes,
+        usersCountRes,
+        visitsTodayCountRes,
+        ordersTodayCountRes
+      ] = await Promise.all([
+        visitsPromise, 
+        ordersPromise, 
+        outletsPromise, 
+        usersPromise,
+        outletsCountPromise,
+        usersCountPromise,
+        visitsTodayCountPromise,
+        ordersTodayCountRes,
+      ]);
 
       if (visitsRes.data) setRecentVisits(visitsRes.data);
       if (ordersRes.data) setRecentOrders(ordersRes.data as Order[]);
       if (outletsRes.data) setOutlets(outletsRes.data);
       if (usersRes.data) setUsers(usersRes.data);
+      
+      const visitsTodayCount = visitsTodayCountRes.count ?? 0;
+      const ordersTodayCount = ordersTodayCountRes.count ?? 0;
+
+      setStats({
+        totalOutlets: outletsCountRes.count ?? 0,
+        activeUsers: usersCountRes.count ?? 0,
+        visitsToday: visitsTodayCount,
+        successfulVisits: visitsTodayCount + ordersTodayCount,
+      });
 
       setLoading(false);
     };
@@ -94,7 +143,7 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="flex flex-col gap-4 md:gap-8">
-      <StatCards />
+      <StatCards stats={stats} loading={loading} />
       <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader className="flex flex-row items-center">
