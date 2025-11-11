@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -23,7 +22,7 @@ import { format } from "date-fns";
 import { useTranslation } from "@/components/i18n/provider";
 
 export default function DistributorDashboardPage() {
-  const { user } = useAuth();
+  const { user, refetchKey } = useAuth();
   const { t } = useTranslation();
   const [teamMembers, setTeamMembers] = useState<User[]>([]);
   const [assignedOutlets, setAssignedOutlets] = useState<Outlet[]>([]);
@@ -85,7 +84,7 @@ export default function DistributorDashboardPage() {
     if (user) {
       fetchDistributorData();
     }
-  }, [user, fetchDistributorData]);
+  }, [user, fetchDistributorData, refetchKey]);
 
    const getInitials = (name: string) => {
     if (!name) return '??';

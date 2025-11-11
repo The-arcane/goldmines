@@ -45,7 +45,7 @@ export default function RoutePlanPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <SalespersonMap outlets={outlets} loading={loading} />
+                    <SalespersonMap outlets={outlets} activeOutlets={[]} />
                 </CardContent>
             </Card>
         </main>

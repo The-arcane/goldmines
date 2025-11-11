@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Download, AlertCircle, TrendingUp } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { subDays, format } from 'date-fns';
+import { useAuth } from "@/lib/auth";
 
 type SalesRepStats = {
   user: User;
@@ -37,6 +38,7 @@ type DailyOrderSummary = {
 }
 
 export default function AnalyticsPage() {
+    const { refetchKey } = useAuth();
     const [salesReps, setSalesReps] = useState<User[]>([]);
     const [deliveryBoys, setDeliveryBoys] = useState<User[]>([]);
     const [visits, setVisits] = useState<Visit[]>([]);
@@ -74,7 +76,7 @@ export default function AnalyticsPage() {
             setLoading(false);
         };
         fetchData();
-    }, []);
+    }, [refetchKey]);
 
     const salesRepStats: SalesRepStats[] = useMemo(() => {
         return salesReps.map(rep => {

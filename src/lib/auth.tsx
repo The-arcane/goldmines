@@ -29,7 +29,7 @@ const mapNumericRoleToString = (role: number): UserRole => {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refetchKey, setRefetchKey] = useState(0); // State for the refetch key
+  const [refetchKey, setRefetchKey] = useState(0);
   const router = useRouter();
 
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
@@ -59,19 +59,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    setLoading(true);
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setLoading(true);
         const supabaseUser = session?.user ?? null;
         const profile = await fetchUserProfile(supabaseUser);
         setUser(profile);
         setLoading(false);
       }
     );
-    
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        // Increment the key to trigger re-fetches in components
         setRefetchKey(prevKey => prevKey + 1);
       }
     };
@@ -87,7 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     await supabase.auth.signOut();
-    router.push('/login'); // Redirect to a generic login, which will then handle role-specific redirects
+    router.push('/login');
     setUser(null);
   };
   
