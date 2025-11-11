@@ -269,7 +269,7 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
             <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0">
                  <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
-                        <DialogHeader className="p-6 pb-4">
+                        <DialogHeader className="p-6 pb-4 border-b">
                             <DialogTitle>New Order for: {outlet.name}</DialogTitle>
                             <DialogDescription>Add products, select order type, and set payment details.</DialogDescription>
                         </DialogHeader>
@@ -286,8 +286,73 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
                                 </div>
                             </div>
                         ) : (
-                            <ScrollArea className="flex-1 px-6">
-                                <div className="space-y-4">
+                            <ScrollArea className="flex-1">
+                                <div className="p-6 space-y-4">
+                                    {/* Mobile Cards */}
+                                    <div className="grid gap-4 md:hidden">
+                                         {fields.map((field, index) => {
+                                            const stockInfo = distributorStock.find(s => s.sku_id === watchedItems[index]?.sku_id);
+                                            const isCases = watchedItems[index]?.order_unit_type === 'cases';
+                                            const { total_price, scheme_discount_percentage } = calculateItemTotals(watchedItems[index]);
+                                            const final_total_price = total_price * (1 - (scheme_discount_percentage / 100));
+                                            return (
+                                                <Card key={field.id}>
+                                                    <CardHeader>
+                                                        <div className="flex justify-between items-start">
+                                                            <div className="flex-grow">
+                                                                <Controller
+                                                                    control={form.control} name={`items.${index}.sku_id`}
+                                                                    render={({ field: controllerField }) => (
+                                                                        <Select onValueChange={(value) => { handleFieldChange(index, 'sku_id', parseInt(value)); handleFieldChange(index, 'available_stock', distributorStock.find(s => s.sku_id === parseInt(value))?.stock_quantity ?? 0) }} defaultValue={String(controllerField.value)}>
+                                                                            <FormControl><SelectTrigger><SelectValue placeholder="Select SKU" /></SelectTrigger></FormControl>
+                                                                            <SelectContent>{distributorStock.map(s => <SelectItem key={s.id} value={String(s.sku_id)}>{s.skus.name} {s.skus.unit_type ? `(${s.skus.unit_type})` : ''}</SelectItem>)}</SelectContent>
+                                                                        </Select>
+                                                                    )}
+                                                                />
+                                                            </div>
+                                                            <Button variant="ghost" size="icon" className="ml-2 flex-shrink-0" onClick={() => remove(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                                        </div>
+                                                    </CardHeader>
+                                                    <CardContent className="grid grid-cols-2 gap-4">
+                                                         <div>
+                                                            <Label>Type</Label>
+                                                            <Controller control={form.control} name={`items.${index}.order_unit_type`}
+                                                                render={({ field: controllerField }) => (
+                                                                    <Select onValueChange={(value) => handleFieldChange(index, 'order_unit_type', value)} defaultValue={controllerField.value}>
+                                                                        <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                                                        <SelectContent><SelectItem value="units">Units</SelectItem><SelectItem value="cases">Cases</SelectItem></SelectContent>
+                                                                    </Select>
+                                                                )}
+                                                            />
+                                                        </div>
+                                                         <div>
+                                                             <Label>Quantity</Label>
+                                                            <Input type="number" min={1} value={watchedItems[index]?.quantity} onChange={(e) => handleFieldChange(index, 'quantity', parseInt(e.target.value) || 1)} />
+                                                        </div>
+                                                        <div className="text-sm">
+                                                            <Label>Available</Label>
+                                                            <div>{stockInfo?.stock_quantity ?? 'N/A'}</div>
+                                                        </div>
+                                                        <div className="text-sm">
+                                                            <Label>Price</Label>
+                                                            <div>₹{watchedItems[index]?.unit_price.toFixed(2)}</div>
+                                                        </div>
+                                                        {isCases && (
+                                                             <div className="col-span-2 flex items-center justify-between">
+                                                                <Label htmlFor={`scheme-mobile-${index}`}>Apply Scheme Discount ({scheme_discount_percentage}%)</Label>
+                                                                <Switch id={`scheme-mobile-${index}`} checked={watchedItems[index]?.apply_scheme} onCheckedChange={(checked) => handleFieldChange(index, 'apply_scheme', checked)} />
+                                                            </div>
+                                                        )}
+                                                    </CardContent>
+                                                    <CardFooter className="bg-muted/50 p-3 flex justify-between items-center">
+                                                        <span className="text-sm text-muted-foreground">Item Total</span>
+                                                        <span className="font-bold text-lg">₹{final_total_price.toFixed(2)}</span>
+                                                    </CardFooter>
+                                                </Card>
+                                            )
+                                         })}
+                                    </div>
+
                                     {/* Desktop Table */}
                                     <div className="hidden md:block">
                                         <Table>
@@ -354,72 +419,6 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
                                             </TableBody>
                                         </Table>
                                     </div>
-                                    
-                                    {/* Mobile Cards */}
-                                    <div className="grid gap-4 md:hidden">
-                                         {fields.map((field, index) => {
-                                            const stockInfo = distributorStock.find(s => s.sku_id === watchedItems[index]?.sku_id);
-                                            const isCases = watchedItems[index]?.order_unit_type === 'cases';
-                                            const { total_price, scheme_discount_percentage } = calculateItemTotals(watchedItems[index]);
-                                            const final_total_price = total_price * (1 - (scheme_discount_percentage / 100));
-                                            return (
-                                                <Card key={field.id}>
-                                                    <CardHeader>
-                                                        <div className="flex justify-between items-start">
-                                                            <div className="flex-grow">
-                                                                <Controller
-                                                                    control={form.control} name={`items.${index}.sku_id`}
-                                                                    render={({ field: controllerField }) => (
-                                                                        <Select onValueChange={(value) => { handleFieldChange(index, 'sku_id', parseInt(value)); handleFieldChange(index, 'available_stock', distributorStock.find(s => s.sku_id === parseInt(value))?.stock_quantity ?? 0) }} defaultValue={String(controllerField.value)}>
-                                                                            <FormControl><SelectTrigger><SelectValue placeholder="Select SKU" /></SelectTrigger></FormControl>
-                                                                            <SelectContent>{distributorStock.map(s => <SelectItem key={s.id} value={String(s.sku_id)}>{s.skus.name} {s.skus.unit_type ? `(${s.skus.unit_type})` : ''}</SelectItem>)}</SelectContent>
-                                                                        </Select>
-                                                                    )}
-                                                                />
-                                                            </div>
-                                                            <Button variant="ghost" size="icon" className="ml-2 flex-shrink-0" onClick={() => remove(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                                                        </div>
-                                                    </CardHeader>
-                                                    <CardContent className="grid grid-cols-2 gap-4">
-                                                         <div>
-                                                            <Label>Type</Label>
-                                                            <Controller control={form.control} name={`items.${index}.order_unit_type`}
-                                                                render={({ field: controllerField }) => (
-                                                                    <Select onValueChange={(value) => handleFieldChange(index, 'order_unit_type', value)} defaultValue={controllerField.value}>
-                                                                        <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                                                                        <SelectContent><SelectItem value="units">Units</SelectItem><SelectItem value="cases">Cases</SelectItem></SelectContent>
-                                                                    </Select>
-                                                                )}
-                                                            />
-                                                        </div>
-                                                         <div>
-                                                             <Label>Quantity</Label>
-                                                            <Input type="number" min={1} value={watchedItems[index]?.quantity} onChange={(e) => handleFieldChange(index, 'quantity', parseInt(e.target.value) || 1)} />
-                                                        </div>
-                                                        <div className="text-sm">
-                                                            <Label>Available</Label>
-                                                            <div>{stockInfo?.stock_quantity ?? 'N/A'}</div>
-                                                        </div>
-                                                        <div className="text-sm">
-                                                            <Label>Price</Label>
-                                                            <div>₹{watchedItems[index]?.unit_price.toFixed(2)}</div>
-                                                        </div>
-                                                        {isCases && (
-                                                             <div className="col-span-2 flex items-center justify-between">
-                                                                <Label htmlFor={`scheme-mobile-${index}`}>Apply Scheme Discount ({scheme_discount_percentage}%)</Label>
-                                                                <Switch id={`scheme-mobile-${index}`} checked={watchedItems[index]?.apply_scheme} onCheckedChange={(checked) => handleFieldChange(index, 'apply_scheme', checked)} />
-                                                            </div>
-                                                        )}
-                                                    </CardContent>
-                                                    <CardFooter className="bg-muted/50 p-3 flex justify-between items-center">
-                                                        <span className="text-sm text-muted-foreground">Item Total</span>
-                                                        <span className="font-bold text-lg">₹{final_total_price.toFixed(2)}</span>
-                                                    </CardFooter>
-                                                </Card>
-                                            )
-                                         })}
-                                    </div>
-
 
                                     <Button type="button" variant="outline" size="sm" onClick={() => append({ sku_id: 0, order_unit_type: 'units', quantity: 1, unit_price: 0, total_price: 0, scheme_discount_percentage: 0, apply_scheme: true, available_stock: 0 })}>
                                         <PlusCircle className="mr-2 h-4 w-4" /> Add Item
@@ -449,7 +448,7 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
                                 </div>
                             </ScrollArea>
                         )}
-                        <DialogFooter className="mt-auto p-6 pt-4 border-t flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                        <DialogFooter className="p-6 pt-4 border-t flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                             <div className="flex items-baseline gap-4">
                                 <div className="text-sm">Subtotal: <span className="line-through">₹{totals.subtotal.toFixed(2)}</span></div>
                                 <div className="text-sm">Discount: <span className="text-green-600">-₹{totals.totalDiscount.toFixed(2)}</span></div>
@@ -470,3 +469,5 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
         </Dialog>
     );
 }
+
+    
