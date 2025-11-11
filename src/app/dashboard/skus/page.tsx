@@ -1,0 +1,100 @@
+
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { supabase } from "@/lib/supabaseClient";
+import type { Sku } from "@/lib/types";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useAuth } from "@/lib/auth";
+import { AddSkuDialog } from "@/components/dashboard/skus/add-sku-dialog";
+import { Badge } from "@/components/ui/badge";
+
+export default function SkusPage() {
+    const { user } = useAuth();
+    const [skus, setSkus] = useState<Sku[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const fetchSkus = useCallback(async () => {
+        if (!user) return;
+        setLoading(true);
+
+        // Fetch master SKUs (where distributor_id is null)
+        const { data, error } = await supabase
+            .from("skus")
+            .select("*")
+            .is('distributor_id', null)
+            .order("created_at", { ascending: false });
+
+        if (error) {
+            console.error("Error fetching SKUs:", error);
+        } else {
+            setSkus(data || []);
+        }
+        setLoading(false);
+    }, [user]);
+
+    useEffect(() => {
+        if (user) {
+            fetchSkus();
+        }
+    }, [user, fetchSkus]);
+
+    return (
+        <main className="flex flex-1 flex-col gap-4 md:gap-8">
+            <Card>
+                <CardHeader className="flex flex-row items-center">
+                    <div className="grid gap-2">
+                        <CardTitle>Master SKUs & Inventory</CardTitle>
+                        <CardDescription>
+                           A list of all master products available to be ordered by distributors.
+                        </CardDescription>
+                    </div>
+                    <div className="ml-auto">
+                        <AddSkuDialog onSkuAdded={fetchSkus} />
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    {loading ? (
+                        <div className="text-center p-8">Loading master product list...</div>
+                    ) : skus.length > 0 ? (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Product Name</TableHead>
+                                    <TableHead>SKU Code</TableHead>
+                                    <TableHead className="text-right">Stock</TableHead>
+                                    <TableHead>Unit</TableHead>
+                                    <TableHead className="text-right">Units/Case</TableHead>
+                                    <TableHead className="text-right">Case Price</TableHead>
+                                    <TableHead className="text-right">MRP</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {skus.map((sku) => (
+                                    <TableRow key={sku.id}>
+                                        <TableCell className="font-medium">{sku.name}</TableCell>
+                                        <TableCell>{sku.product_code || 'N/A'}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Badge variant={sku.stock_quantity < 10 ? 'destructive' : 'secondary'}>
+                                                {sku.stock_quantity}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>{sku.unit_type || 'N/A'}</TableCell>
+                                        <TableCell className="text-right">{sku.units_per_case || 'N/A'}</TableCell>
+                                        <TableCell className="text-right">₹{sku.case_price?.toFixed(2) || '0.00'}</TableCell>
+                                        <TableCell className="text-right">₹{sku.mrp?.toFixed(2) || '0.00'}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    ) : (
+                        <div className="text-center text-muted-foreground p-8 border-dashed border-2 rounded-md">
+                            No master SKUs found. Add one to get started.
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        </main>
+    );
+}

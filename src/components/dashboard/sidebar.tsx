@@ -32,6 +32,7 @@ const navItems = {
     { href: "/dashboard/distributors", icon: Building, label: "Distributors" },
     { href: "/dashboard/admin/stock-orders", icon: ClipboardList, label: "Stock Orders" },
     { href: "/dashboard/outlets", icon: Warehouse, label: "Outlets" },
+    { href: "/dashboard/skus", icon: Box, label: "SKUs & Inventory" },
     { href: "/dashboard/users", icon: Users, label: "Users" },
   ],
   sales_executive: [
