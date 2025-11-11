@@ -1,5 +1,6 @@
 
 
+
 export type UserRole = 'super_admin' | 'sales_executive' | 'distributor_admin';
 
 export type User = {
@@ -202,6 +203,15 @@ export type DistributorFormData = {
     adminEmail: string;
     adminPassword: string;
 }
+
+// For updating a distributor organization
+export type DistributorUpdateFormData = {
+    name: string;
+    address?: string;
+    gst_number?: string;
+    admin_user_id?: number;
+}
+
 
 // For creating a new SKU
 export type SkuFormData = {

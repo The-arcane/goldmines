@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { PlusCircle } from "lucide-react";
 import { createDistributorWithAdmin } from "@/lib/actions";
 import { Separator } from "@/components/ui/separator";
+import type { User } from "@/lib/types";
 
 const formSchema = z.object({
   distributorName: z.string().min(3, "Organization name must be at least 3 characters."),
@@ -40,9 +41,10 @@ const formSchema = z.object({
 
 type AddDistributorDialogProps = {
   onDistributorAdded: () => void;
+  users: User[];
 };
 
-export function AddDistributorDialog({ onDistributorAdded }: AddDistributorDialogProps) {
+export function AddDistributorDialog({ onDistributorAdded, users }: AddDistributorDialogProps) {
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
 

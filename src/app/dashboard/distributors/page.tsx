@@ -9,6 +9,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format } from "date-fns";
 import { AddDistributorDialog } from "@/components/dashboard/distributors/add-distributor-dialog";
 import { useAuth } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
+import { MoreHorizontal, PlusCircle } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { EditDistributorDialog } from "@/components/dashboard/distributors/edit-distributor-dialog";
+import Link from 'next/link';
 
 export default function DistributorsPage() {
     const [distributors, setDistributors] = useState<Distributor[]>([]);
@@ -19,7 +31,7 @@ export default function DistributorsPage() {
     const fetchData = useCallback(async () => {
         setLoading(true);
         const distributorsPromise = supabase.from("distributors").select("*").order("name", { ascending: true });
-        const usersPromise = supabase.from("users").select("id, name"); // Only need id and name for mapping
+        const usersPromise = supabase.from("users").select("id, name");
 
         const [distributorsRes, usersRes] = await Promise.all([distributorsPromise, usersPromise]);
 
@@ -49,8 +61,14 @@ export default function DistributorsPage() {
                            Create and manage distributor organizations and their administrators.
                         </CardDescription>
                     </div>
-                    <div className="ml-auto">
-                        <AddDistributorDialog onDistributorAdded={fetchData} />
+                    <div className="ml-auto flex items-center gap-2">
+                        <Button asChild size="sm" className="h-8 gap-1">
+                            <Link href="/dashboard/admin/create-stock-order">
+                                <PlusCircle className="h-3.5 w-3.5" />
+                                Create Stock Order
+                            </Link>
+                        </Button>
+                        <AddDistributorDialog onDistributorAdded={fetchData} users={users} />
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -65,6 +83,7 @@ export default function DistributorsPage() {
                                     <TableHead>Address</TableHead>
                                     <TableHead>GST Number</TableHead>
                                     <TableHead className="text-right">Created On</TableHead>
+                                    <TableHead><span className="sr-only">Actions</span></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -75,6 +94,28 @@ export default function DistributorsPage() {
                                         <TableCell>{distributor.address || 'N/A'}</TableCell>
                                         <TableCell>{distributor.gst_number || 'N/A'}</TableCell>
                                         <TableCell className="text-right">{format(new Date(distributor.created_at), 'MMM d, yyyy')}</TableCell>
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                    <DropdownMenuSeparator />
+                                                    <EditDistributorDialog 
+                                                        distributor={distributor} 
+                                                        onDistributorUpdated={fetchData} 
+                                                        users={users}
+                                                    >
+                                                        <button className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full text-left">
+                                                            Edit
+                                                        </button>
+                                                    </EditDistributorDialog>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>

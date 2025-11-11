@@ -3,7 +3,7 @@
 "use server";
 
 import { flagAnomalousVisit } from "@/ai/flows/flag-anomalous-visits";
-import type { UserFormData, DistributorFormData, SkuFormData, OrderFormData, AttendanceData, StockOrderFormData, UserRole } from "./types";
+import type { UserFormData, DistributorFormData, SkuFormData, OrderFormData, AttendanceData, StockOrderFormData, UserRole, DistributorUpdateFormData } from "./types";
 import { revalidatePath } from "next/cache";
 import { createServerActionClient } from "./supabaseServer";
 import { redirect } from 'next/navigation';
@@ -136,6 +136,29 @@ export async function createDistributorWithAdmin(formData: DistributorFormData) 
     revalidatePath('/dashboard/distributors');
     return { success: true };
 }
+
+export async function updateDistributor(id: number, formData: DistributorUpdateFormData) {
+    const supabaseAdmin = createServerActionClient({ isAdmin: true });
+
+    const { error } = await supabaseAdmin
+        .from('distributors')
+        .update({
+            name: formData.name,
+            address: formData.address,
+            gst_number: formData.gst_number,
+            admin_user_id: formData.admin_user_id === 0 ? null : formData.admin_user_id,
+        })
+        .eq('id', id);
+
+    if (error) {
+        console.error('Error updating distributor:', error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath('/dashboard/distributors');
+    return { success: true };
+}
+
 
 export async function createNewSku(formData: SkuFormData, distributorId: number | null) {
   const supabase = createServerActionClient({ isAdmin: true });
@@ -370,6 +393,8 @@ export async function createStockOrder(formData: StockOrderFormData, distributor
   }
 
   revalidatePath('/dashboard/distributor/stock-orders');
+  revalidatePath('/dashboard/admin/stock-orders');
+  revalidatePath('/dashboard/admin/create-stock-order');
   return { success: true, stockOrderId: stockOrderData.id };
 }
 
