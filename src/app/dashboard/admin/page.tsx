@@ -65,7 +65,7 @@ export default function AdminDashboardPage() {
         recentOrdersPromise,
         outletsPromise, 
         outletsCountPromise,
-        usersCountRes,
+        usersCountPromise,
         ordersTodayCountPromise,
       ]);
 
