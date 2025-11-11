@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  sessionRefreshed: boolean; // New state to track if session has been checked at least once
   logout: () => Promise<void>;
 }
 
@@ -28,6 +29,7 @@ const mapNumericRoleToString = (role: number): UserRole => {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionRefreshed, setSessionRefreshed] = useState(false);
   const router = useRouter();
 
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
@@ -35,53 +37,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
     }
 
-    const { data: profile, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('auth_id', supabaseUser.id)
-        .single();
-    
-    if (error) {
-        console.error("Error fetching user profile:", error);
-        await supabase.auth.signOut();
+    try {
+        const { data: profile, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('auth_id', supabaseUser.id)
+            .single();
+        
+        if (error) {
+            console.error("Error fetching user profile:", error);
+            await supabase.auth.signOut();
+            return null;
+        }
+
+        return {
+            id: profile.id,
+            auth_id: supabaseUser.id,
+            name: profile.name,
+            email: profile.email,
+            role: mapNumericRoleToString(profile.role),
+            avatar_url: profile.avatar_url,
+            created_at: profile.created_at,
+        };
+    } catch (e) {
+        console.error("Exception in fetchUserProfile:", e);
         return null;
     }
-
-    return {
-        id: profile.id,
-        auth_id: supabaseUser.id,
-        name: profile.name,
-        email: profile.email,
-        role: mapNumericRoleToString(profile.role),
-        avatar_url: profile.avatar_url,
-        created_at: profile.created_at,
-    };
   }, []);
 
   useEffect(() => {
-    setLoading(true);
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      try {
+    const handleAuthStateChange = async (_event: AuthChangeEvent, session: Session | null) => {
+        setLoading(true);
         const supabaseUser = session?.user ?? null;
         if (supabaseUser) {
-          const profile = await fetchUserProfile(supabaseUser);
-          setUser(profile);
+            const profile = await fetchUserProfile(supabaseUser);
+            setUser(profile);
         } else {
-          setUser(null);
+            setUser(null);
         }
-      } catch (e) {
-        console.error("Error in onAuthStateChange handler", e);
-        setUser(null);
-      } finally {
+        setSessionRefreshed(true); // Mark session as checked
         setLoading(false);
-      }
-    });
+    };
     
+    // Subscribe to auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
+    
+    // Initial check in case onAuthStateChange doesn't fire on page load
+    supabase.auth.getSession().then(({ data: { session } }) => {
+        if (!sessionRefreshed) {
+             handleAuthStateChange('INITIAL_SESSION', session);
+        }
+    });
+
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchUserProfile]);
+  }, [fetchUserProfile, sessionRefreshed]);
 
 
   const logout = async () => {
@@ -92,7 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   };
   
-  const value = { user, loading, logout };
+  const value = { user, loading, sessionRefreshed, logout };
 
   return (
     <AuthContext.Provider value={value}>

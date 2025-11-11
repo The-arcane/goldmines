@@ -12,20 +12,20 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
+  const { user, loading, sessionRefreshed } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading) {
+    if (!loading && sessionRefreshed) {
       if (!user) {
         router.replace("/login");
       } else if (user.role === 'sales_executive') {
         router.replace("/salesperson/dashboard");
       }
     }
-  }, [user, loading, router]);
+  }, [user, loading, sessionRefreshed, router]);
   
-  if (loading) {
+  if (loading || !sessionRefreshed) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />

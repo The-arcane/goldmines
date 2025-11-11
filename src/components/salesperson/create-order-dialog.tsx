@@ -64,7 +64,7 @@ type CreateOrderDialogProps = {
 }
 
 export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrderDialogProps) {
-    const { user } = useAuth();
+    const { user, sessionRefreshed } = useAuth();
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [distributorStock, setDistributorStock] = useState<DistributorStock[]>([]);
@@ -123,10 +123,11 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
     }, [user, toast]);
     
     useEffect(() => {
-      if (open && user) {
+      // Fetch data only when dialog is open and the session is confirmed.
+      if (open && user && sessionRefreshed) {
         fetchData();
       }
-    }, [open, user, fetchData]);
+    }, [open, user, sessionRefreshed, fetchData]);
 
     useEffect(() => {
         if (!open) {
@@ -263,10 +264,10 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
             <DialogTrigger asChild>
                 <Button disabled={disabled}>Order</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-4xl h-full flex flex-col p-0 sm:h-[90vh]">
+            <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col p-0">
                  <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 overflow-hidden">
-                        <DialogHeader className="p-6 pb-4 border-b">
+                        <DialogHeader className="p-6 pb-4 border-b flex-shrink-0">
                             <DialogTitle>New Order for: {outlet.name}</DialogTitle>
                             <DialogDescription>Add products, select order type, and set payment details.</DialogDescription>
                         </DialogHeader>
@@ -429,7 +430,7 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
                                 </ScrollArea>
                             </div>
                         )}
-                        <DialogFooter className="p-6 pt-4 border-t flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                        <DialogFooter className="p-6 pt-4 border-t flex-shrink-0 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                             <div className="flex items-baseline gap-4">
                                 {totals.totalDiscount > 0 && <div className="text-sm">Subtotal: <span className="line-through">₹{totals.subtotal.toFixed(2)}</span></div>}
                                 {totals.totalDiscount > 0 && <div className="text-sm">Discount: <span className="text-green-600">-₹{totals.totalDiscount.toFixed(2)}</span></div>}
@@ -450,5 +451,3 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
         </Dialog>
     );
 }
-
-    
