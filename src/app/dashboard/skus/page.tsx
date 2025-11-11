@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -9,6 +8,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useAuth } from "@/lib/auth";
 import { AddSkuDialog } from "@/components/dashboard/skus/add-sku-dialog";
 import { Badge } from "@/components/ui/badge";
+import { MoreHorizontal } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { EditSkuDialog } from "@/components/dashboard/skus/edit-sku-dialog";
 
 export default function SkusPage() {
     const { user } = useAuth();
@@ -68,6 +78,7 @@ export default function SkusPage() {
                                     <TableHead className="text-right">Units/Case</TableHead>
                                     <TableHead className="text-right">Case Price</TableHead>
                                     <TableHead className="text-right">MRP</TableHead>
+                                    <TableHead><span className="sr-only">Actions</span></TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -84,6 +95,25 @@ export default function SkusPage() {
                                         <TableCell className="text-right">{sku.units_per_case || 'N/A'}</TableCell>
                                         <TableCell className="text-right">₹{sku.case_price?.toFixed(2) || '0.00'}</TableCell>
                                         <TableCell className="text-right">₹{sku.mrp?.toFixed(2) || '0.00'}</TableCell>
+                                        <TableCell>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon">
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                                    <DropdownMenuSeparator />
+                                                    <EditSkuDialog sku={sku} onSkuUpdated={fetchSkus}>
+                                                        <button className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full text-left">
+                                                            Edit
+                                                        </button>
+                                                    </EditSkuDialog>
+                                                    <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
