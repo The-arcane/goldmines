@@ -2,7 +2,6 @@
 "use client";
 
 import { StatCards } from "@/components/dashboard/admin/stat-cards";
-import { VisitsTable } from "@/components/dashboard/admin/visits-table";
 import {
   Card,
   CardContent,
@@ -11,9 +10,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { OutletsMap } from "@/components/dashboard/admin/outlets-map";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import type { Outlet, Visit, User, Order } from "@/lib/types";
+import type { Outlet, Order, User } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -26,22 +25,17 @@ import { useAuth } from "@/lib/auth";
 type AdminStats = {
   totalOutlets: number;
   activeUsers: number;
-  visitsToday: number;
   successfulVisits: number;
 };
 
 export default function AdminDashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const { t, locale } = useTranslation();
-  const [recentVisits, setRecentVisits] = useState<Visit[]>([]);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
-  const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [outlets, setOutlets] = useState<Outlet[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<AdminStats>({
     totalOutlets: 0,
     activeUsers: 0,
-    visitsToday: 0,
     successfulVisits: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -53,53 +47,36 @@ export default function AdminDashboardPage() {
       setLoading(true);
       const today = new Date().toISOString().split('T')[0];
 
-      const visitsPromise = supabase.from("visits").select("*").order("entry_time", { ascending: false }).limit(5);
       const recentOrdersPromise = supabase.from("orders").select("*, outlets(name)").order("order_date", { ascending: false }).limit(5);
-      const allOrdersPromise = supabase.from("orders").select("*");
       const outletsPromise = supabase.from("outlets").select("*");
-      const usersPromise = supabase.from("users").select("*");
       
       const outletsCountPromise = supabase.from("outlets").select('*', { count: 'exact', head: true });
       const usersCountPromise = supabase.from("users").select('*', { count: 'exact', head: true }).in('role', [2, 4]); // sales_executive, delivery_partner
-      const visitsTodayCountPromise = supabase.from("visits").select('*', { count: 'exact', head: true }).gte('entry_time', `${today}T00:00:00.000Z`);
       const ordersTodayCountPromise = supabase.from("orders").select('id', { count: 'exact', head: true }).gte('order_date', `${today}T00:00:00.000Z`);
 
 
       const [
-        visitsRes, 
         recentOrdersRes, 
-        allOrdersRes,
         outletsRes, 
-        usersRes,
         outletsCountRes,
         usersCountRes,
-        visitsTodayCountRes,
         ordersTodayCountRes
       ] = await Promise.all([
-        visitsPromise, 
         recentOrdersPromise,
-        allOrdersPromise,
         outletsPromise, 
-        usersPromise,
         outletsCountPromise,
-        usersCountPromise,
-        visitsTodayCountPromise,
+        usersCountRes,
         ordersTodayCountPromise,
       ]);
 
-      if (visitsRes.data) setRecentVisits(visitsRes.data);
       if (recentOrdersRes.data) setRecentOrders(recentOrdersRes.data as Order[]);
-      if (allOrdersRes.data) setAllOrders(allOrdersRes.data as Order[]);
       if (outletsRes.data) setOutlets(outletsRes.data);
-      if (usersRes.data) setUsers(usersRes.data);
       
-      const visitsTodayCount = visitsTodayCountRes.count ?? 0;
       const ordersTodayCount = ordersTodayCountRes.count ?? 0;
 
       setStats({
         totalOutlets: outletsCountRes.count ?? 0,
         activeUsers: usersCountRes.count ?? 0,
-        visitsToday: visitsTodayCount,
         successfulVisits: ordersTodayCount,
       });
 
@@ -150,36 +127,7 @@ export default function AdminDashboardPage() {
       <StatCards stats={stats} loading={loading} />
       <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-3">
         <Card className="xl:col-span-2">
-          <CardHeader className="flex flex-row items-center">
-            <div className="grid gap-2">
-              <CardTitle>Recent Visits</CardTitle>
-              <CardDescription>
-                An overview of the most recent sales executive visits.
-              </CardDescription>
-            </div>
-            <Button asChild size="sm" className="ml-auto gap-1">
-              <Link href="/dashboard/visits">
-                View All
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {loading ? <p>Loading recent visits...</p> : <VisitsTable visits={recentVisits} users={users} outlets={outlets} orders={allOrders}/>}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Outlets Overview</CardTitle>
-            <CardDescription>
-              Geographical distribution of all outlets.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-             {loading ? <p>Loading outlets map...</p> : <OutletsMap outlets={outlets} />}
-          </CardContent>
-        </Card>
-         <Card className="xl:col-span-full">
-          <CardHeader className="flex flex-row items-center">
+           <CardHeader className="flex flex-row items-center">
             <div className="grid gap-2">
                 <CardTitle>Recent Orders</CardTitle>
                 <CardDescription>
@@ -217,6 +165,17 @@ export default function AdminDashboardPage() {
                 </TableBody>
             </Table>
             )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Outlets Overview</CardTitle>
+            <CardDescription>
+              Geographical distribution of all outlets.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+             {loading ? <p>Loading outlets map...</p> : <OutletsMap outlets={outlets} />}
           </CardContent>
         </Card>
       </div>

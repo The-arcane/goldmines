@@ -7,12 +7,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Users, Warehouse, Route, CheckCircle } from "lucide-react";
+import { Users, Warehouse, CheckCircle } from "lucide-react";
 
 type StatData = {
   totalOutlets: number;
   activeUsers: number;
-  visitsToday: number;
   successfulVisits: number;
 };
 
@@ -25,8 +24,8 @@ type StatCardsProps = {
 export function StatCards({ stats, loading }: StatCardsProps) {
   if (loading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
+      <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
+        {[...Array(3)].map((_, i) => (
           <Card key={i}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div className="h-4 w-2/4 rounded bg-muted"></div>
@@ -42,7 +41,7 @@ export function StatCards({ stats, loading }: StatCardsProps) {
   }
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-3">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
@@ -65,18 +64,6 @@ export function StatCards({ stats, loading }: StatCardsProps) {
           <div className="text-2xl font-bold">+{stats.activeUsers}</div>
           <p className="text-xs text-muted-foreground">
             Sales & Delivery Teams
-          </p>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Visits Today</CardTitle>
-          <Route className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">+{stats.visitsToday}</div>
-          <p className="text-xs text-muted-foreground">
-            Across all outlets
           </p>
         </CardContent>
       </Card>
