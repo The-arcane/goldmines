@@ -67,7 +67,7 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [distributorStock, setDistributorStock] = useState<DistributorStock[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const [isSubmitting, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
 
@@ -316,7 +316,7 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
                                                                 render={({ field: controllerField }) => (
                                                                     <Select onValueChange={(value) => { handleFieldChange(index, 'sku_id', parseInt(value)); handleFieldChange(index, 'available_stock', distributorStock.find(s => s.sku_id === parseInt(value))?.stock_quantity ?? 0) }} defaultValue={String(controllerField.value)}>
                                                                         <FormControl><SelectTrigger><SelectValue placeholder="Select SKU" /></SelectTrigger></FormControl>
-                                                                        <SelectContent>{distributorStock.map(s => <SelectItem key={s.id} value={String(s.sku_id)}>{s.skus.name}</SelectItem>)}</SelectContent>
+                                                                        <SelectContent>{distributorStock.map(s => <SelectItem key={s.id} value={String(s.sku_id)}>{s.skus.name} {s.skus.unit_type ? `(${s.skus.unit_type})` : ''}</SelectItem>)}</SelectContent>
                                                                     </Select>
                                                                 )}
                                                             />
@@ -369,7 +369,7 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
                                                                 render={({ field: controllerField }) => (
                                                                     <Select onValueChange={(value) => { handleFieldChange(index, 'sku_id', parseInt(value)); handleFieldChange(index, 'available_stock', distributorStock.find(s => s.sku_id === parseInt(value))?.stock_quantity ?? 0) }} defaultValue={String(controllerField.value)}>
                                                                         <FormControl><SelectTrigger><SelectValue placeholder="Select SKU" /></SelectTrigger></FormControl>
-                                                                        <SelectContent>{distributorStock.map(s => <SelectItem key={s.id} value={String(s.sku_id)}>{s.skus.name}</SelectItem>)}</SelectContent>
+                                                                        <SelectContent>{distributorStock.map(s => <SelectItem key={s.id} value={String(s.sku_id)}>{s.skus.name} {s.skus.unit_type ? `(${s.skus.unit_type})` : ''}</SelectItem>)}</SelectContent>
                                                                     </Select>
                                                                 )}
                                                             />
