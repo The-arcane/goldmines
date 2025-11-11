@@ -23,12 +23,6 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export async function createNewUser(formData: UserFormData, distributorId?: string) {
   const supabaseAdmin = createServerActionClient({ isAdmin: true });
 
-  const userMetadata: {[key: string]: any} = {
-      name: formData.name,
-      role: formData.role,
-      avatar_url: `https://picsum.photos/seed/${formData.email}/100/100`,
-  };
-  
   const roleInt = (() => {
     switch (formData.role) {
       case 'admin': return 1;
@@ -38,6 +32,12 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
       default: return 2;
     }
   })();
+  
+  const userMetadata: {[key: string]: any} = {
+      name: formData.name,
+      role: roleInt,
+      avatar_url: `https://picsum.photos/seed/${formData.email}/100/100`,
+  };
   
   // Step 1: Create the user in auth.users. The database trigger should handle creating the public.users profile.
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
