@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { SalespersonMap } from "@/components/salesperson/live-map";
 
 export default function RoutePlanPage() {
-    const { user } = useAuth();
+    const { user, refetchKey } = useAuth();
     const [outlets, setOutlets] = useState<Outlet[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -33,7 +33,7 @@ export default function RoutePlanPage() {
         if(user) {
             fetchOutlets();
         }
-    }, [user, fetchOutlets]);
+    }, [user, fetchOutlets, refetchKey]);
 
     return (
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">

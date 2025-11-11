@@ -21,8 +21,10 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { useTranslation } from "@/components/i18n/provider";
 import { translateText } from "@/ai/flows/translate-text";
+import { useAuth } from "@/lib/auth";
 
 export default function AdminDashboardPage() {
+  const { refetchKey } = useAuth();
   const { t, locale } = useTranslation();
   const [recentVisits, setRecentVisits] = useState<Visit[]>([]);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
@@ -50,7 +52,7 @@ export default function AdminDashboardPage() {
     };
 
     fetchData();
-  }, []);
+  }, [refetchKey]);
   
   useEffect(() => {
     if (locale === 'hi' && recentOrders.length > 0) {

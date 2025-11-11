@@ -17,7 +17,7 @@ import { generateInvoice } from "@/lib/actions";
 import { useToast } from "@/hooks/use-toast";
 
 export default function OrdersPage() {
-    const { user, loading: authLoading } = useAuth();
+    const { user, loading: authLoading, refetchKey } = useAuth();
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [isPending, startTransition] = useTransition();
@@ -62,7 +62,7 @@ export default function OrdersPage() {
         if (!authLoading) {
             fetchOrders();
         }
-    }, [authLoading, fetchOrders]);
+    }, [authLoading, fetchOrders, refetchKey]);
 
     const handleGenerateInvoice = (orderId: number) => {
         startTransition(async () => {

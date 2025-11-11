@@ -66,7 +66,7 @@ type CreateOrderDrawerProps = {
 }
 
 export function CreateOrderDrawer({ outlet, onOrderPlaced, disabled }: CreateOrderDrawerProps) {
-    const { user } = useAuth();
+    const { user, refetchKey } = useAuth();
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [distributorStock, setDistributorStock] = useState<DistributorStock[]>([]);
@@ -128,7 +128,7 @@ export function CreateOrderDrawer({ outlet, onOrderPlaced, disabled }: CreateOrd
       if (open && user) {
         fetchData();
       }
-    }, [open, user, fetchData]);
+    }, [open, user, fetchData, refetchKey]);
 
     useEffect(() => {
         if (!open) {

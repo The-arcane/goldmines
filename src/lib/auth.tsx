@@ -11,7 +11,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   logout: () => Promise<void>;
-  sessionRefreshed: boolean;
+  refetchKey: number; // Add a refetch key
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,65 +29,69 @@ const mapNumericRoleToString = (role: number): UserRole => {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sessionRefreshed, setSessionRefreshed] = useState(false);
+  const [refetchKey, setRefetchKey] = useState(0); // State for the refetch key
   const router = useRouter();
 
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
     if (!supabaseUser) {
         return null;
     }
-
-    try {
-        const { data: profile, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('auth_id', supabaseUser.id)
-            .single();
-        
-        if (error) {
-            console.error("Error fetching user profile:", error);
-            await supabase.auth.signOut();
-            return null;
-        }
-
-        return {
-            id: profile.id,
-            auth_id: supabaseUser.id,
-            name: profile.name,
-            email: profile.email,
-            role: mapNumericRoleToString(profile.role),
-            avatar_url: profile.avatar_url,
-            created_at: profile.created_at,
-        };
-    } catch (e) {
-        console.error("Exception in fetchUserProfile:", e);
+    const { data: profile, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('auth_id', supabaseUser.id)
+        .single();
+    
+    if (error) {
+        console.error("Error fetching user profile:", error);
+        await supabase.auth.signOut();
         return null;
     }
+    return {
+        id: profile.id,
+        auth_id: supabaseUser.id,
+        name: profile.name,
+        email: profile.email,
+        role: mapNumericRoleToString(profile.role),
+        avatar_url: profile.avatar_url,
+        created_at: profile.created_at,
+    };
   }, []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        setLoading(true);
         const supabaseUser = session?.user ?? null;
         const profile = await fetchUserProfile(supabaseUser);
         setUser(profile);
-        setSessionRefreshed(true);
         setLoading(false);
       }
     );
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Increment the key to trigger re-fetches in components
+        setRefetchKey(prevKey => prevKey + 1);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       subscription.unsubscribe();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [fetchUserProfile]);
 
 
   const logout = async () => {
     await supabase.auth.signOut();
-    router.push('/login');
+    router.push('/login'); // Redirect to a generic login, which will then handle role-specific redirects
+    setUser(null);
   };
   
-  const value = { user, loading, logout, sessionRefreshed };
+  const value = { user, loading, logout, refetchKey };
 
   return (
     <AuthContext.Provider value={value}>

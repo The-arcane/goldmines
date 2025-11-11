@@ -14,7 +14,7 @@ import { RecordPaymentDialog } from "@/components/dashboard/distributor/record-p
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function PaymentsPage() {
-    const { user } = useAuth();
+    const { user, refetchKey } = useAuth();
     const [orders, setOrders] = useState<Order[]>([]);
     const [distributor, setDistributor] = useState<Distributor | null>(null);
     const [loading, setLoading] = useState(true);
@@ -55,7 +55,7 @@ export default function PaymentsPage() {
         if (user) {
             fetchPaymentData();
         }
-    }, [user, fetchPaymentData]);
+    }, [user, fetchPaymentData, refetchKey]);
 
     const totalDues = useMemo(() => {
         return orders.reduce((sum, order) => {

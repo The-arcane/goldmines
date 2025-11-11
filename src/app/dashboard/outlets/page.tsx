@@ -15,11 +15,13 @@ import { OutletsMap } from "@/components/dashboard/outlets/outlets-map";
 import { useToast } from "@/hooks/use-toast";
 import { EditOutletDialog } from "@/components/dashboard/outlets/edit-outlet-dialog";
 import { DeleteOutletAlert } from "@/components/dashboard/outlets/delete-outlet-alert";
+import { useAuth } from "@/lib/auth";
 
 export default function OutletsPage() {
     const [outlets, setOutlets] = useState<Outlet[]>([]);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
+    const { refetchKey } = useAuth();
 
     const fetchOutlets = async () => {
         setLoading(true);
@@ -40,7 +42,7 @@ export default function OutletsPage() {
 
     useEffect(() => {
         fetchOutlets();
-    }, []);
+    }, [refetchKey]);
 
     const handleDataChange = () => {
         fetchOutlets();

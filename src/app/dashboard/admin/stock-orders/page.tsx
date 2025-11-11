@@ -22,12 +22,14 @@ import {
 import { MoreHorizontal, CheckCircle, XCircle, Truck, Eye, Check, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { updateStockOrderStatus, generateInvoice } from "@/lib/actions";
+import { useAuth } from "@/lib/auth";
 
 export default function AdminStockOrdersPage() {
     const [orders, setOrders] = useState<StockOrder[]>([]);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
     const [isPending, startTransition] = useTransition();
+    const { refetchKey } = useAuth();
 
     const fetchOrders = useCallback(async () => {
         setLoading(true);
@@ -47,7 +49,7 @@ export default function AdminStockOrdersPage() {
 
     useEffect(() => {
         fetchOrders();
-    }, [fetchOrders]);
+    }, [fetchOrders, refetchKey]);
     
     const getStatusVariant = (status: string) => {
         switch (status) {

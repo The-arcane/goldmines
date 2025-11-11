@@ -60,7 +60,7 @@ type CreateOrderDialogContentProps = {
 }
 
 export function CreateOrderDialogContent({ outlet, onOrderPlaced, setOpen, open }: CreateOrderDialogContentProps) {
-    const { user } = useAuth();
+    const { user, refetchKey } = useAuth();
     const { toast } = useToast();
     const [distributorStock, setDistributorStock] = useState<DistributorStock[]>([]);
     const [loading, setLoading] = useState(true);
@@ -121,7 +121,7 @@ export function CreateOrderDialogContent({ outlet, onOrderPlaced, setOpen, open 
         if(open && user) {
             fetchData();
         }
-    }, [open, user, fetchData]);
+    }, [open, user, fetchData, refetchKey]);
 
     const watchedItems = form.watch("items");
     const watchedPaymentStatus = form.watch("payment_status");

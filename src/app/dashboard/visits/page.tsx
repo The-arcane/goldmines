@@ -6,12 +6,14 @@ import { supabase } from "@/lib/supabaseClient";
 import type { Visit, User, Outlet } from "@/lib/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { VisitsTable } from "@/components/dashboard/admin/visits-table";
+import { useAuth } from "@/lib/auth";
 
 export default function VisitsPage() {
     const [visits, setVisits] = useState<Visit[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [outlets, setOutlets] = useState<Outlet[]>([]);
     const [loading, setLoading] = useState(true);
+    const { refetchKey } = useAuth();
 
     useEffect(() => {
         const fetchData = async () => {
@@ -30,7 +32,7 @@ export default function VisitsPage() {
         };
 
         fetchData();
-    }, []);
+    }, [refetchKey]);
 
     return (
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">

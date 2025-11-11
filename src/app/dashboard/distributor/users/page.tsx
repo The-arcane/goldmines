@@ -29,7 +29,7 @@ const mapNumericRoleToString = (role: number): UserRole => {
 }
 
 export default function DistributorUsersPage() {
-    const { user } = useAuth();
+    const { user, refetchKey } = useAuth();
     const { t } = useTranslation();
     const [teamMembers, setTeamMembers] = useState<User[]>([]);
     const [distributor, setDistributor] = useState<Distributor | null>(null);
@@ -102,7 +102,7 @@ export default function DistributorUsersPage() {
         } else {
             setLoading(false);
         }
-    }, [user, fetchDistributorData]);
+    }, [user, fetchDistributorData, refetchKey]);
 
     const getInitials = (name: string) => {
         if (!name) return '??';

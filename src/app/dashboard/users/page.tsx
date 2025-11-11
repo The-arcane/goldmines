@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { AddUserDialog } from "@/components/dashboard/users/add-user-dialog";
+import { useAuth } from "@/lib/auth";
 
 // Admins can create Sales Execs and Delivery Partners directly.
 // Distributor Admins are created via the Distributors page.
@@ -34,6 +35,7 @@ export default function UsersPage() {
     const [users, setUsers] = useState<User[]>([]);
     const [distributors, setDistributors] = useState<Distributor[]>([]);
     const [loading, setLoading] = useState(true);
+    const { refetchKey } = useAuth();
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -55,7 +57,7 @@ export default function UsersPage() {
 
     useEffect(() => {
         fetchData();
-    }, [fetchData]);
+    }, [fetchData, refetchKey]);
 
     const getInitials = (name: string) => {
         if(!name) return '??';

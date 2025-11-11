@@ -21,7 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
 export default function DistributorDashboardPage() {
-  const { user } = useAuth();
+  const { user, refetchKey } = useAuth();
   const [teamMembers, setTeamMembers] = useState<User[]>([]);
   const [assignedOutlets, setAssignedOutlets] = useState<Outlet[]>([]);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
@@ -82,7 +82,7 @@ export default function DistributorDashboardPage() {
     if (user) {
       fetchDistributorData();
     }
-  }, [user, fetchDistributorData]);
+  }, [user, fetchDistributorData, refetchKey]);
 
    const getInitials = (name: string) => {
     if (!name) return '??';

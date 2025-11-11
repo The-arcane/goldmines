@@ -14,7 +14,7 @@ import Link from "next/link";
 import { Loader2 } from "lucide-react";
 
 export default function MyOrdersPage() {
-    const { user, loading: authLoading } = useAuth();
+    const { user, loading: authLoading, refetchKey } = useAuth();
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -42,7 +42,7 @@ export default function MyOrdersPage() {
         } else if (!authLoading && !user) {
             setLoading(false);
         }
-    }, [user, authLoading, fetchOrders]);
+    }, [user, authLoading, fetchOrders, refetchKey]);
     
     const getStatusVariant = (status: string) => {
         switch (status) {

@@ -8,11 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { AddDistributorDialog } from "@/components/dashboard/distributors/add-distributor-dialog";
+import { useAuth } from "@/lib/auth";
 
 export default function DistributorsPage() {
     const [distributors, setDistributors] = useState<Distributor[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
+    const { refetchKey } = useAuth();
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -28,7 +30,7 @@ export default function DistributorsPage() {
 
     useEffect(() => {
         fetchData();
-    }, [fetchData]);
+    }, [fetchData, refetchKey]);
 
     const getAdminName = (adminUserId: number | null) => {
         if (!adminUserId) return <span className="text-muted-foreground">Not Assigned</span>;
