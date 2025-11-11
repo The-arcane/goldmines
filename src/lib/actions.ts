@@ -656,8 +656,25 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
     const stockUpdateErrors = [];
 
     for (const item of order.stock_order_items) {
-        const totalUnitsToMove = item.quantity * (item.skus?.units_per_case || 1);
+        if (!item.skus) {
+            stockUpdateErrors.push(`Missing SKU details for an item in the order.`);
+            continue;
+        }
 
+        const totalUnitsToMove = item.quantity * (item.skus.units_per_case || 1);
+
+        // 1. Decrement Super Admin's stock in the 'skus' table
+        const { error: adminStockError } = await supabase.rpc('decrement_master_stock', {
+            p_sku_id: item.sku_id,
+            p_quantity: totalUnitsToMove
+        });
+        if (adminStockError) {
+             stockUpdateErrors.push(`Failed to update master stock for SKU ${item.sku_id}: ${adminStockError.message}`);
+             continue; // Stop processing this item if master stock fails
+        }
+        
+
+        // 2. Increment/Insert Distributor's stock in 'distributor_stock' table
         const { data: existingStock, error: fetchStockError } = await supabase
             .from('distributor_stock')
             .select('id, stock_quantity')
@@ -667,6 +684,7 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
 
         if (fetchStockError && fetchStockError.code !== 'PGRST116') { // Ignore "not found" error
             stockUpdateErrors.push(`Error checking stock for SKU ${item.sku_id}: ${fetchStockError.message}`);
+            // Here we should ideally roll back the admin stock decrement
             continue;
         }
 
@@ -681,7 +699,7 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
                     units_per_case: item.skus?.units_per_case
                 })
                 .eq('id', existingStock.id);
-            if (updateStockError) stockUpdateErrors.push(`Failed to update stock for SKU ${item.sku_id}: ${updateStockError.message}`);
+            if (updateStockError) stockUpdateErrors.push(`Failed to update distributor stock for SKU ${item.sku_id}: ${updateStockError.message}`);
         } else {
             const { error: insertStockError } = await supabase
                 .from('distributor_stock')
@@ -693,12 +711,14 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
                     mrp: item.skus?.mrp,
                     units_per_case: item.skus?.units_per_case
                 });
-            if (insertStockError) stockUpdateErrors.push(`Failed to insert stock for SKU ${item.sku_id}: ${insertStockError.message}`);
+            if (insertStockError) stockUpdateErrors.push(`Failed to insert distributor stock for SKU ${item.sku_id}: ${insertStockError.message}`);
         }
     }
 
     if (stockUpdateErrors.length > 0) {
         console.error("Stock update errors:", stockUpdateErrors);
+        // Note: This is a partial failure state. Some master stocks might be decremented.
+        // A full transaction would be needed for a perfect rollback.
         return { success: false, error: `Order status not updated. Stock update failed: ${stockUpdateErrors.join('; ')}` };
     }
 
@@ -712,6 +732,7 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
         return { success: false, error: `Critical error: Stock was updated, but failed to mark order as delivered. Please check manually. Error: ${updateStatusError.message}` };
     }
     
+    revalidatePath('/dashboard/skus');
     revalidatePath('/dashboard/admin/stock-orders');
     revalidatePath('/dashboard/distributor/skus');
     revalidatePath('/dashboard/distributor/stock-orders');
@@ -824,3 +845,4 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
   revalidatePath('/dashboard/distributor/stock-orders');
   redirect(`/invoice/${invoiceData.id}`);
 }
+
