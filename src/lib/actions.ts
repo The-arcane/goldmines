@@ -23,19 +23,18 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function createNewUser(formData: UserFormData, distributorId?: string) {
   const supabaseAdmin = createServerActionClient({ isAdmin: true });
-
-  const userMetadata: {[key: string]: any} = {
-      name: formData.name,
-      // Role is now an ENUM, it will be set on the public.users table directly after creation
-      avatar_url: `https://picsum.photos/seed/${formData.email}/100/100`,
-  };
   
-  // Step 1: Create the user in auth.users. The database trigger should handle creating the public.users profile.
+  // Step 1: Create the user in auth.users. 
+  // The database trigger will now correctly handle creating the public.users profile WITH the role.
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email: formData.email,
     password: formData.password,
     email_confirm: true, // Auto-confirm email
-    user_metadata: userMetadata,
+    user_metadata: {
+        name: formData.name,
+        role: formData.role, // Pass the role string directly
+        avatar_url: `https://picsum.photos/seed/${formData.email}/100/100`,
+    },
   });
 
   if (authError) {
@@ -51,22 +50,21 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
   // Wait a moment for the trigger to fire and create the public.users row
   await sleep(1000); 
 
-  // Step 2: Now that the trigger has run, update the new user's role in public.users
-   const { data: updatedUser, error: updateError } = await supabaseAdmin
+  // Step 2: Get the new user's ID from the public.users table.
+   const { data: userProfile, error: profileError } = await supabaseAdmin
     .from('users')
-    .update({ role: formData.role })
-    .eq('auth_id', authUser.id)
     .select('id')
+    .eq('auth_id', authUser.id)
     .single();
 
-  if (updateError || !updatedUser) {
-    console.error('Error updating role for new user:', updateError);
-     // Cleanup auth user if profile update fails
+  if (profileError || !userProfile) {
+    console.error('Could not find new user profile after creation:', profileError);
+    // Cleanup auth user if profile was not created
     await supabaseAdmin.auth.admin.deleteUser(authUser.id);
-    return { success: false, error: 'User was created in auth, but failed to set role in profile. Rolled back.' };
+    return { success: false, error: 'User auth record was created, but the profile was not found. Rolled back.' };
   }
 
-  const newUserId = updatedUser.id;
+  const newUserId = userProfile.id;
 
   // Step 3: If it's a distributor user, link them in the junction table
   const distributorRoles: UserRole[] = ['delivery_partner', 'distributor_admin', 'sales_executive'];

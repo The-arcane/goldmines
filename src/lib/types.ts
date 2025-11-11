@@ -1,4 +1,5 @@
 
+
 export type UserRole = 'super_admin' | 'sales_executive' | 'distributor_admin' | 'delivery_partner';
 
 export type User = {
