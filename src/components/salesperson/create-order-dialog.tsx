@@ -87,24 +87,27 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
         setError(null);
     
         try {
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('distributor_id:distributor_users!inner(distributor_id)')
-            .eq('id', user.id)
+          // Step 1: Find the distributor_id for the current sales executive
+          const { data: distributorLink, error: distributorLinkError } = await supabase
+            .from('distributor_users')
+            .select('distributor_id')
+            .eq('user_id', user.id)
             .single();
     
-          if (userError || !userData || !(userData as any).distributor_id.length) {
+          if (distributorLinkError || !distributorLink) {
             throw new Error("You are not assigned to a distributor.");
           }
+          
+          const distributorId = distributorLink.distributor_id;
     
-          const distributorId = (userData as any).distributor_id[0].distributor_id;
-    
+          // Step 2: Fetch the stock for that distributor
           const { data: stockData, error: stockError } = await supabase
             .from('distributor_stock')
-            .select('*, skus(*)')
+            .select('*, skus(*)') // Ensure you have RLS for users to read skus table
             .eq('distributor_id', distributorId);
     
           if (stockError) {
+            console.error("Stock fetch error:", stockError);
             throw new Error("Could not load distributor's product stock.");
           }
     
@@ -458,5 +461,3 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
         </Dialog>
     );
 }
-
-    
