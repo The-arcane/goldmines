@@ -29,7 +29,7 @@ export default function AdminStockOrdersPage() {
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
     const [isPending, startTransition] = useTransition();
-    const { refetchKey } = useAuth();
+    const { user } = useAuth();
 
     const fetchOrders = useCallback(async () => {
         setLoading(true);
@@ -48,8 +48,10 @@ export default function AdminStockOrdersPage() {
     }, []);
 
     useEffect(() => {
-        fetchOrders();
-    }, [fetchOrders, refetchKey]);
+        if(user) {
+            fetchOrders();
+        }
+    }, [fetchOrders, user]);
     
     const getStatusVariant = (status: string) => {
         switch (status) {

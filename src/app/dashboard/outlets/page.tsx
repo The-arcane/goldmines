@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { Outlet } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -21,9 +21,9 @@ export default function OutletsPage() {
     const [outlets, setOutlets] = useState<Outlet[]>([]);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
-    const { refetchKey } = useAuth();
+    const { user } = useAuth();
 
-    const fetchOutlets = async () => {
+    const fetchOutlets = useCallback(async () => {
         setLoading(true);
         const { data, error } = await supabase.from("outlets").select("*").order("name", { ascending: true });
 
@@ -38,11 +38,13 @@ export default function OutletsPage() {
             setOutlets(data || []);
         }
         setLoading(false);
-    };
+    }, [toast]);
 
     useEffect(() => {
-        fetchOutlets();
-    }, [refetchKey]);
+        if(user) {
+            fetchOutlets();
+        }
+    }, [fetchOutlets, user]);
 
     const handleDataChange = () => {
         fetchOutlets();

@@ -11,7 +11,6 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   logout: () => Promise<void>;
-  refetchKey: number; // Keep for components that already use it, but central logic is removed.
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,7 +28,6 @@ const mapNumericRoleToString = (role: number): UserRole => {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refetchKey, setRefetchKey] = useState(0); // This can still be used for manual refreshes if needed.
   const router = useRouter();
 
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
@@ -44,10 +42,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (error) {
         console.error("Error fetching user profile:", error);
-        // Don't sign out here, as it might be a temporary network issue.
-        // Let the UI handle the "no profile" case.
         return null;
     }
+
     return {
         id: profile.id,
         auth_id: supabaseUser.id,
@@ -63,14 +60,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         const supabaseUser = session?.user ?? null;
+        
+        // Always fetch profile on auth change
         const profile = await fetchUserProfile(supabaseUser);
         setUser(profile);
         setLoading(false);
-
-        // This is a good place to trigger a refetch after auth state is confirmed.
-        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-          setRefetchKey(prev => prev + 1);
-        }
       }
     );
 
@@ -82,11 +76,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     await supabase.auth.signOut();
+    // Redirect is handled by layouts listening to user state
+    setUser(null); 
     router.push('/login');
-    setUser(null);
   };
   
-  const value = { user, loading, logout, refetchKey };
+  const value = { user, loading, logout };
 
   return (
     <AuthContext.Provider value={value}>

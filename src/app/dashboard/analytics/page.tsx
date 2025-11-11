@@ -38,7 +38,7 @@ type DailyOrderSummary = {
 }
 
 export default function AnalyticsPage() {
-    const { refetchKey } = useAuth();
+    const { user } = useAuth();
     const [salesReps, setSalesReps] = useState<User[]>([]);
     const [deliveryBoys, setDeliveryBoys] = useState<User[]>([]);
     const [visits, setVisits] = useState<Visit[]>([]);
@@ -75,8 +75,10 @@ export default function AnalyticsPage() {
             
             setLoading(false);
         };
-        fetchData();
-    }, [refetchKey]);
+        if(user) {
+            fetchData();
+        }
+    }, [user]);
 
     const salesRepStats: SalesRepStats[] = useMemo(() => {
         return salesReps.map(rep => {

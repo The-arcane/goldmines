@@ -33,7 +33,7 @@ const formSchema = z.object({
 type StockOrderFormValues = z.infer<typeof formSchema>;
 
 export default function CreateStockOrderPage() {
-    const { user, refetchKey } = useAuth();
+    const { user } = useAuth();
     const router = useRouter();
     const { toast } = useToast();
     const [distributor, setDistributor] = useState<Distributor | null>(null);
@@ -83,7 +83,11 @@ export default function CreateStockOrderPage() {
         }
     }, [user, toast]);
 
-    useEffect(() => { fetchData() }, [fetchData, refetchKey]);
+    useEffect(() => { 
+        if(user) {
+            fetchData();
+        }
+    }, [fetchData, user]);
 
     const watchedItems = form.watch("items");
     const totalValue = watchedItems.reduce((sum, item) => sum + (item.total_price || 0), 0);

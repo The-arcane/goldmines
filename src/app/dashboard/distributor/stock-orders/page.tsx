@@ -18,7 +18,7 @@ import { updateOrderStatus } from "@/lib/actions";
 
 
 export default function StockOrdersPage() {
-    const { user, loading: authLoading, refetchKey } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const [orders, setOrders] = useState<StockOrder[]>([]);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
@@ -63,7 +63,7 @@ export default function StockOrdersPage() {
         if (!authLoading) {
             fetchOrders();
         }
-    }, [authLoading, fetchOrders, refetchKey]);
+    }, [authLoading, fetchOrders]);
     
     const getStatusVariant = (status: string) => {
         switch (status) {

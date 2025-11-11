@@ -24,7 +24,7 @@ import { translateText } from "@/ai/flows/translate-text";
 import { useAuth } from "@/lib/auth";
 
 export default function AdminDashboardPage() {
-  const { refetchKey } = useAuth();
+  const { user } = useAuth();
   const { t, locale } = useTranslation();
   const [recentVisits, setRecentVisits] = useState<Visit[]>([]);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
@@ -41,7 +41,7 @@ export default function AdminDashboardPage() {
       const outletsPromise = supabase.from("outlets").select("*");
       const usersPromise = supabase.from("users").select("*");
 
-      const [visitsRes, ordersRes, outletsRes, usersRes] = await Promise.all([visitsPromise, ordersPromise, outletsPromise, usersPromise]);
+      const [visitsRes, ordersRes, outletsRes, usersRes] = await Promise.all([visitsPromise, ordersPromise, outletsPromise, usersRes]);
 
       if (visitsRes.data) setRecentVisits(visitsRes.data);
       if (ordersRes.data) setRecentOrders(ordersRes.data as Order[]);
@@ -51,8 +51,10 @@ export default function AdminDashboardPage() {
       setLoading(false);
     };
 
-    fetchData();
-  }, [refetchKey]);
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
   
   useEffect(() => {
     if (locale === 'hi' && recentOrders.length > 0) {

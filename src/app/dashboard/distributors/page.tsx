@@ -14,7 +14,7 @@ export default function DistributorsPage() {
     const [distributors, setDistributors] = useState<Distributor[]>([]);
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
-    const { refetchKey } = useAuth();
+    const { user } = useAuth();
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -29,8 +29,10 @@ export default function DistributorsPage() {
     }, []);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData, refetchKey]);
+        if(user) {
+            fetchData();
+        }
+    }, [fetchData, user]);
 
     const getAdminName = (adminUserId: number | null) => {
         if (!adminUserId) return <span className="text-muted-foreground">Not Assigned</span>;

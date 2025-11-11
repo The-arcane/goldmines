@@ -20,7 +20,7 @@ import { useTranslation } from "@/components/i18n/provider";
 
 
 export default function SalespersonDashboardPage() {
-    const { user, loading: authLoading, refetchKey } = useAuth();
+    const { user, loading: authLoading } = useAuth();
     const { toast } = useToast();
     const { t } = useTranslation();
     const [attendance, setAttendance] = useState<Attendance | null>(null);
@@ -87,7 +87,7 @@ export default function SalespersonDashboardPage() {
         } else if (!authLoading && !user) {
             setLoading(false);
         }
-    }, [user, authLoading, fetchDashboardData, refetchKey]);
+    }, [user, authLoading, fetchDashboardData]);
     
     const activeOutlets = useMemo(() => {
         if (!coords || allOutlets.length === 0) {

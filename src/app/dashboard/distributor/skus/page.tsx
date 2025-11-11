@@ -12,7 +12,7 @@ import { AddSkuDialog } from "@/components/dashboard/distributor/add-sku-dialog"
 import { useTranslation } from "@/components/i18n/provider";
 
 export default function SkusPage() {
-    const { user, refetchKey } = useAuth();
+    const { user } = useAuth();
     const { t } = useTranslation();
     const [distributorStock, setDistributorStock] = useState<DistributorStock[]>([]);
     const [distributor, setDistributor] = useState<Distributor | null>(null);
@@ -53,7 +53,7 @@ export default function SkusPage() {
         if (user) {
             fetchSkus();
         }
-    }, [user, fetchSkus, refetchKey]);
+    }, [user, fetchSkus]);
 
     return (
         <main className="flex flex-1 flex-col gap-4 md:gap-8">

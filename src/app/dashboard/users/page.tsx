@@ -35,7 +35,7 @@ export default function UsersPage() {
     const [users, setUsers] = useState<User[]>([]);
     const [distributors, setDistributors] = useState<Distributor[]>([]);
     const [loading, setLoading] = useState(true);
-    const { refetchKey } = useAuth();
+    const { user } = useAuth();
 
     const fetchData = useCallback(async () => {
         setLoading(true);
@@ -56,8 +56,10 @@ export default function UsersPage() {
     }, []);
 
     useEffect(() => {
-        fetchData();
-    }, [fetchData, refetchKey]);
+        if(user) {
+            fetchData();
+        }
+    }, [fetchData, user]);
 
     const getInitials = (name: string) => {
         if(!name) return '??';
