@@ -30,7 +30,7 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
                     <Button disabled={disabled}>Order</Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-4xl max-h-[90vh]">
-                     <CreateOrderDialogContent outlet={outlet} onOrderPlaced={onOrderPlaced} setOpen={setOpen} />
+                     <CreateOrderDialogContent outlet={outlet} onOrderPlaced={onOrderPlaced} setOpen={setOpen} open={open} />
                 </DialogContent>
             </Dialog>
         );

@@ -56,10 +56,11 @@ type CreateOrderDialogContentProps = {
     outlet: Outlet;
     onOrderPlaced: () => void;
     setOpen: (open: boolean) => void;
+    open: boolean;
 }
 
-export function CreateOrderDialogContent({ outlet, onOrderPlaced, setOpen }: CreateOrderDialogContentProps) {
-    const { user, sessionRefreshed } = useAuth();
+export function CreateOrderDialogContent({ outlet, onOrderPlaced, setOpen, open }: CreateOrderDialogContentProps) {
+    const { user } = useAuth();
     const { toast } = useToast();
     const [distributorStock, setDistributorStock] = useState<DistributorStock[]>([]);
     const [loading, setLoading] = useState(true);
@@ -117,10 +118,10 @@ export function CreateOrderDialogContent({ outlet, onOrderPlaced, setOpen }: Cre
     }, [user, toast]);
     
     useEffect(() => {
-        if(sessionRefreshed) {
+        if(open && user) {
             fetchData();
         }
-    }, [sessionRefreshed, fetchData]);
+    }, [open, user, fetchData]);
 
     const watchedItems = form.watch("items");
     const watchedPaymentStatus = form.watch("payment_status");
@@ -372,5 +373,3 @@ export function CreateOrderDialogContent({ outlet, onOrderPlaced, setOpen }: Cre
         </Form>
     );
 }
-
-    

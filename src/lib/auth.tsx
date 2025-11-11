@@ -11,6 +11,7 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   logout: () => Promise<void>;
+  sessionRefreshed: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,7 +28,8 @@ const mapNumericRoleToString = (role: number): UserRole => {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true); // Start as true
+  const [loading, setLoading] = useState(true);
+  const [sessionRefreshed, setSessionRefreshed] = useState(false);
   const router = useRouter();
 
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
@@ -44,7 +46,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (error) {
             console.error("Error fetching user profile:", error);
-            // This might happen if profile creation trigger fails. Log out the user.
             await supabase.auth.signOut();
             return null;
         }
@@ -66,15 +67,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         const supabaseUser = session?.user ?? null;
-        if (supabaseUser) {
-          const profile = await fetchUserProfile(supabaseUser);
-          setUser(profile);
-        } else {
-          setUser(null);
-        }
-        // Only set loading to false after the auth state has been determined.
+        const profile = await fetchUserProfile(supabaseUser);
+        setUser(profile);
+        setSessionRefreshed(true);
         setLoading(false);
       }
     );
@@ -90,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push('/login');
   };
   
-  const value = { user, loading, logout };
+  const value = { user, loading, logout, sessionRefreshed };
 
   return (
     <AuthContext.Provider value={value}>
