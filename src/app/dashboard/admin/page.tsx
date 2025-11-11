@@ -31,10 +31,11 @@ type AdminStats = {
 };
 
 export default function AdminDashboardPage() {
-  const { user, loading: authLoading, refetchKey } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { t, locale } = useTranslation();
   const [recentVisits, setRecentVisits] = useState<Visit[]>([]);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [outlets, setOutlets] = useState<Outlet[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<AdminStats>({
@@ -47,12 +48,14 @@ export default function AdminDashboardPage() {
   const [translatedStatuses, setTranslatedStatuses] = useState<Record<string, string>>({});
 
   useEffect(() => {
+    if (!user) return;
     const fetchData = async () => {
       setLoading(true);
       const today = new Date().toISOString().split('T')[0];
 
       const visitsPromise = supabase.from("visits").select("*").order("entry_time", { ascending: false }).limit(5);
-      const ordersPromise = supabase.from("orders").select("*, outlets(name)").order("order_date", { ascending: false }).limit(5);
+      const recentOrdersPromise = supabase.from("orders").select("*, outlets(name)").order("order_date", { ascending: false }).limit(5);
+      const allOrdersPromise = supabase.from("orders").select("*");
       const outletsPromise = supabase.from("outlets").select("*");
       const usersPromise = supabase.from("users").select("*");
       
@@ -64,7 +67,8 @@ export default function AdminDashboardPage() {
 
       const [
         visitsRes, 
-        ordersRes, 
+        recentOrdersRes, 
+        allOrdersRes,
         outletsRes, 
         usersRes,
         outletsCountRes,
@@ -73,7 +77,8 @@ export default function AdminDashboardPage() {
         ordersTodayCountRes
       ] = await Promise.all([
         visitsPromise, 
-        ordersPromise, 
+        recentOrdersPromise,
+        allOrdersPromise,
         outletsPromise, 
         usersPromise,
         outletsCountPromise,
@@ -83,7 +88,8 @@ export default function AdminDashboardPage() {
       ]);
 
       if (visitsRes.data) setRecentVisits(visitsRes.data);
-      if (ordersRes.data) setRecentOrders(ordersRes.data as Order[]);
+      if (recentOrdersRes.data) setRecentOrders(recentOrdersRes.data as Order[]);
+      if (allOrdersRes.data) setAllOrders(allOrdersRes.data as Order[]);
       if (outletsRes.data) setOutlets(outletsRes.data);
       if (usersRes.data) setUsers(usersRes.data);
       
@@ -94,16 +100,14 @@ export default function AdminDashboardPage() {
         totalOutlets: outletsCountRes.count ?? 0,
         activeUsers: usersCountRes.count ?? 0,
         visitsToday: visitsTodayCount,
-        successfulVisits: visitsTodayCount + ordersTodayCount,
+        successfulVisits: ordersTodayCount,
       });
 
       setLoading(false);
     };
 
-    if (user) {
-      fetchData();
-    }
-  }, [user, refetchKey]);
+    fetchData();
+  }, [user]);
   
   useEffect(() => {
     if (locale === 'hi' && recentOrders.length > 0) {
@@ -160,7 +164,7 @@ export default function AdminDashboardPage() {
             </Button>
           </CardHeader>
           <CardContent>
-            {loading ? <p>Loading recent visits...</p> : <VisitsTable visits={recentVisits} users={users} outlets={outlets} />}
+            {loading ? <p>Loading recent visits...</p> : <VisitsTable visits={recentVisits} users={users} outlets={outlets} orders={allOrders}/>}
           </CardContent>
         </Card>
         <Card>
