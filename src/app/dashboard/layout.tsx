@@ -16,15 +16,16 @@ export default function DashboardLayout({
   const router = useRouter();
 
   useEffect(() => {
-    // Wait until the loading is false before making any routing decisions
-    if (!loading) {
-      if (!user) {
-        // If loading is done and there's no user, redirect to login
-        router.replace("/login");
-      } else if (user.role === 'sales_executive') {
-        // If the user is a sales exec, they don't belong in the main dashboard
-        router.replace("/salesperson/dashboard");
-      }
+    if (loading) {
+      return; // Do nothing while loading
+    }
+    if (!user) {
+      router.replace("/login");
+      return;
+    }
+    if (user.role === 'sales_executive') {
+      router.replace("/salesperson/dashboard");
+      return;
     }
   }, [user, loading, router]);
   

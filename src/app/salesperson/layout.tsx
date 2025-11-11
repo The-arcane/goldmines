@@ -16,19 +16,20 @@ export default function SalespersonLayout({
   const router = useRouter();
 
   useEffect(() => {
-    // Wait until the loading is false before making any routing decisions
-    if (!loading) {
-      if (!user) {
-        // If loading is done and there's no user, send them to the correct login page
-        router.replace("/salesperson/login");
-      } else if (user.role !== 'sales_executive') {
-        // If the user is not a sales executive, they don't belong here. Send to main login.
-        router.replace("/login");
-      }
+    if (loading) {
+      return; // Do nothing while loading
+    }
+    if (!user) {
+      router.replace("/salesperson/login");
+      return;
+    }
+    if (user.role !== 'sales_executive') {
+      router.replace("/login");
+      return;
     }
   }, [user, loading, router]);
   
-  // This is the key change: always show a loading screen while `loading` is true
+  // Always show a loading screen while `loading` is true
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">

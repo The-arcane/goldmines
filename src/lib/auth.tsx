@@ -33,7 +33,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
-        setLoading(true);
         const supabaseUser = session?.user ?? null;
         
         if (supabaseUser) {
@@ -43,10 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 .eq('auth_id', supabaseUser.id)
                 .single();
 
-            if (error) {
-                console.error("Error fetching user profile:", error);
-                setUser(null);
-            } else if (profile) {
+            if (profile) {
                 setUser({
                     id: profile.id,
                     auth_id: supabaseUser.id,
@@ -62,38 +58,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
             setUser(null);
         }
-        
         setLoading(false);
       }
     );
-
-    // Initial check
-    const checkInitialSession = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        const supabaseUser = session?.user ?? null;
-        if (supabaseUser) {
-             const { data: profile, error } = await supabase
-                .from('users')
-                .select('*')
-                .eq('auth_id', supabaseUser.id)
-                .single();
-
-            if (profile) {
-                 setUser({
-                    id: profile.id,
-                    auth_id: supabaseUser.id,
-                    name: profile.name,
-                    email: profile.email,
-                    role: mapNumericRoleToString(profile.role),
-                    avatar_url: profile.avatar_url,
-                    created_at: profile.created_at,
-                });
-            }
-        }
-        setLoading(false);
-    }
-    checkInitialSession();
-
 
     return () => {
       subscription.unsubscribe();
