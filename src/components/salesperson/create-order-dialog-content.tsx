@@ -59,7 +59,7 @@ type CreateOrderDialogContentProps = {
 }
 
 export function CreateOrderDialogContent({ outlet, onOrderPlaced, setOpen }: CreateOrderDialogContentProps) {
-    const { user } = useAuth();
+    const { user, sessionRefreshed } = useAuth();
     const { toast } = useToast();
     const [distributorStock, setDistributorStock] = useState<DistributorStock[]>([]);
     const [loading, setLoading] = useState(true);
@@ -117,8 +117,10 @@ export function CreateOrderDialogContent({ outlet, onOrderPlaced, setOpen }: Cre
     }, [user, toast]);
     
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        if(sessionRefreshed) {
+            fetchData();
+        }
+    }, [sessionRefreshed, fetchData]);
 
     const watchedItems = form.watch("items");
     const watchedPaymentStatus = form.watch("payment_status");
@@ -268,9 +270,9 @@ export function CreateOrderDialogContent({ outlet, onOrderPlaced, setOpen }: Cre
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead className="w-[25%]">SKU</TableHead>
-                                            <TableHead>Type</TableHead>
-                                            <TableHead>Qty</TableHead>
+                                            <TableHead className="w-[30%]">SKU</TableHead>
+                                            <TableHead className="w-[120px]">Type</TableHead>
+                                            <TableHead className="w-[90px]">Qty</TableHead>
                                             <TableHead>Available</TableHead>
                                             <TableHead>Price</TableHead>
                                             <TableHead>Total</TableHead>
@@ -300,7 +302,9 @@ export function CreateOrderDialogContent({ outlet, onOrderPlaced, setOpen }: Cre
                                                             <SelectContent><SelectItem value="units">Units</SelectItem><SelectItem value="cases">Cases</SelectItem></SelectContent>
                                                         </Select>
                                                     </TableCell>
-                                                    <TableCell><Input type="number" min={1} value={watchedItems[index]?.quantity} onChange={(e) => handleFieldChange(index, 'quantity', parseInt(e.target.value) || 1)} /></TableCell>
+                                                    <TableCell>
+                                                        <Input type="number" min={1} value={watchedItems[index]?.quantity} onChange={(e) => handleFieldChange(index, 'quantity', parseInt(e.target.value) || 1)} />
+                                                    </TableCell>
                                                     <TableCell>{stockInfo?.stock_quantity ?? 'N/A'}</TableCell>
                                                     <TableCell>₹{watchedItems[index]?.unit_price.toFixed(2)}</TableCell>
                                                     <TableCell>₹{total_price.toFixed(2)}</TableCell>
@@ -349,7 +353,7 @@ export function CreateOrderDialogContent({ outlet, onOrderPlaced, setOpen }: Cre
                         </ScrollArea>
                     </div>
                 )}
-                <DialogFooter className="p-6 pt-4 border-t flex-shrink-0 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                <DialogFooter className="p-6 pt-4 border-t flex-shrink-0 flex-col-reverse sm:flex-row sm:justify-between sm:items-center gap-4">
                     <div className="flex items-baseline gap-4">
                         {totals.totalDiscount > 0 && <div className="text-sm">Subtotal: <span className="line-through">₹{totals.subtotal.toFixed(2)}</span></div>}
                         {totals.totalDiscount > 0 && <div className="text-sm">Discount: <span className="text-green-600">-₹{totals.totalDiscount.toFixed(2)}</span></div>}
@@ -369,3 +373,4 @@ export function CreateOrderDialogContent({ outlet, onOrderPlaced, setOpen }: Cre
     );
 }
 
+    
