@@ -9,9 +9,15 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { MobileSidebar } from "./mobile-sidebar";
 import { LanguageSwitcher } from "../i18n/language-switcher";
+import { useRouter } from "next/navigation";
 
 export function Header() {
-  const { user, forceRefresh } = useAuth();
+  const { user } = useAuth();
+  const router = useRouter();
+
+  const handleRefresh = () => {
+    router.refresh();
+  };
   
   if (!user) return null;
 
@@ -31,7 +37,7 @@ export function Header() {
       <div className="w-full flex-1">
         {/* Header content like search can go here */}
       </div>
-      <Button variant="outline" size="icon" className="h-8 w-8" onClick={forceRefresh}>
+      <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleRefresh}>
         <RefreshCcw className="h-4 w-4" />
         <span className="sr-only">Refresh Data</span>
       </Button>
