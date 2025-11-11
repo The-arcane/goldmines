@@ -30,53 +30,79 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
-  const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
-    if (!supabaseUser) {
-        return null;
-    }
-    const { data: profile, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('auth_id', supabaseUser.id)
-        .single();
-    
-    if (error) {
-        console.error("Error fetching user profile:", error);
-        return null;
-    }
-
-    return {
-        id: profile.id,
-        auth_id: supabaseUser.id,
-        name: profile.name,
-        email: profile.email,
-        role: mapNumericRoleToString(profile.role),
-        avatar_url: profile.avatar_url,
-        created_at: profile.created_at,
-    };
-  }, []);
-
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: AuthChangeEvent, session: Session | null) => {
+        setLoading(true);
         const supabaseUser = session?.user ?? null;
         
-        // Always fetch profile on auth change
-        const profile = await fetchUserProfile(supabaseUser);
-        setUser(profile);
+        if (supabaseUser) {
+            const { data: profile, error } = await supabase
+                .from('users')
+                .select('*')
+                .eq('auth_id', supabaseUser.id)
+                .single();
+
+            if (error) {
+                console.error("Error fetching user profile:", error);
+                setUser(null);
+            } else if (profile) {
+                setUser({
+                    id: profile.id,
+                    auth_id: supabaseUser.id,
+                    name: profile.name,
+                    email: profile.email,
+                    role: mapNumericRoleToString(profile.role),
+                    avatar_url: profile.avatar_url,
+                    created_at: profile.created_at,
+                });
+            } else {
+                 setUser(null);
+            }
+        } else {
+            setUser(null);
+        }
+        
         setLoading(false);
       }
     );
 
+    // Initial check
+    const checkInitialSession = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        const supabaseUser = session?.user ?? null;
+        if (supabaseUser) {
+             const { data: profile, error } = await supabase
+                .from('users')
+                .select('*')
+                .eq('auth_id', supabaseUser.id)
+                .single();
+
+            if (profile) {
+                 setUser({
+                    id: profile.id,
+                    auth_id: supabaseUser.id,
+                    name: profile.name,
+                    email: profile.email,
+                    role: mapNumericRoleToString(profile.role),
+                    avatar_url: profile.avatar_url,
+                    created_at: profile.created_at,
+                });
+            }
+        }
+        setLoading(false);
+    }
+    checkInitialSession();
+
+
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchUserProfile]);
+  }, []);
 
 
   const logout = async () => {
     await supabase.auth.signOut();
-    // Redirect is handled by layouts listening to user state
     setUser(null); 
     router.push('/login');
   };
