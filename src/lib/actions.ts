@@ -6,8 +6,6 @@ import type { UserFormData, DistributorFormData, SkuFormData, OrderFormData, Att
 import { revalidatePath } from "next/cache";
 import { createServerActionClient } from "./supabaseServer";
 import { redirect } from 'next/navigation';
-import { useToast } from "@/hooks/use-toast";
-
 
 export async function checkVisitAnomaly(visitDetails: string, criteria: string) {
   try {
@@ -185,7 +183,7 @@ export async function createNewSku(formData: SkuFormData, distributorId: number)
 }
 
 export async function createNewOrder(formData: OrderFormData, distributorId: number) {
-  const supabase = createServerActionClient({ isAdmin: true });
+  const supabase = createServerActionClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

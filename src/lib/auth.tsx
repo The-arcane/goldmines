@@ -11,8 +11,6 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   logout: () => Promise<void>;
-  // This flag is no longer needed with the new robust implementation
-  // sessionRefreshed: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -88,14 +86,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
   const logout = async () => {
-    setLoading(true);
     await supabase.auth.signOut();
-    setUser(null);
-    // Don't push here, let the layouts handle the redirect based on the new auth state
-    setLoading(false);
+    router.push('/login');
   };
   
-  // sessionRefreshed is removed as the new loading state handles it implicitly
   const value = { user, loading, logout };
 
   return (

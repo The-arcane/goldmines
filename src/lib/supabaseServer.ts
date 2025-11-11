@@ -47,5 +47,3 @@ export function createServerActionClient({ isAdmin = false } = {}) {
     }
   )
 }
-
-    
