@@ -12,24 +12,23 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
+  const { user, loading, session } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) {
       return; // Do nothing while loading
     }
-    if (!user) {
+    if (!session) {
       router.replace("/login");
       return;
     }
-    if (user.role === 'sales_executive') {
+    if (user?.role === 'sales_executive') {
       router.replace("/salesperson/dashboard");
       return;
     }
-  }, [user, loading, router]);
+  }, [user, session, loading, router]);
   
-  // This is the key change: always show a loading screen while `loading` is true
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -38,13 +37,13 @@ export default function DashboardLayout({
     );
   }
 
-  // If loading is done but the user is null or a sales exec, the useEffect will handle the redirect.
-  // Rendering null prevents a brief flash of the dashboard layout.
-  if (!user || user.role === 'sales_executive') {
-    return null; 
+  // If loading is done but there is no session or the user is a sales exec,
+  // the useEffect will handle the redirect. Rendering null prevents a brief flash.
+  if (!session || user?.role === 'sales_executive') {
+    return null;
   }
 
-  // Only render the layout if loading is false and we have a valid, authorized user
+  // Only render the layout if loading is false and we have a valid user session
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <Sidebar userRole={user.role} />

@@ -1,14 +1,15 @@
 
 "use client";
 
-import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { User, UserRole } from './types';
 import { supabase } from './supabaseClient';
-import type { AuthChangeEvent, Session, User as SupabaseUser } from '@supabase/supabase-js';
-import { useRouter } from 'next/navigation';
+import type { AuthChangeEvent, Session as SupabaseSession } from '@supabase/supabase-js';
 
+// Define a more specific type for the context value
 interface AuthContextType {
-  user: User | null;
+  session: SupabaseSession | null;
+  user: User | null; // Changed from profile to user to match existing usage
   loading: boolean;
   logout: () => Promise<void>;
 }
@@ -26,55 +27,93 @@ const mapNumericRoleToString = (role: number): UserRole => {
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<SupabaseSession | null>(null);
+  const [user, setUser] = useState<User | null>(null); // Changed from profile to user
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
+
+  async function loadSession() {
+    // setLoading(true) is not needed here as it's set initially and on every auth change
+    const { data: sessionData } = await supabase.auth.getSession();
+    const currentSession = sessionData?.session ?? null;
+    setSession(currentSession);
+
+    if (currentSession) {
+      const { data: profileData } = await supabase
+        .from("users")
+        .select("*")
+        .eq("auth_id", currentSession.user.id)
+        .single();
+      
+      if (profileData) {
+        setUser({
+            id: profileData.id,
+            auth_id: profileData.auth_id,
+            name: profileData.name,
+            email: profileData.email,
+            role: mapNumericRoleToString(profileData.role),
+            avatar_url: profileData.avatar_url,
+            created_at: profileData.created_at,
+        });
+      } else {
+        setUser(null);
+      }
+    } else {
+      setUser(null);
+    }
+
+    setLoading(false);
+  }
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event: AuthChangeEvent, session: Session | null) => {
-        const supabaseUser = session?.user ?? null;
-        
-        if (supabaseUser) {
-            const { data: profile, error } = await supabase
-                .from('users')
-                .select('*')
-                .eq('auth_id', supabaseUser.id)
-                .single();
+    // The initial loadSession call is critical
+    loadSession();
 
-            if (profile) {
-                setUser({
-                    id: profile.id,
-                    auth_id: supabaseUser.id,
-                    name: profile.name,
-                    email: profile.email,
-                    role: mapNumericRoleToString(profile.role),
-                    avatar_url: profile.avatar_url,
-                    created_at: profile.created_at,
-                });
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (event: AuthChangeEvent, newSession: SupabaseSession | null) => {
+        // Re-run the full loading logic on every auth event
+        setLoading(true);
+        setSession(newSession);
+
+        async function loadProfile() {
+            if (newSession) {
+                const { data: profileData } = await supabase
+                    .from("users")
+                    .select("*")
+                    .eq("auth_id", newSession.user.id)
+                    .single();
+
+                if (profileData) {
+                     setUser({
+                        id: profileData.id,
+                        auth_id: profileData.auth_id,
+                        name: profileData.name,
+                        email: profileData.email,
+                        role: mapNumericRoleToString(profileData.role),
+                        avatar_url: profileData.avatar_url,
+                        created_at: profileData.created_at,
+                    });
+                } else {
+                    setUser(null);
+                }
             } else {
-                 setUser(null);
+                setUser(null);
             }
-        } else {
-            setUser(null);
+            setLoading(false);
         }
-        setLoading(false);
+        loadProfile();
       }
     );
-
-    return () => {
-      subscription.unsubscribe();
-    };
+    
+    return () => listener.subscription.unsubscribe();
   }, []);
-
 
   const logout = async () => {
     await supabase.auth.signOut();
-    setUser(null); 
-    router.push('/login');
+    setUser(null);
+    setSession(null);
   };
-  
-  const value = { user, loading, logout };
+
+  const value = { session, user, loading, logout };
 
   return (
     <AuthContext.Provider value={value}>

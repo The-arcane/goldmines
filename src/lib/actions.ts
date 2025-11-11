@@ -67,7 +67,7 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
   for (let i = 0; i < 3; i++) {
     const { data: profileData, error: profileError } = await supabaseAdmin
       .from('users')
-      .select('id')
+      .select('id', { cache: 'no-store' })
       .eq('auth_id', authUser.id)
       .single();
 
@@ -142,7 +142,7 @@ export async function createDistributorWithAdmin(formData: DistributorFormData) 
     // 3. Link the new user's profile ID back to the distributor table as the main admin
     const { data: newUserProfile, error: profileError } = await supabaseAdmin
         .from('users')
-        .select('id')
+        .select('id', { cache: 'no-store' })
         .eq('auth_id', creationResult.user.id)
         .single();
 
@@ -192,7 +192,7 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
 
   const { data: userProfile } = await supabase
     .from('users')
-    .select('id')
+    .select('id', { cache: 'no-store' })
     .eq('auth_id', user.id)
     .single();
 
@@ -203,7 +203,7 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
   // 1. Check credit limit
   const { data: outlet, error: outletError } = await supabase
     .from('outlets')
-    .select('credit_limit, current_due')
+    .select('credit_limit, current_due', { cache: 'no-store' })
     .eq('id', formData.outlet_id)
     .single();
 
@@ -261,7 +261,7 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
   for (const item of formData.items) {
     const { data: stockItem, error: stockFetchError } = await supabase
       .from('distributor_stock')
-      .select('stock_quantity, units_per_case')
+      .select('stock_quantity, units_per_case', { cache: 'no-store' })
       .eq('distributor_id', distributorId)
       .eq('sku_id', item.sku_id)
       .single();
@@ -318,7 +318,7 @@ export async function createStockOrder(formData: StockOrderFormData, distributor
 
   const { data: userProfile } = await supabase
     .from('users')
-    .select('id')
+    .select('id', { cache: 'no-store' })
     .eq('auth_id', user.id)
     .single();
 
@@ -373,7 +373,7 @@ export async function updateOrderStatus(orderId: number, status: 'Dispatched' | 
     // Get order details to update outlet due if rejecting
     const { data: order, error: fetchError } = await supabase
         .from('orders')
-        .select('outlet_id, total_amount, status')
+        .select('outlet_id, total_amount, status', { cache: 'no-store' })
         .eq('id', orderId)
         .single();
         
@@ -414,7 +414,7 @@ export async function recordOrderPayment(orderId: number, paymentAmount: number)
     // 1. Get the current order details
     const { data: order, error: fetchError } = await supabase
         .from('orders')
-        .select('total_amount, amount_paid, outlet_id')
+        .select('total_amount, amount_paid, outlet_id', { cache: 'no-store' })
         .eq('id', orderId)
         .single();
 
@@ -468,7 +468,7 @@ export async function markAttendance(data: AttendanceData) {
 
     const { data: userProfile, error: profileError } = await supabase
         .from('users')
-        .select('id')
+        .select('id', { cache: 'no-store' })
         .eq('auth_id', user.id)
         .single();
 
@@ -482,7 +482,7 @@ export async function markAttendance(data: AttendanceData) {
     const today = new Date().toISOString().slice(0, 10);
     const { data: existingRecord } = await supabase
         .from('attendance')
-        .select('id, status')
+        .select('id, status', { cache: 'no-store' })
         .eq('user_id', userId)
         .gte('checkin_time', `${today}T00:00:00.000Z`)
         .lte('checkin_time', `${today}T23:59:59.999Z`)
@@ -553,7 +553,7 @@ export async function updateOrderAndStock(orderId: number, outOfStockItemIds: nu
 
     const { data: order, error: fetchError } = await supabase
         .from('orders')
-        .select('*, order_items(*, skus(units_per_case))')
+        .select('*, order_items(*, skus(units_per_case))', { cache: 'no-store' })
         .eq('id', orderId)
         .single();
     
@@ -614,7 +614,7 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
 
     const { data: order, error: orderError } = await supabase
         .from('stock_orders')
-        .select('*, stock_order_items(*, skus(*))')
+        .select('*, stock_order_items(*, skus(*))', { cache: 'no-store' })
         .eq('id', orderId)
         .single();
     
@@ -629,7 +629,7 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
 
         const { data: existingStock, error: fetchStockError } = await supabase
             .from('distributor_stock')
-            .select('id, stock_quantity')
+            .select('id, stock_quantity', { cache: 'no-store' })
             .eq('distributor_id', order.distributor_id)
             .eq('sku_id', item.sku_id)
             .single();
@@ -696,7 +696,7 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
     return { success: false, error: "An order ID or stock order ID is required." };
   }
 
-  let existingInvoiceCheck = supabase.from('invoices').select('id').limit(1);
+  let existingInvoiceCheck = supabase.from('invoices').select('id', { cache: 'no-store' }).limit(1);
   if (orderId) {
       existingInvoiceCheck = existingInvoiceCheck.eq('order_id', orderId);
   } else if (stockOrderId) {
@@ -722,7 +722,7 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
   if (orderId) {
     const { data, error } = await supabase
         .from('orders')
-        .select('total_amount, total_discount, order_items(*, skus(name, product_code, unit_type))')
+        .select('total_amount, total_discount, order_items(*, skus(name, product_code, unit_type))', { cache: 'no-store' })
         .eq('id', orderId)
         .single();
     if (error || !data) return { success: false, error: "Could not find retail order." };
@@ -746,7 +746,7 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
   } else if (stockOrderId) {
     const { data, error } = await supabase
         .from('stock_orders')
-        .select('total_amount, stock_order_items(*, skus(name, product_code, unit_type, units_per_case))')
+        .select('total_amount, stock_order_items(*, skus(name, product_code, unit_type, units_per_case))', { cache: 'no-store' })
         .eq('id', stockOrderId)
         .single();
     if (error || !data) return { success: false, error: "Could not find stock order." };

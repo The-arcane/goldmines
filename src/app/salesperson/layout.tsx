@@ -12,24 +12,23 @@ export default function SalespersonLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
+  const { user, loading, session } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (loading) {
       return; // Do nothing while loading
     }
-    if (!user) {
+    if (!session) {
       router.replace("/salesperson/login");
       return;
     }
-    if (user.role !== 'sales_executive') {
+    if (user?.role !== 'sales_executive') {
       router.replace("/login");
       return;
     }
-  }, [user, loading, router]);
+  }, [user, session, loading, router]);
   
-  // Always show a loading screen while `loading` is true
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -38,13 +37,13 @@ export default function SalespersonLayout({
     );
   }
   
-  // If loading is done but the user is not a sales exec, the useEffect will handle the redirect.
-  // Rendering null prevents a brief flash of the layout.
-  if (!user || user.role !== 'sales_executive') {
+  // If loading is done but conditions aren't met, useEffect handles redirect.
+  // Rendering null prevents brief layout flash.
+  if (!session || user?.role !== 'sales_executive') {
      return null;
   }
 
-  // Only render the layout if loading is false and we have a valid sales executive user
+  // Only render if we have a valid sales executive session
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <Sidebar />
