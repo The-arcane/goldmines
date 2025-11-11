@@ -19,6 +19,7 @@ import {
   Banknote,
   LineChart,
   ClipboardList,
+  Boxes,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { UserRole } from "@/lib/types";
@@ -33,6 +34,7 @@ const navItems = {
     { href: "/dashboard/admin/stock-orders", icon: ClipboardList, label: "Stock Orders" },
     { href: "/dashboard/outlets", icon: Warehouse, label: "Outlets" },
     { href: "/dashboard/skus", icon: Box, label: "SKUs & Inventory" },
+    { href: "/dashboard/distributor-stock", icon: Boxes, label: "Distributor Stock" },
     { href: "/dashboard/users", icon: Users, label: "Users" },
   ],
   sales_executive: [
