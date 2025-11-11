@@ -63,7 +63,7 @@ type CreateOrderDialogProps = {
 }
 
 export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrderDialogProps) {
-    const { user, loading: authLoading, sessionRefreshed } = useAuth();
+    const { user, sessionRefreshed } = useAuth();
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [distributorStock, setDistributorStock] = useState<DistributorStock[]>([]);
@@ -82,7 +82,7 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
     });
     
     const fetchData = useCallback(async () => {
-        if (!user || !open || !sessionRefreshed) return;
+        if (!user) return;
         setLoading(true);
         setError(null);
     
@@ -116,13 +116,13 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
         } finally {
           setLoading(false);
         }
-      }, [user, open, sessionRefreshed, toast]);
+      }, [user, toast]);
     
       useEffect(() => {
-        if (open && sessionRefreshed) {
+        if (open && user && sessionRefreshed) {
           fetchData();
         }
-      }, [open, sessionRefreshed, fetchData]);
+      }, [open, user, sessionRefreshed, fetchData]);
 
     useEffect(() => {
         if (!open) {
@@ -197,7 +197,7 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
         });
     };
     
-    const handleFieldChange = (index: number, field: keyof OrderFormValues['items'][0], value: any) => {
+    const handleFieldChange = (index: number, field: keyof OrderFormValues['items'][number], value: any) => {
         const currentItem = form.getValues(`items.${index}`);
         // Create a new object to ensure re-render
         const updatedItem = { ...currentItem, [field]: value };
@@ -458,3 +458,5 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
         </Dialog>
     );
 }
+
+    
