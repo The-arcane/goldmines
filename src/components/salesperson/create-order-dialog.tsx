@@ -122,10 +122,10 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
     }, [user, toast]);
     
     useEffect(() => {
-      if (open && user && sessionRefreshed) {
+      if (open && user) {
         fetchData();
       }
-    }, [open, user, sessionRefreshed, fetchData]);
+    }, [open, user, fetchData]);
 
     useEffect(() => {
         if (!open) {
