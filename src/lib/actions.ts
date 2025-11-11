@@ -132,7 +132,7 @@ export async function createDistributorWithAdmin(formData: DistributorFormData) 
         name: formData.adminName,
         email: formData.adminEmail,
         password: formData.adminPassword,
-        role: 'distributor_admin',
+        role: 'distributor_admin', // This string will be correctly mapped to 3 in createNewUser
     }, String(distributorData.id));
 
 
