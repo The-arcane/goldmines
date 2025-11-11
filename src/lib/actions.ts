@@ -1,3 +1,4 @@
+
 "use server";
 
 import { flagAnomalousVisit } from "@/ai/flows/flag-anomalous-visits";
@@ -193,6 +194,20 @@ export async function updateMasterSku(skuId: number, formData: SkuFormData) {
     
     if (error) {
         console.error("Error updating SKU:", error);
+        return { success: false, error: error.message };
+    }
+
+    revalidatePath("/dashboard/skus");
+    return { success: true };
+}
+
+export async function deleteMasterSku(skuId: number) {
+    const supabase = createServerActionClient({ isAdmin: true });
+
+    const { error } = await supabase.from("skus").delete().eq("id", skuId);
+    
+    if (error) {
+        console.error("Error deleting SKU:", error);
         return { success: false, error: error.message };
     }
 

@@ -19,6 +19,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { EditSkuDialog } from "@/components/dashboard/skus/edit-sku-dialog";
+import { DeleteSkuAlert } from "@/components/dashboard/skus/delete-sku-alert";
+
 
 export default function SkusPage() {
     const { user } = useAuth();
@@ -110,7 +112,11 @@ export default function SkusPage() {
                                                             Edit
                                                         </button>
                                                     </EditSkuDialog>
-                                                    <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
+                                                    <DeleteSkuAlert sku={sku} onSkuDeleted={fetchSkus}>
+                                                        <button className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full text-left text-destructive">
+                                                            Delete
+                                                        </button>
+                                                    </DeleteSkuAlert>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         </TableCell>
