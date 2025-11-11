@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { Order } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,43 +70,74 @@ export default function MyOrdersPage() {
                         <div className="flex justify-center items-center p-8">
                             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                         </div>
-                    ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-[80px]">Order ID</TableHead>
-                                    <TableHead>Outlet</TableHead>
-                                    <TableHead className="hidden md:table-cell">Status</TableHead>
-                                    <TableHead className="hidden sm:table-cell">Date</TableHead>
-                                    <TableHead className="text-right">Value</TableHead>
-                                    <TableHead className="w-[100px] text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {orders.length > 0 ? orders.map((order) => (
-                                    <TableRow key={order.id}>
-                                        <TableCell className="font-mono">#{order.id}</TableCell>
-                                        <TableCell>{(order as any).outlets?.name || 'N/A'}</TableCell>
-                                        <TableCell className="hidden md:table-cell"><Badge variant={getStatusVariant(order.status)}>{order.status}</Badge></TableCell>
-                                        <TableCell className="hidden sm:table-cell">{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
-                                        <TableCell className="text-right">₹{order.total_amount?.toFixed(2) || '0.00'}</TableCell>
-                                        <TableCell className="text-right">
-                                            <Button asChild variant="outline" size="sm">
+                    ) : orders.length > 0 ? (
+                        <>
+                            {/* Desktop Table View */}
+                            <div className="hidden md:block">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-[80px]">Order ID</TableHead>
+                                            <TableHead>Outlet</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead>Date</TableHead>
+                                            <TableHead className="text-right">Value</TableHead>
+                                            <TableHead className="w-[100px] text-right">Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {orders.map((order) => (
+                                            <TableRow key={order.id}>
+                                                <TableCell className="font-mono">#{order.id}</TableCell>
+                                                <TableCell>{(order as any).outlets?.name || 'N/A'}</TableCell>
+                                                <TableCell><Badge variant={getStatusVariant(order.status)}>{order.status}</Badge></TableCell>
+                                                <TableCell>{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
+                                                <TableCell className="text-right">₹{order.total_amount?.toFixed(2) || '0.00'}</TableCell>
+                                                <TableCell className="text-right">
+                                                    <Button asChild variant="outline" size="sm">
+                                                        <Link href={`/salesperson/orders/${order.id}`}>
+                                                            View
+                                                        </Link>
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                            
+                            {/* Mobile Card View */}
+                             <div className="grid gap-4 md:hidden">
+                                {orders.map((order) => (
+                                    <Card key={order.id}>
+                                        <CardHeader>
+                                            <CardTitle className="text-base flex items-start justify-between">
+                                                <span>{(order as any).outlets?.name || 'N/A'}</span>
+                                                <Badge variant={getStatusVariant(order.status)}>{order.status}</Badge>
+                                            </CardTitle>
+                                            <CardDescription>
+                                                 Order #{order.id}
+                                            </CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="flex justify-between items-center text-sm">
+                                            <div className="text-muted-foreground">{format(new Date(order.order_date), 'MMM d, yyyy')}</div>
+                                            <div className="font-semibold text-lg">₹{order.total_amount?.toFixed(2) || '0.00'}</div>
+                                        </CardContent>
+                                        <CardFooter>
+                                             <Button asChild variant="outline" size="sm" className="w-full">
                                                 <Link href={`/salesperson/orders/${order.id}`}>
-                                                    View
+                                                    View Details
                                                 </Link>
                                             </Button>
-                                        </TableCell>
-                                    </TableRow>
-                                )) : (
-                                     <TableRow>
-                                        <TableCell colSpan={6} className="text-center text-muted-foreground p-8">
-                                            You haven't placed any orders yet.
-                                        </TableCell>
-                                    </TableRow>
-                                )}
-                            </TableBody>
-                        </Table>
+                                        </CardFooter>
+                                    </Card>
+                                ))}
+                            </div>
+                        </>
+                    ) : (
+                         <div className="text-center text-muted-foreground p-8 border-dashed border-2 rounded-md">
+                            You haven't placed any orders yet.
+                        </div>
                     )}
                 </CardContent>
             </Card>
