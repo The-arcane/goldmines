@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -62,7 +63,7 @@ export function Sidebar() {
           </nav>
         </div>
          <div className="mt-auto p-4 text-center text-xs text-muted-foreground">
-          Version 1.0.0.0 done by Raunaq
+          Version 1.0.1.0 by SparkEdge Innovations
         </div>
       </div>
     </div>
