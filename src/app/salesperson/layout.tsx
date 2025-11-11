@@ -20,7 +20,7 @@ export default function SalespersonLayout({
       return; // Do nothing while loading
     }
     if (!session) {
-      router.replace("/salesperson/login");
+      router.replace("/login");
       return;
     }
     if (user?.role !== 'sales_executive') {

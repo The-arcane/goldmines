@@ -5,6 +5,7 @@ import { createContext, useContext, useState, ReactNode, useEffect } from 'react
 import type { User, UserRole } from './types';
 import { supabase } from './supabaseClient';
 import type { AuthChangeEvent, Session as SupabaseSession } from '@supabase/supabase-js';
+import { useRouter } from 'next/navigation';
 
 // Define a more specific type for the context value
 interface AuthContextType {
@@ -30,77 +31,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<SupabaseSession | null>(null);
   const [user, setUser] = useState<User | null>(null); // Changed from profile to user
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
-  async function loadSession() {
-    // setLoading(true) is not needed here as it's set initially and on every auth change
-    const { data: sessionData } = await supabase.auth.getSession();
-    const currentSession = sessionData?.session ?? null;
-    setSession(currentSession);
+  useEffect(() => {
+    async function loadSession() {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const currentSession = sessionData?.session ?? null;
+      setSession(currentSession);
 
-    if (currentSession) {
-      const { data: profileData } = await supabase
-        .from("users")
-        .select("*")
-        .eq("auth_id", currentSession.user.id)
-        .single();
-      
-      if (profileData) {
-        setUser({
-            id: profileData.id,
-            auth_id: profileData.auth_id,
-            name: profileData.name,
-            email: profileData.email,
-            role: mapNumericRoleToString(profileData.role),
-            avatar_url: profileData.avatar_url,
-            created_at: profileData.created_at,
-        });
+      if (currentSession) {
+        const { data: profileData } = await supabase
+          .from("users")
+          .select("*")
+          .eq("auth_id", currentSession.user.id)
+          .single();
+        
+        if (profileData) {
+          setUser({
+              id: profileData.id,
+              auth_id: profileData.auth_id,
+              name: profileData.name,
+              email: profileData.email,
+              role: mapNumericRoleToString(profileData.role),
+              avatar_url: profileData.avatar_url,
+              created_at: profileData.created_at,
+          });
+        } else {
+          setUser(null);
+        }
       } else {
         setUser(null);
       }
-    } else {
-      setUser(null);
+      setLoading(false);
     }
-
-    setLoading(false);
-  }
-
-  useEffect(() => {
-    // The initial loadSession call is critical
+    
     loadSession();
 
     const { data: listener } = supabase.auth.onAuthStateChange(
       (event: AuthChangeEvent, newSession: SupabaseSession | null) => {
-        // Re-run the full loading logic on every auth event
         setLoading(true);
-        setSession(newSession);
-
-        async function loadProfile() {
-            if (newSession) {
-                const { data: profileData } = await supabase
-                    .from("users")
-                    .select("*")
-                    .eq("auth_id", newSession.user.id)
-                    .single();
-
-                if (profileData) {
-                     setUser({
-                        id: profileData.id,
-                        auth_id: profileData.auth_id,
-                        name: profileData.name,
-                        email: profileData.email,
-                        role: mapNumericRoleToString(profileData.role),
-                        avatar_url: profileData.avatar_url,
-                        created_at: profileData.created_at,
-                    });
-                } else {
-                    setUser(null);
-                }
-            } else {
-                setUser(null);
-            }
-            setLoading(false);
-        }
-        loadProfile();
+        loadSession();
       }
     );
     
@@ -111,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
+    router.push('/login');
   };
 
   const value = { session, user, loading, logout };
