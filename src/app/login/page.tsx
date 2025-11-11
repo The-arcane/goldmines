@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { AuthForm } from '@/components/auth/auth-form';
@@ -21,7 +22,6 @@ export default function LoginPage() {
       switch (user.role) {
         case 'super_admin':
         case 'distributor_admin':
-        case 'delivery_partner':
           router.replace("/dashboard");
           break;
         case 'sales_executive':

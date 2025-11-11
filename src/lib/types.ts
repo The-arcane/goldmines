@@ -1,6 +1,6 @@
 
 
-export type UserRole = 'super_admin' | 'sales_executive' | 'distributor_admin' | 'delivery_partner';
+export type UserRole = 'super_admin' | 'sales_executive' | 'distributor_admin';
 
 export type User = {
   id: number;

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -13,21 +14,16 @@ import { AddUserDialog } from "@/components/dashboard/users/add-user-dialog";
 import { useAuth } from "@/lib/auth";
 
 const adminAllowedRoles: { value: UserRole, label: string }[] = [
-    { value: 'admin', label: 'Super Admin' },
+    { value: 'super_admin', label: 'Super Admin' },
     { value: 'sales_executive', label: 'Sales Executive' },
     { value: 'distributor_admin', label: 'Distributor Admin' },
-    { value: 'delivery_partner', label: 'Delivery Partner' },
 ];
 
-const mapNumericRoleToString = (role: number): string => {
-    const roleMap: { [key: number]: string } = {
-        1: 'Super Admin',
-        2: 'Sales Executive',
-        3: 'Distributor Admin',
-        4: 'Delivery Partner',
-    };
-    return roleMap[role] || 'Unknown';
-}
+const roleDisplayNames: Record<UserRole, string> = {
+    super_admin: 'Super Admin',
+    sales_executive: 'Sales Executive',
+    distributor_admin: 'Distributor Admin',
+};
 
 export default function UsersPage() {
     const [users, setUsers] = useState<User[]>([]);
@@ -112,7 +108,7 @@ export default function UsersPage() {
                                         </TableCell>
                                         <TableCell>{user.email}</TableCell>
                                         <TableCell>
-                                            <Badge variant="secondary">{mapNumericRoleToString(user.role)}</Badge>
+                                            <Badge variant="secondary">{roleDisplayNames[user.role] || 'Unknown'}</Badge>
                                         </TableCell>
                                         <TableCell className="text-right">{format(new Date(user.created_at), 'MMM d, yyyy')}</TableCell>
                                     </TableRow>

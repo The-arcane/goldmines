@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -40,7 +41,7 @@ const formSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters."),
   email: z.string().email("Invalid email address."),
   password: z.string().min(6, "Password must be at least 6 characters."),
-  role: z.enum(['super_admin', 'sales_executive', 'distributor_admin', 'delivery_partner']),
+  role: z.enum(['super_admin', 'sales_executive', 'distributor_admin']),
   distributorId: z.string().optional(),
 });
 
@@ -84,10 +85,10 @@ export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, distribu
     const onSubmit: SubmitHandler<z.infer<typeof formSchema>> = async (data) => {
         
         // If the distributor admin is creating a user, the distributorId is passed as a prop.
-        // If the site admin is creating a delivery partner, it's selected from the form.
+        // If the site admin is creating a user, it's selected from the form.
         const finalDistributorId = distributorId || data.distributorId;
 
-        if ((watchedRole === 'distributor_admin' || watchedRole === 'delivery_partner' || watchedRole === 'sales_executive') && !finalDistributorId) {
+        if ((watchedRole === 'distributor_admin' || watchedRole === 'sales_executive') && !finalDistributorId) {
              toast({
                 variant: "destructive",
                 title: "Distributor Required",
@@ -198,7 +199,7 @@ export function AddUserDialog({ onUserAdded, allowedRoles, defaultRole, distribu
                         />
 
                         {/* Conditional field for ADMIN to select distributor */}
-                        {distributors && (watchedRole === 'delivery_partner' || watchedRole === 'distributor_admin' || watchedRole === 'sales_executive') && (
+                        {distributors && (watchedRole === 'distributor_admin' || watchedRole === 'sales_executive') && (
                             <FormField
                                 control={form.control}
                                 name="distributorId"

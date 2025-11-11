@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import Link from "next/link";
@@ -9,7 +10,6 @@ import {
   Users,
   Map,
   BarChart,
-  Truck,
   Warehouse,
   Rocket,
   Building,
@@ -54,10 +54,6 @@ const navItems = {
     { href: "/dashboard/distributor/skus", icon: Box, label: "SKU Management" },
     { href: "/dashboard/distributor/users", icon: Users, label: "Manage Team" },
     { href: "/dashboard/analytics", icon: LineChart, label: "Analytics" },
-  ],
-  delivery_partner: [
-    { href: "/dashboard/delivery", icon: Truck, label: "My Deliveries" },
-    { href: "/dashboard/orders/create", icon: PlusCircle, label: "Create Order" },
   ],
 };
 

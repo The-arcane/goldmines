@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { useEffect } from "react";
@@ -30,9 +31,6 @@ export default function DashboardPage() {
         break;
       case 'distributor_admin':
         router.replace("/dashboard/distributor");
-        break;
-      case 'delivery_partner':
-        router.replace("/dashboard/delivery");
         break;
       default:
         // Fallback for any other case

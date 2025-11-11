@@ -18,21 +18,16 @@ export async function checkVisitAnomaly(visitDetails: string, criteria: string) 
   }
 }
 
-// Helper function to introduce a delay
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 export async function createNewUser(formData: UserFormData, distributorId?: string) {
   const supabaseAdmin = createServerActionClient({ isAdmin: true });
-  
-  // Step 1: Create the user in auth.users. 
-  // The database trigger will now correctly handle creating the public.users profile WITH the role.
+
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email: formData.email,
     password: formData.password,
-    email_confirm: true, // Auto-confirm email
+    email_confirm: true,
     user_metadata: {
         name: formData.name,
-        role: formData.role, // Pass the role string directly
+        role: formData.role,
         avatar_url: `https://picsum.photos/seed/${formData.email}/100/100`,
     },
   });
@@ -47,11 +42,9 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
     return { success: false, error: "Auth user was not created." };
   }
   
-  // Wait a moment for the trigger to fire and create the public.users row
-  await sleep(1000); 
+  await new Promise(resolve => setTimeout(resolve, 1000));
 
-  // Step 2: Get the new user's ID from the public.users table.
-   const { data: userProfile, error: profileError } = await supabaseAdmin
+  const { data: userProfile, error: profileError } = await supabaseAdmin
     .from('users')
     .select('id')
     .eq('auth_id', authUser.id)
@@ -59,15 +52,13 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
 
   if (profileError || !userProfile) {
     console.error('Could not find new user profile after creation:', profileError);
-    // Cleanup auth user if profile was not created
     await supabaseAdmin.auth.admin.deleteUser(authUser.id);
     return { success: false, error: 'User auth record was created, but the profile was not found. Rolled back.' };
   }
 
   const newUserId = userProfile.id;
 
-  // Step 3: If it's a distributor user, link them in the junction table
-  const distributorRoles: UserRole[] = ['delivery_partner', 'distributor_admin', 'sales_executive'];
+  const distributorRoles: UserRole[] = ['distributor_admin', 'sales_executive'];
   if (distributorRoles.includes(formData.role) && distributorId) {
     const { error: linkError } = await supabaseAdmin
       .from('distributor_users')
@@ -78,7 +69,6 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
 
     if (linkError) {
       console.error('Error linking user to distributor:', linkError);
-      // Clean up user and profile
       await supabaseAdmin.from('users').delete().eq('id', newUserId);
       await supabaseAdmin.auth.admin.deleteUser(authUser.id);
       return { success: false, error: `User was created but could not be linked to the distributor: ${linkError.message}` };
@@ -94,7 +84,6 @@ export async function createNewUser(formData: UserFormData, distributorId?: stri
 export async function createDistributorWithAdmin(formData: DistributorFormData) {
     const supabaseAdmin = createServerActionClient({ isAdmin: true });
 
-    // 1. Create the distributor organization first
     const { data: distributorData, error: distributorError } = await supabaseAdmin
         .from('distributors')
         .insert({ 
@@ -110,7 +99,6 @@ export async function createDistributorWithAdmin(formData: DistributorFormData) 
         return { success: false, error: `Failed to create distributor organization: ${distributorError.message}` };
     }
 
-    // 2. Now create the admin user for that organization
     const creationResult = await createNewUser({
         name: formData.adminName,
         email: formData.adminEmail,
@@ -118,15 +106,12 @@ export async function createDistributorWithAdmin(formData: DistributorFormData) 
         role: 'distributor_admin',
     }, String(distributorData.id));
 
-
     if (!creationResult.success || !creationResult.user) {
-        // If user creation fails, roll back the distributor creation for consistency
         await supabaseAdmin.from('distributors').delete().eq('id', distributorData.id);
         console.error('Error creating admin user:', creationResult.error);
         return { success: false, error: `Failed to create admin user: ${creationResult.error}. Distributor creation was rolled back.` };
     }
 
-    // 3. Link the new user's profile ID back to the distributor table as the main admin
     const { data: newUserProfile, error: profileError } = await supabaseAdmin
         .from('users')
         .select('id')
