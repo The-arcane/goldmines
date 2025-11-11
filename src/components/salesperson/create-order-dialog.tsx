@@ -64,7 +64,7 @@ type CreateOrderDialogProps = {
 }
 
 export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrderDialogProps) {
-    const { user, sessionRefreshed } = useAuth();
+    const { user } = useAuth();
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [distributorStock, setDistributorStock] = useState<DistributorStock[]>([]);
@@ -123,16 +123,15 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
     }, [user, toast]);
     
     useEffect(() => {
-      // Fetch data only when dialog is open and the session is confirmed.
-      if (open && user && sessionRefreshed) {
+      if (open && user) {
         fetchData();
       }
-    }, [open, user, sessionRefreshed, fetchData]);
+    }, [open, user, fetchData]);
 
     useEffect(() => {
         if (!open) {
             form.reset({ items: [], payment_status: "Unpaid", amount_paid: 0 });
-            setLoading(true); // Reset loading state
+            setLoading(true);
             setError(null);
         }
     }, [open, form]);
@@ -284,7 +283,7 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex-1 overflow-hidden">
+                            <div className="flex-1 min-h-0">
                                 <ScrollArea className="h-full">
                                     <div className="p-6 space-y-4">
                                         {/* Mobile Cards */}
