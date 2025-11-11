@@ -47,8 +47,10 @@ export default function MyOrderDetailsPage({ params }: { params: { id: string } 
     }, [user, id, router, toast]);
 
     useEffect(() => {
-        fetchOrderDetails();
-    }, [fetchOrderDetails]);
+        if (user) {
+            fetchOrderDetails();
+        }
+    }, [fetchOrderDetails, user]);
 
     
     const getStatusVariant = (status: string) => {
@@ -95,30 +97,58 @@ export default function MyOrderDetailsPage({ params }: { params: { id: string } 
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                             <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Product</TableHead>
-                                        <TableHead>SKU</TableHead>
-                                        <TableHead className="text-right">Quantity</TableHead>
-                                        <TableHead className="text-right">Unit Price</TableHead>
-                                        <TableHead className="text-right">Total</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {items.map(item => (
-                                        <TableRow key={item.id}>
-                                            <TableCell>{item.skus?.name}</TableCell>
-                                            <TableCell>{item.skus?.product_code}</TableCell>
-                                            <TableCell className="text-right">{item.quantity}</TableCell>
-                                            <TableCell className="text-right">₹{item.unit_price.toFixed(2)}</TableCell>
-                                            <TableCell className="text-right">₹{item.total_price.toFixed(2)}</TableCell>
+                            {/* Desktop Table */}
+                             <div className="hidden md:block">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Product</TableHead>
+                                            <TableHead>SKU</TableHead>
+                                            <TableHead className="text-right">Quantity</TableHead>
+                                            <TableHead className="text-right">Unit Price</TableHead>
+                                            <TableHead className="text-right">Total</TableHead>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {items.map(item => (
+                                            <TableRow key={item.id}>
+                                                <TableCell>{item.skus?.name}</TableCell>
+                                                <TableCell>{item.skus?.product_code}</TableCell>
+                                                <TableCell className="text-right">{item.quantity}</TableCell>
+                                                <TableCell className="text-right">₹{item.unit_price.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right">₹{item.total_price.toFixed(2)}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                             </div>
+                             {/* Mobile Card List */}
+                             <div className="grid gap-4 md:hidden">
+                                {items.map(item => (
+                                    <Card key={item.id} className="w-full">
+                                        <CardHeader>
+                                            <CardTitle className="text-base">{item.skus?.name}</CardTitle>
+                                            <CardDescription>SKU: {item.skus?.product_code}</CardDescription>
+                                        </CardHeader>
+                                        <CardContent className="grid grid-cols-2 gap-4 text-sm">
+                                            <div>
+                                                <div className="text-muted-foreground">Quantity</div>
+                                                <div>{item.quantity}</div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-muted-foreground">Unit Price</div>
+                                                <div>₹{item.unit_price.toFixed(2)}</div>
+                                            </div>
+                                            <div className="col-span-2 text-right">
+                                                <div className="text-muted-foreground">Line Total</div>
+                                                <div className="font-semibold">₹{item.total_price.toFixed(2)}</div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                             </div>
                         </CardContent>
-                         <CardFooter className="flex flex-row items-center border-t bg-muted/50 px-6 py-3">
+                         <CardFooter className="flex flex-row items-center justify-end border-t bg-muted/50 px-6 py-3">
                             <div className="text-s text-muted-foreground">
                                 Order Total: <span className="font-bold text-lg text-foreground">₹{order.total_amount.toFixed(2)}</span>
                             </div>
