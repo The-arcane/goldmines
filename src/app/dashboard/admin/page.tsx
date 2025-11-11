@@ -79,7 +79,7 @@ export default function AdminDashboardPage() {
         outletsCountPromise,
         usersCountPromise,
         visitsTodayCountPromise,
-        ordersTodayCountRes,
+        ordersTodayCountPromise,
       ]);
 
       if (visitsRes.data) setRecentVisits(visitsRes.data);
