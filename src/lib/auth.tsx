@@ -11,7 +11,8 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   logout: () => Promise<void>;
-  refetchKey: number; // Add a refetch key
+  refetchKey: number;
+  forceRefresh: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -58,10 +59,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const forceRefresh = useCallback(() => {
+    setRefetchKey(prevKey => prevKey + 1);
+  }, []);
+
   useEffect(() => {
     setLoading(true);
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        setLoading(true);
         const supabaseUser = session?.user ?? null;
         const profile = await fetchUserProfile(supabaseUser);
         setUser(profile);
@@ -71,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        setRefetchKey(prevKey => prevKey + 1);
+        forceRefresh();
       }
     };
 
@@ -81,7 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [fetchUserProfile]);
+  }, [fetchUserProfile, forceRefresh]);
 
 
   const logout = async () => {
@@ -90,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
   
-  const value = { user, loading, logout, refetchKey };
+  const value = { user, loading, logout, refetchKey, forceRefresh };
 
   return (
     <AuthContext.Provider value={value}>

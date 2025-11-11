@@ -1,14 +1,15 @@
+
 import { UserNav } from "@/components/dashboard/user-nav";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, Rocket } from "lucide-react";
+import { Menu, Rocket, RefreshCcw } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { MobileSidebar } from "./mobile-sidebar";
 import { LanguageSwitcher } from "../i18n/language-switcher";
 
 export function Header() {
-  const { user } = useAuth();
+  const { user, forceRefresh } = useAuth();
   
   if (!user) return null;
 
@@ -28,6 +29,10 @@ export function Header() {
       <div className="w-full flex-1">
         {/* Header content like search can go here */}
       </div>
+      <Button variant="outline" size="icon" className="h-8 w-8" onClick={forceRefresh}>
+        <RefreshCcw className="h-4 w-4" />
+        <span className="sr-only">Refresh Data</span>
+      </Button>
       <LanguageSwitcher />
       <UserNav />
     </header>
