@@ -30,6 +30,7 @@ import { createNewOrder } from "@/lib/actions";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 const formSchema = z.object({
     items: z.array(z.object({
@@ -63,7 +64,7 @@ type CreateOrderDialogProps = {
 }
 
 export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrderDialogProps) {
-    const { user, sessionRefreshed } = useAuth();
+    const { user } = useAuth();
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [distributorStock, setDistributorStock] = useState<DistributorStock[]>([]);
@@ -264,27 +265,29 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
             <DialogTrigger asChild>
                 <Button disabled={disabled}>Order</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-4xl">
+            <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col h-full overflow-hidden">
                         <DialogHeader>
                             <DialogTitle>New Order for: {outlet.name}</DialogTitle>
                             <DialogDescription>Add products, select order type, and set payment details.</DialogDescription>
                         </DialogHeader>
 
                         {loading ? (
-                            <div className="flex h-64 items-center justify-center">
+                            <div className="flex flex-grow items-center justify-center">
                                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                             </div>
                         ) : error ? (
-                            <div className="flex h-64 items-center justify-center text-center text-destructive bg-destructive/10 rounded-md p-4">
+                            <div className="flex flex-grow items-center justify-center text-center text-destructive bg-destructive/10 rounded-md p-4">
                                 <div>
                                     <p className="font-bold">Could not load order form</p>
                                     <p className="text-sm">{error}</p>
                                 </div>
                             </div>
                         ) : (
-                             <div className="py-4 space-y-4">
+                             <div className="py-4 space-y-4 flex-grow overflow-hidden">
+                               <ScrollArea className="h-full">
+                                <div className="pr-4 space-y-4">
                                 {/* Desktop Table */}
                                 <div className="hidden md:block">
                                     <Table>
@@ -443,9 +446,11 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
                                         <FormField control={form.control} name="amount_paid" render={({ field }) => (<FormItem><FormLabel>Amount Paid</FormLabel><FormControl><Input type="number" placeholder="Enter amount" {...field} /></FormControl><FormMessage /></FormItem>)} />
                                     )}
                                 </div>
+                                </div>
+                               </ScrollArea>
                             </div>
                         )}
-                        <DialogFooter className="mt-4 pt-4 border-t flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                        <DialogFooter className="mt-auto pt-4 border-t flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
                             <div className="flex items-baseline gap-4">
                                 <div className="text-sm">Subtotal: <span className="line-through">₹{totals.subtotal.toFixed(2)}</span></div>
                                 <div className="text-sm">Discount: <span className="text-green-600">-₹{totals.totalDiscount.toFixed(2)}</span></div>
