@@ -18,6 +18,7 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -62,7 +63,7 @@ type CreateOrderDialogProps = {
 }
 
 export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrderDialogProps) {
-    const { user } = useAuth();
+    const { user, loading: authLoading, sessionRefreshed } = useAuth();
     const { toast } = useToast();
     const [open, setOpen] = useState(false);
     const [distributorStock, setDistributorStock] = useState<DistributorStock[]>([]);
@@ -81,7 +82,7 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
     });
     
     const fetchData = useCallback(async () => {
-        if (!user || !open) return;
+        if (!user || !open || !sessionRefreshed) return;
         setLoading(true);
         setError(null);
     
@@ -115,13 +116,13 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
         } finally {
           setLoading(false);
         }
-      }, [user, open, toast]);
+      }, [user, open, sessionRefreshed, toast]);
     
       useEffect(() => {
-        if (open) {
+        if (open && sessionRefreshed) {
           fetchData();
         }
-      }, [open, fetchData]);
+      }, [open, sessionRefreshed, fetchData]);
 
     useEffect(() => {
         if (!open) {
@@ -220,7 +221,7 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
                 }
             }
 
-            const orderData: OrderFormData = {
+            const orderData = {
                 outlet_id: outlet.id,
                 total_amount: totals.finalTotal, // Final, post-discount amount
                 total_discount: totals.totalDiscount,
@@ -255,7 +256,7 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
             <DialogTrigger asChild>
                 <Button disabled={disabled}>Order</Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-6xl">
+            <DialogContent className="sm:max-w-4xl">
                  <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)}>
                         <DialogHeader>
@@ -276,41 +277,101 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
                             </div>
                         ) : (
                              <div className="py-4 space-y-4">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead className="w-[25%]">SKU</TableHead>
-                                            <TableHead>Type</TableHead>
-                                            <TableHead>Qty</TableHead>
-                                            <TableHead>Available</TableHead>
-                                            <TableHead>Price</TableHead>
-                                            <TableHead>Total</TableHead>
-                                            <TableHead>Scheme</TableHead>
-                                            <TableHead>Final Total</TableHead>
-                                            <TableHead><span className="sr-only">Actions</span></TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {fields.map((field, index) => {
-                                            const stockInfo = distributorStock.find(s => s.sku_id === watchedItems[index]?.sku_id);
-                                            const isCases = watchedItems[index]?.order_unit_type === 'cases';
-                                            const { total_price, scheme_discount_percentage } = calculateItemTotals(watchedItems[index]);
-                                            const final_total_price = total_price * (1 - (scheme_discount_percentage / 100));
+                                {/* Desktop Table */}
+                                <div className="hidden md:block">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead className="w-[25%]">SKU</TableHead>
+                                                <TableHead>Type</TableHead>
+                                                <TableHead>Qty</TableHead>
+                                                <TableHead>Available</TableHead>
+                                                <TableHead>Price</TableHead>
+                                                <TableHead>Total</TableHead>
+                                                <TableHead>Scheme</TableHead>
+                                                <TableHead>Final Total</TableHead>
+                                                <TableHead><span className="sr-only">Actions</span></TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {fields.map((field, index) => {
+                                                const stockInfo = distributorStock.find(s => s.sku_id === watchedItems[index]?.sku_id);
+                                                const isCases = watchedItems[index]?.order_unit_type === 'cases';
+                                                const { total_price, scheme_discount_percentage } = calculateItemTotals(watchedItems[index]);
+                                                const final_total_price = total_price * (1 - (scheme_discount_percentage / 100));
 
-                                            return (
-                                                <TableRow key={field.id}>
-                                                    <TableCell>
-                                                         <Controller
-                                                            control={form.control} name={`items.${index}.sku_id`}
-                                                            render={({ field: controllerField }) => (
-                                                                <Select onValueChange={(value) => { handleFieldChange(index, 'sku_id', parseInt(value)); handleFieldChange(index, 'available_stock', distributorStock.find(s => s.sku_id === parseInt(value))?.stock_quantity ?? 0) }} defaultValue={String(controllerField.value)}>
-                                                                    <FormControl><SelectTrigger><SelectValue placeholder="Select SKU" /></SelectTrigger></FormControl>
-                                                                    <SelectContent>{distributorStock.map(s => <SelectItem key={s.id} value={String(s.sku_id)}>{s.skus.name}</SelectItem>)}</SelectContent>
-                                                                </Select>
-                                                            )}
-                                                        />
-                                                    </TableCell>
-                                                    <TableCell>
+                                                return (
+                                                    <TableRow key={field.id}>
+                                                        <TableCell>
+                                                            <Controller
+                                                                control={form.control} name={`items.${index}.sku_id`}
+                                                                render={({ field: controllerField }) => (
+                                                                    <Select onValueChange={(value) => { handleFieldChange(index, 'sku_id', parseInt(value)); handleFieldChange(index, 'available_stock', distributorStock.find(s => s.sku_id === parseInt(value))?.stock_quantity ?? 0) }} defaultValue={String(controllerField.value)}>
+                                                                        <FormControl><SelectTrigger><SelectValue placeholder="Select SKU" /></SelectTrigger></FormControl>
+                                                                        <SelectContent>{distributorStock.map(s => <SelectItem key={s.id} value={String(s.sku_id)}>{s.skus.name}</SelectItem>)}</SelectContent>
+                                                                    </Select>
+                                                                )}
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Controller control={form.control} name={`items.${index}.order_unit_type`}
+                                                                render={({ field: controllerField }) => (
+                                                                    <Select onValueChange={(value) => handleFieldChange(index, 'order_unit_type', value)} defaultValue={controllerField.value}>
+                                                                        <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
+                                                                        <SelectContent><SelectItem value="units">Units</SelectItem><SelectItem value="cases">Cases</SelectItem></SelectContent>
+                                                                    </Select>
+                                                                )}
+                                                            />
+                                                        </TableCell>
+                                                        <TableCell><Input type="number" min={1} value={watchedItems[index]?.quantity} onChange={(e) => handleFieldChange(index, 'quantity', parseInt(e.target.value) || 1)} /></TableCell>
+                                                        <TableCell>{stockInfo?.stock_quantity ?? 'N/A'}</TableCell>
+                                                        <TableCell>₹{watchedItems[index]?.unit_price.toFixed(2)}</TableCell>
+                                                        <TableCell>₹{total_price.toFixed(2)}</TableCell>
+                                                        <TableCell>
+                                                            {isCases ? (
+                                                                <div className="flex items-center gap-2">
+                                                                    <Switch id={`scheme-${index}`} checked={watchedItems[index]?.apply_scheme} onCheckedChange={(checked) => handleFieldChange(index, 'apply_scheme', checked)} />
+                                                                    <Label htmlFor={`scheme-${index}`}>{scheme_discount_percentage}%</Label>
+                                                                </div>
+                                                            ) : 'N/A'}
+                                                        </TableCell>
+                                                        <TableCell className="font-bold">₹{final_total_price.toFixed(2)}</TableCell>
+                                                        <TableCell><Button variant="ghost" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
+                                                    </TableRow>
+                                                );
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                                
+                                {/* Mobile Cards */}
+                                <div className="grid gap-4 md:hidden">
+                                     {fields.map((field, index) => {
+                                        const stockInfo = distributorStock.find(s => s.sku_id === watchedItems[index]?.sku_id);
+                                        const isCases = watchedItems[index]?.order_unit_type === 'cases';
+                                        const { total_price, scheme_discount_percentage } = calculateItemTotals(watchedItems[index]);
+                                        const final_total_price = total_price * (1 - (scheme_discount_percentage / 100));
+                                        return (
+                                            <Card key={field.id}>
+                                                <CardHeader>
+                                                    <div className="flex justify-between items-start">
+                                                        <div className="flex-grow">
+                                                            <Controller
+                                                                control={form.control} name={`items.${index}.sku_id`}
+                                                                render={({ field: controllerField }) => (
+                                                                    <Select onValueChange={(value) => { handleFieldChange(index, 'sku_id', parseInt(value)); handleFieldChange(index, 'available_stock', distributorStock.find(s => s.sku_id === parseInt(value))?.stock_quantity ?? 0) }} defaultValue={String(controllerField.value)}>
+                                                                        <FormControl><SelectTrigger><SelectValue placeholder="Select SKU" /></SelectTrigger></FormControl>
+                                                                        <SelectContent>{distributorStock.map(s => <SelectItem key={s.id} value={String(s.sku_id)}>{s.skus.name}</SelectItem>)}</SelectContent>
+                                                                    </Select>
+                                                                )}
+                                                            />
+                                                        </div>
+                                                        <Button variant="ghost" size="icon" className="ml-2 flex-shrink-0" onClick={() => remove(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                                    </div>
+                                                </CardHeader>
+                                                <CardContent className="grid grid-cols-2 gap-4">
+                                                     <div>
+                                                        <Label>Type</Label>
                                                         <Controller control={form.control} name={`items.${index}.order_unit_type`}
                                                             render={({ field: controllerField }) => (
                                                                 <Select onValueChange={(value) => handleFieldChange(index, 'order_unit_type', value)} defaultValue={controllerField.value}>
@@ -319,26 +380,36 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
                                                                 </Select>
                                                             )}
                                                         />
-                                                    </TableCell>
-                                                    <TableCell><Input type="number" min={1} value={watchedItems[index]?.quantity} onChange={(e) => handleFieldChange(index, 'quantity', parseInt(e.target.value) || 1)} /></TableCell>
-                                                    <TableCell>{stockInfo?.stock_quantity ?? 'N/A'}</TableCell>
-                                                    <TableCell>₹{watchedItems[index]?.unit_price.toFixed(2)}</TableCell>
-                                                    <TableCell>₹{total_price.toFixed(2)}</TableCell>
-                                                    <TableCell>
-                                                        {isCases ? (
-                                                            <div className="flex items-center gap-2">
-                                                                <Switch id={`scheme-${index}`} checked={watchedItems[index]?.apply_scheme} onCheckedChange={(checked) => handleFieldChange(index, 'apply_scheme', checked)} />
-                                                                <Label htmlFor={`scheme-${index}`}>{scheme_discount_percentage}%</Label>
-                                                            </div>
-                                                        ) : 'N/A'}
-                                                    </TableCell>
-                                                    <TableCell className="font-bold">₹{final_total_price.toFixed(2)}</TableCell>
-                                                    <TableCell><Button variant="ghost" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
-                                                </TableRow>
-                                            );
-                                        })}
-                                    </TableBody>
-                                </Table>
+                                                    </div>
+                                                     <div>
+                                                         <Label>Quantity</Label>
+                                                        <Input type="number" min={1} value={watchedItems[index]?.quantity} onChange={(e) => handleFieldChange(index, 'quantity', parseInt(e.target.value) || 1)} />
+                                                    </div>
+                                                    <div className="text-sm">
+                                                        <Label>Available</Label>
+                                                        <div>{stockInfo?.stock_quantity ?? 'N/A'}</div>
+                                                    </div>
+                                                    <div className="text-sm">
+                                                        <Label>Price</Label>
+                                                        <div>₹{watchedItems[index]?.unit_price.toFixed(2)}</div>
+                                                    </div>
+                                                    {isCases && (
+                                                         <div className="col-span-2 flex items-center justify-between">
+                                                            <Label htmlFor={`scheme-mobile-${index}`}>Apply Scheme Discount ({scheme_discount_percentage}%)</Label>
+                                                            <Switch id={`scheme-mobile-${index}`} checked={watchedItems[index]?.apply_scheme} onCheckedChange={(checked) => handleFieldChange(index, 'apply_scheme', checked)} />
+                                                        </div>
+                                                    )}
+                                                </CardContent>
+                                                <CardFooter className="bg-muted/50 p-3 flex justify-between items-center">
+                                                    <span className="text-sm text-muted-foreground">Item Total</span>
+                                                    <span className="font-bold text-lg">₹{final_total_price.toFixed(2)}</span>
+                                                </CardFooter>
+                                            </Card>
+                                        )
+                                     })}
+                                </div>
+
+
                                 <Button type="button" variant="outline" size="sm" onClick={() => append({ sku_id: 0, order_unit_type: 'units', quantity: 1, unit_price: 0, total_price: 0, scheme_discount_percentage: 0, apply_scheme: true, available_stock: 0 })}>
                                     <PlusCircle className="mr-2 h-4 w-4" /> Add Item
                                 </Button>
@@ -366,10 +437,12 @@ export function CreateOrderDialog({ outlet, onOrderPlaced, disabled }: CreateOrd
                                 </div>
                             </div>
                         )}
-                        <DialogFooter className="mt-4 pt-4 border-t">
-                            <div className="flex items-center gap-4 w-full justify-end">
+                        <DialogFooter className="mt-4 pt-4 border-t flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                            <div className="flex items-baseline gap-4">
                                 <div className="text-sm">Subtotal: <span className="line-through">₹{totals.subtotal.toFixed(2)}</span></div>
                                 <div className="text-sm">Discount: <span className="text-green-600">-₹{totals.totalDiscount.toFixed(2)}</span></div>
+                            </div>
+                             <div className="flex items-center justify-end gap-4">
                                 <div className="text-right">
                                     <p className="text-muted-foreground">Total Order Value</p>
                                     <p className="text-2xl font-bold">₹{totals.finalTotal.toFixed(2)}</p>
