@@ -10,8 +10,9 @@ import { useRouter } from 'next/navigation';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  sessionRefreshed: boolean; // New state to track if session has been checked at least once
   logout: () => Promise<void>;
+  // This flag is no longer needed with the new robust implementation
+  // sessionRefreshed: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -28,8 +29,7 @@ const mapNumericRoleToString = (role: number): UserRole => {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [sessionRefreshed, setSessionRefreshed] = useState(false);
+  const [loading, setLoading] = useState(true); // Start as true
   const router = useRouter();
 
   const fetchUserProfile = useCallback(async (supabaseUser: SupabaseUser | null): Promise<User | null> => {
@@ -46,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (error) {
             console.error("Error fetching user profile:", error);
+            // This might happen if profile creation trigger fails. Log out the user.
             await supabase.auth.signOut();
             return null;
         }
@@ -66,44 +67,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const handleAuthStateChange = async (_event: AuthChangeEvent, session: Session | null) => {
-        setLoading(true);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
         const supabaseUser = session?.user ?? null;
         if (supabaseUser) {
-            const profile = await fetchUserProfile(supabaseUser);
-            setUser(profile);
+          const profile = await fetchUserProfile(supabaseUser);
+          setUser(profile);
         } else {
-            setUser(null);
+          setUser(null);
         }
-        setSessionRefreshed(true); // Mark session as checked
+        // Only set loading to false after the auth state has been determined.
         setLoading(false);
-    };
-    
-    // Subscribe to auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
-    
-    // Initial check in case onAuthStateChange doesn't fire on page load
-    supabase.auth.getSession().then(({ data: { session } }) => {
-        if (!sessionRefreshed) {
-             handleAuthStateChange('INITIAL_SESSION', session);
-        }
-    });
+      }
+    );
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchUserProfile, sessionRefreshed]);
+  }, [fetchUserProfile]);
 
 
   const logout = async () => {
     setLoading(true);
     await supabase.auth.signOut();
     setUser(null);
-    router.push('/login'); 
+    // Don't push here, let the layouts handle the redirect based on the new auth state
     setLoading(false);
   };
   
-  const value = { user, loading, sessionRefreshed, logout };
+  // sessionRefreshed is removed as the new loading state handles it implicitly
+  const value = { user, loading, logout };
 
   return (
     <AuthContext.Provider value={value}>
