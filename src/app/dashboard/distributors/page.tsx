@@ -24,7 +24,7 @@ export default function DistributorsPage() {
         const [distributorsRes, usersRes] = await Promise.all([distributorsPromise, usersPromise]);
 
         if (distributorsRes.data) setDistributors(distributorsRes.data);
-        if (usersRes.data) setUsers(usersRes.data);
+        if (usersRes.data) setUsers(usersRes.data as User[]);
         setLoading(false);
     }, []);
 
@@ -62,6 +62,8 @@ export default function DistributorsPage() {
                                 <TableRow>
                                     <TableHead>Organization Name</TableHead>
                                     <TableHead>Admin User</TableHead>
+                                    <TableHead>Address</TableHead>
+                                    <TableHead>GST Number</TableHead>
                                     <TableHead className="text-right">Created On</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -70,6 +72,8 @@ export default function DistributorsPage() {
                                     <TableRow key={distributor.id}>
                                         <TableCell className="font-medium">{distributor.name}</TableCell>
                                         <TableCell>{getAdminName(distributor.admin_user_id)}</TableCell>
+                                        <TableCell>{distributor.address || 'N/A'}</TableCell>
+                                        <TableCell>{distributor.gst_number || 'N/A'}</TableCell>
                                         <TableCell className="text-right">{format(new Date(distributor.created_at), 'MMM d, yyyy')}</TableCell>
                                     </TableRow>
                                 ))}

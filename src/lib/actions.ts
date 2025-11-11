@@ -114,7 +114,11 @@ export async function createDistributorWithAdmin(formData: DistributorFormData) 
     // 1. Create the distributor organization first
     const { data: distributorData, error: distributorError } = await supabaseAdmin
         .from('distributors')
-        .insert({ name: formData.distributorName })
+        .insert({ 
+            name: formData.distributorName,
+            address: formData.address,
+            gst_number: formData.gst_number,
+         })
         .select()
         .single();
 

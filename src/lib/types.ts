@@ -195,6 +195,8 @@ export type UserFormData = {
 // For creating a new distributor organization and its admin
 export type DistributorFormData = {
     distributorName: string;
+    address?: string;
+    gst_number?: string;
     adminName: string;
     adminEmail: string;
     adminPassword: string;

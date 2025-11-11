@@ -31,6 +31,8 @@ import { Separator } from "@/components/ui/separator";
 
 const formSchema = z.object({
   distributorName: z.string().min(3, "Organization name must be at least 3 characters."),
+  address: z.string().optional(),
+  gst_number: z.string().optional(),
   adminName: z.string().min(2, "Admin name must be at least 2 characters."),
   adminEmail: z.string().email("Invalid email address for admin."),
   adminPassword: z.string().min(6, "Admin password must be at least 6 characters."),
@@ -48,6 +50,8 @@ export function AddDistributorDialog({ onDistributorAdded }: AddDistributorDialo
         resolver: zodResolver(formSchema),
         defaultValues: {
             distributorName: "",
+            address: "",
+            gst_number: "",
             adminName: "",
             adminEmail: "",
             adminPassword: "",
@@ -103,6 +107,32 @@ export function AddDistributorDialog({ onDistributorAdded }: AddDistributorDialo
                                         <FormLabel>Organization Name</FormLabel>
                                         <FormControl>
                                             <Input placeholder="e.g., City-Wide Beverages" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="address"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Address</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g., 123 Business Rd, Commerce City" {...field} />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="gst_number"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>GST Number</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g., 22AAAAA0000A1Z5" {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
