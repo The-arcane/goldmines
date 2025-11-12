@@ -5,13 +5,14 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { User, UserRole, Distributor } from "@/lib/types";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { AddUserDialog } from "@/components/dashboard/users/add-user-dialog";
 import { useAuth } from "@/lib/auth";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const adminAllowedRoles: { value: UserRole, label: string }[] = [
     { value: 'super_admin', label: 'Super Admin' },
@@ -85,36 +86,70 @@ export default function UsersPage() {
                 </CardHeader>
                 <CardContent>
                     {loading ? (
-                        <div className="text-center p-8">Loading users...</div>
-                    ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Name</TableHead>
-                                    <TableHead>Email</TableHead>
-                                    <TableHead>Role</TableHead>
-                                    <TableHead className="text-right">Joined</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
+                        <div className="space-y-4">
+                            <Skeleton className="h-12 w-full" />
+                            <Skeleton className="h-12 w-full" />
+                            <Skeleton className="h-12 w-full" />
+                        </div>
+                    ) : users.length > 0 ? (
+                        <>
+                            {/* Desktop View */}
+                            <div className="hidden md:block">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Name</TableHead>
+                                            <TableHead>Email</TableHead>
+                                            <TableHead>Role</TableHead>
+                                            <TableHead className="text-right">Joined</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {users.map((user) => (
+                                            <TableRow key={user.id}>
+                                                <TableCell className="font-medium flex items-center gap-3">
+                                                    <Avatar className="h-9 w-9">
+                                                        <AvatarImage src={user.avatar_url} alt={user.name} />
+                                                        <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                                                    </Avatar>
+                                                    {user.name}
+                                                </TableCell>
+                                                <TableCell>{user.email}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="secondary">{roleDisplayNames[user.role] || 'Unknown'}</Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right">{format(new Date(user.created_at), 'MMM d, yyyy')}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                            {/* Mobile View */}
+                            <div className="grid gap-4 md:hidden">
                                 {users.map((user) => (
-                                    <TableRow key={user.id}>
-                                        <TableCell className="font-medium flex items-center gap-3">
-                                            <Avatar className="h-9 w-9">
+                                    <Card key={user.id}>
+                                        <CardHeader className="flex flex-row items-center gap-4">
+                                            <Avatar className="h-12 w-12">
                                                 <AvatarImage src={user.avatar_url} alt={user.name} />
                                                 <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                                             </Avatar>
-                                            {user.name}
-                                        </TableCell>
-                                        <TableCell>{user.email}</TableCell>
-                                        <TableCell>
+                                            <div className="grid gap-1">
+                                                <CardTitle className="text-base leading-tight">{user.name}</CardTitle>
+                                                <CardDescription className="text-xs break-all">{user.email}</CardDescription>
+                                            </div>
+                                        </CardHeader>
+                                        <CardFooter className="flex justify-between items-center text-sm">
                                             <Badge variant="secondary">{roleDisplayNames[user.role] || 'Unknown'}</Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right">{format(new Date(user.created_at), 'MMM d, yyyy')}</TableCell>
-                                    </TableRow>
+                                            <span className="text-muted-foreground">Joined: {format(new Date(user.created_at), 'MMM d, yyyy')}</span>
+                                        </CardFooter>
+                                    </Card>
                                 ))}
-                            </TableBody>
-                        </Table>
+                            </div>
+                        </>
+                    ) : (
+                        <div className="text-center text-muted-foreground p-8 border-dashed border-2 rounded-md">
+                            No users found.
+                        </div>
                     )}
                 </CardContent>
             </Card>

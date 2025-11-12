@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { AddUserDialog } from "@/components/dashboard/users/add-user-dialog";
 import { useAuth } from "@/lib/auth";
 import { useTranslation } from "@/components/i18n/provider";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const distributorAllowedRoles: { value: UserRole, label: string }[] = [
     { value: 'sales_executive', label: 'Sales Executive' },
@@ -134,7 +135,11 @@ export default function DistributorUsersPage() {
                 </CardHeader>
                 <CardContent>
                     {loading ? (
-                        <div className="text-center p-8">Loading team members...</div>
+                         <div className="space-y-4">
+                            <Skeleton className="h-12 w-full" />
+                            <Skeleton className="h-12 w-full" />
+                            <Skeleton className="h-12 w-full" />
+                        </div>
                     ) : teamMembers.length > 0 ? (
                         <>
                             {/* Desktop Table */}
@@ -180,7 +185,7 @@ export default function DistributorUsersPage() {
                                                     <AvatarFallback>{getInitials(member.name)}</AvatarFallback>
                                                 </Avatar>
                                                 <div>
-                                                    <CardTitle className="text-lg">{member.name}</CardTitle>
+                                                    <CardTitle className="text-lg leading-tight">{member.name}</CardTitle>
                                                     <CardDescription className="break-all">{member.email}</CardDescription>
                                                 </div>
                                             </div>
