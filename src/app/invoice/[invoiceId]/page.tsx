@@ -164,7 +164,7 @@ export default function InvoicePage({ params }: { params: { invoiceId: string } 
                                     </TableHeader>
                                     <TableBody>
                                         {items?.map((item: InvoiceItem, index: number) => (
-                                            <TableRow key={index}>
+                                            <TableRow key={index} className="break-inside-avoid">
                                                 <TableCell>
                                                     <div className="font-medium">{item.name}</div>
                                                     <div className="text-xs text-muted-foreground">{item.code}</div>
@@ -180,7 +180,7 @@ export default function InvoicePage({ params }: { params: { invoiceId: string } 
                             </div>
                             <div className="grid gap-4 md:hidden">
                                 {items?.map((item: InvoiceItem, index: number) => (
-                                    <Card key={index}>
+                                    <Card key={index} className="break-inside-avoid">
                                         <CardContent className="p-4 grid gap-2">
                                             <div>
                                                 <p className="font-medium">{item.name}</p>
