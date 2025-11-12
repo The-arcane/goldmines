@@ -42,45 +42,38 @@ export default function CreateOrderPage() {
     const [skus, setSkus] = useState<Sku[]>([]);
     const [loading, setLoading] = useState(true);
 
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
-        defaultValues: { outlet_id: "", items: [] },
-    });
-
-    const { fields, append, remove, update } = useFieldArray({
-        control: form.control,
-        name: "items",
-    });
-
     const fetchData = useCallback(async () => {
         if (!user) return;
         setLoading(true);
 
-        // A sales exec or delivery partner belongs to ONE distributor.
+        // A sales exec belongs to ONE distributor.
         // We need to fetch the user profile to find which distributor they belong to.
         const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('distributor_id:distributor_users!inner(distributor_id)')
-            .eq('id', user.id)
+            .from('distributor_users')
+            .select('distributor_id')
+            .eq('user_id', user.id)
             .single();
 
-        if (userError || !userData || !(userData as any).distributor_id.length) {
+        if (userError || !userData) {
              toast({ variant: "destructive", title: "Cannot create order", description: "You are not assigned to a distributor."});
              setLoading(false);
              return;
         }
         
-        const distributorId = (userData as any).distributor_id[0].distributor_id;
+        const distributorId = userData.distributor_id;
         
         const { data: distributorData } = await supabase.from('distributors').select('*').eq('id', distributorId).single();
 
         if (distributorData) {
             setDistributor(distributorData);
-            const outletsPromise = supabase.from("outlets").select("*"); // Simplified for now
-            const skusPromise = supabase.from("skus").select("*").or(`distributor_id.eq.${distributorData.id},distributor_id.is.null`);
+            const outletsPromise = supabase.from("outlets").select("*").eq('distributor_id', distributorId);
+            const skusPromise = supabase.from("distributor_stock").select("*, skus!inner(*)").eq('distributor_id', distributorId);
             const [outletsRes, skusRes] = await Promise.all([outletsPromise, skusPromise]);
             if(outletsRes.data) setOutlets(outletsRes.data);
-            if(skusRes.data) setSkus(skusRes.data);
+            if(skusRes.data) {
+                const availableSkus = skusRes.data.map(item => item.skus) as Sku[];
+                setSkus(availableSkus);
+            }
         }
         setLoading(false);
     }, [user, toast]);

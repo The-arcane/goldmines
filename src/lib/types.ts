@@ -1,6 +1,5 @@
 
 
-
 export type UserRole = 'super_admin' | 'sales_executive' | 'distributor_admin';
 
 export type User = {
@@ -35,7 +34,8 @@ export type Outlet = {
   created_at: string;
   credit_limit: number;
   current_due: number;
-  created_by?: string; // Add this if you track who created the outlet
+  created_by?: string; 
+  distributor_id?: number; // Added this line
 };
 
 export type Geofence = {

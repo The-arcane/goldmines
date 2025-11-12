@@ -89,6 +89,19 @@ export function AddSalespersonOutletDialog({ onOutletAdded, disabled }: AddSales
 
         setLoading(true);
 
+        const { data: distributorLink, error: distributorLinkError } = await supabase
+            .from('distributor_users')
+            .select('distributor_id')
+            .eq('user_id', user.id)
+            .single();
+
+        if (distributorLinkError || !distributorLink) {
+            toast({ variant: "destructive", title: "Cannot Add Outlet", description: "You are not assigned to a distributor." });
+            setLoading(false);
+            return;
+        }
+
+        const distributorId = distributorLink.distributor_id;
         const lat = selectedPlace.geometry.location.lat();
         const lng = selectedPlace.geometry.location.lng();
         const finalAddress = selectedPlace.formatted_address || address;
@@ -102,6 +115,7 @@ export function AddSalespersonOutletDialog({ onOutletAdded, disabled }: AddSales
                 lat, 
                 lng, 
                 created_by: user.id,
+                distributor_id: distributorId,
                 // These are not in the schema yet, but good practice to have them
                 // owner_name: ownerName,
                 // contact_number: contactNumber,
