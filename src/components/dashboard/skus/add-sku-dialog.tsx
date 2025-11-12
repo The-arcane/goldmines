@@ -91,7 +91,7 @@ export function AddSkuDialog({ onSkuAdded }: AddSkuDialogProps) {
                     </span>
                 </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-2xl">
+            <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Add New Master SKU</DialogTitle>
                     <DialogDescription>
@@ -105,7 +105,7 @@ export function AddSkuDialog({ onSkuAdded }: AddSkuDialogProps) {
                                 control={form.control}
                                 name="name"
                                 render={({ field }) => (
-                                    <FormItem>
+                                    <FormItem className="col-span-2">
                                         <FormLabel>Product Name</FormLabel>
                                         <FormControl><Input placeholder="e.g., Cool Cola 500ml" {...field} /></FormControl>
                                         <FormMessage />
@@ -161,7 +161,7 @@ export function AddSkuDialog({ onSkuAdded }: AddSkuDialogProps) {
                                 name="case_price"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Case Price (to Distributor) (₹)</FormLabel>
+                                        <FormLabel>Case Price (₹)</FormLabel>
                                         <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -182,7 +182,7 @@ export function AddSkuDialog({ onSkuAdded }: AddSkuDialogProps) {
                                 control={form.control}
                                 name="ptr"
                                 render={({ field }) => (
-                                    <FormItem>
+                                    <FormItem className="col-span-2">
                                         <FormLabel>Price to Retailer (PTR) (₹)</FormLabel>
                                         <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
                                         <FormMessage />

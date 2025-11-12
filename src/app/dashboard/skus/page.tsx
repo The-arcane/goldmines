@@ -4,7 +4,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { Sku } from "@/lib/types";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/lib/auth";
 import { AddSkuDialog } from "@/components/dashboard/skus/add-sku-dialog";
@@ -95,59 +95,117 @@ function MasterSkuTable({ skus, onDataChange }: { skus: Sku[], onDataChange: () 
         );
     }
     return (
-        <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead>Product Name</TableHead>
-                    <TableHead>SKU Code</TableHead>
-                    <TableHead className="text-right">Stock</TableHead>
-                    <TableHead>Unit</TableHead>
-                    <TableHead className="text-right">Units/Case</TableHead>
-                    <TableHead className="text-right">Case Price</TableHead>
-                    <TableHead className="text-right">MRP</TableHead>
-                    <TableHead><span className="sr-only">Actions</span></TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
+        <>
+            <div className="hidden md:block">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Product Name</TableHead>
+                            <TableHead>SKU Code</TableHead>
+                            <TableHead className="text-right">Stock</TableHead>
+                            <TableHead>Unit</TableHead>
+                            <TableHead className="text-right">Units/Case</TableHead>
+                            <TableHead className="text-right">Case Price</TableHead>
+                            <TableHead className="text-right">MRP</TableHead>
+                            <TableHead><span className="sr-only">Actions</span></TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {skus.map((sku) => (
+                            <TableRow key={sku.id}>
+                                <TableCell className="font-medium">{sku.name}</TableCell>
+                                <TableCell>{sku.product_code || 'N/A'}</TableCell>
+                                <TableCell className="text-right">
+                                    <Badge variant={sku.stock_quantity < 10 ? 'destructive' : 'secondary'}>
+                                        {sku.stock_quantity}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell>{sku.unit_type || 'N/A'}</TableCell>
+                                <TableCell className="text-right">{sku.units_per_case || 'N/A'}</TableCell>
+                                <TableCell className="text-right">₹{sku.case_price?.toFixed(2) || '0.00'}</TableCell>
+                                <TableCell className="text-right">₹{sku.mrp?.toFixed(2) || '0.00'}</TableCell>
+                                <TableCell>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon">
+                                                <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                            <DropdownMenuSeparator />
+                                            <EditSkuDialog sku={sku} onSkuUpdated={onDataChange}>
+                                                <button className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full text-left">
+                                                    Edit
+                                                </button>
+                                            </EditSkuDialog>
+                                            <DeleteSkuAlert sku={sku} onSkuDeleted={onDataChange}>
+                                                <button className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full text-left text-destructive">
+                                                    Delete
+                                                </button>
+                                            </DeleteSkuAlert>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+            <div className="grid gap-4 md:hidden">
                 {skus.map((sku) => (
-                    <TableRow key={sku.id}>
-                        <TableCell className="font-medium">{sku.name}</TableCell>
-                        <TableCell>{sku.product_code || 'N/A'}</TableCell>
-                        <TableCell className="text-right">
-                            <Badge variant={sku.stock_quantity < 10 ? 'destructive' : 'secondary'}>
-                                {sku.stock_quantity}
-                            </Badge>
-                        </TableCell>
-                        <TableCell>{sku.unit_type || 'N/A'}</TableCell>
-                        <TableCell className="text-right">{sku.units_per_case || 'N/A'}</TableCell>
-                        <TableCell className="text-right">₹{sku.case_price?.toFixed(2) || '0.00'}</TableCell>
-                        <TableCell className="text-right">₹{sku.mrp?.toFixed(2) || '0.00'}</TableCell>
-                        <TableCell>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon">
-                                        <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                    <EditSkuDialog sku={sku} onSkuUpdated={onDataChange}>
-                                        <button className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full text-left">
-                                            Edit
-                                        </button>
-                                    </EditSkuDialog>
-                                    <DeleteSkuAlert sku={sku} onSkuDeleted={onDataChange}>
-                                        <button className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full text-left text-destructive">
-                                            Delete
-                                        </button>
-                                    </DeleteSkuAlert>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </TableCell>
-                    </TableRow>
+                    <Card key={sku.id}>
+                        <CardHeader>
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <CardTitle className="text-base">{sku.name}</CardTitle>
+                                    <CardDescription>SKU: {sku.product_code || 'N/A'}</CardDescription>
+                                </div>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                        <EditSkuDialog sku={sku} onSkuUpdated={onDataChange}>
+                                            <button className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full text-left">Edit</button>
+                                        </EditSkuDialog>
+                                        <DeleteSkuAlert sku={sku} onSkuDeleted={onDataChange}>
+                                            <button className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 w-full text-left text-destructive">Delete</button>
+                                        </DeleteSkuAlert>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-2 gap-4 text-sm">
+                             <div>
+                                <p className="text-muted-foreground">Stock</p>
+                                <Badge variant={sku.stock_quantity < 10 ? 'destructive' : 'secondary'}>{sku.stock_quantity}</Badge>
+                            </div>
+                            <div>
+                                <p className="text-muted-foreground">Unit</p>
+                                <p>{sku.unit_type || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <p className="text-muted-foreground">Units/Case</p>
+                                <p>{sku.units_per_case || 'N/A'}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-muted-foreground">MRP</p>
+                                <p className="font-semibold">₹{sku.mrp?.toFixed(2) || '0.00'}</p>
+                            </div>
+                        </CardContent>
+                        <CardFooter>
+                            <div className="w-full">
+                                <p className="text-muted-foreground text-sm">Case Price</p>
+                                <p className="font-semibold text-base">₹{sku.case_price?.toFixed(2) || '0.00'}</p>
+                            </div>
+                        </CardFooter>
+                    </Card>
                 ))}
-            </TableBody>
-        </Table>
+            </div>
+        </>
     )
 }

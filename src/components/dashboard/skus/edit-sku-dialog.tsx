@@ -93,7 +93,7 @@ export function EditSkuDialog({ sku, onSkuUpdated, children }: EditSkuDialogProp
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>{children}</DialogTrigger>
-            <DialogContent className="sm:max-w-2xl">
+            <DialogContent className="sm:max-w-md">
                 <DialogHeader>
                     <DialogTitle>Edit Master SKU</DialogTitle>
                     <DialogDescription>
@@ -103,11 +103,11 @@ export function EditSkuDialog({ sku, onSkuUpdated, children }: EditSkuDialogProp
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
+                             <FormField
                                 control={form.control}
                                 name="name"
                                 render={({ field }) => (
-                                    <FormItem>
+                                    <FormItem className="col-span-2">
                                         <FormLabel>Product Name</FormLabel>
                                         <FormControl><Input placeholder="e.g., Cool Cola 500ml" {...field} /></FormControl>
                                         <FormMessage />
@@ -163,7 +163,7 @@ export function EditSkuDialog({ sku, onSkuUpdated, children }: EditSkuDialogProp
                                 name="case_price"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Case Price (to Distributor) (₹)</FormLabel>
+                                        <FormLabel>Case Price (₹)</FormLabel>
                                         <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -184,7 +184,7 @@ export function EditSkuDialog({ sku, onSkuUpdated, children }: EditSkuDialogProp
                                 control={form.control}
                                 name="ptr"
                                 render={({ field }) => (
-                                    <FormItem>
+                                    <FormItem className="col-span-2">
                                         <FormLabel>Price to Retailer (PTR) (₹)</FormLabel>
                                         <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
                                         <FormMessage />
