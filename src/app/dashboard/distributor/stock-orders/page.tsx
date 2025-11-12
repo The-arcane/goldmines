@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { Check, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { updateOrderStatus } from "@/lib/actions";
 
@@ -46,7 +46,7 @@ export default function StockOrdersPage() {
 
         const { data, error } = await supabase
             .from("stock_orders")
-            .select("*")
+            .select("*, invoices(id)")
             .eq('distributor_id', distributorData.id)
             .order("order_date", { ascending: false });
 
@@ -132,7 +132,13 @@ export default function StockOrdersPage() {
                                             <Button asChild variant="outline" size="sm">
                                                 <Link href={`/dashboard/stock-orders/${order.id}`}>View</Link>
                                             </Button>
-                                            {order.status === 'Shipped' && (
+                                             {order.is_invoice_created && order.invoices && order.invoices.length > 0 ? (
+                                                <Button asChild variant="secondary" size="sm">
+                                                    <Link href={`/invoice/${order.invoices[0].id}`}>
+                                                        <FileText className="mr-2 h-4 w-4" /> View Invoice
+                                                    </Link>
+                                                </Button>
+                                            ) : order.status === 'Shipped' && (
                                                 <Button 
                                                     variant="default" 
                                                     size="sm" 

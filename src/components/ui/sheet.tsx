@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -64,8 +65,6 @@ const SheetContent = React.forwardRef<
       className={cn(sheetVariants({ side }), className)}
       {...props}
     >
-      {/* The title is visually hidden but available for screen readers */}
-      <SheetPrimitive.Title className="sr-only">Navigation Menu</SheetPrimitive.Title>
       {children}
       <SheetPrimitive.Close data-radix-dialog-close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
         <X className="h-4 w-4" />

@@ -55,7 +55,7 @@ export default function InvoicePage({ params }: { params: { invoiceId: string } 
         const brandDetailsPromise = supabase
             .from('users')
             .select('company_name, company_address, company_gst_number')
-            .eq('role', 1) // role 1 is admin
+            .eq('role', 'super_admin')
             .limit(1)
             .single();
 
