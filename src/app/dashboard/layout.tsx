@@ -55,7 +55,9 @@ export default function DashboardLayout({
           {children}
         </main>
         <footer className="bg-muted/40 p-6 pt-0 text-right text-xs text-muted-foreground">
-          Developed by SparkEdge Innovations
+          <a href="https://linktr.ee/SparkEdgeInnovations" target="_blank" rel="noopener noreferrer" className="hover:underline">
+            Developed by SparkEdge Innovations
+          </a>
         </footer>
       </div>
     </div>

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import Link from "next/link";
@@ -63,7 +64,9 @@ export function Sidebar() {
           </nav>
         </div>
          <div className="mt-auto p-4 text-center text-xs text-muted-foreground">
-          Developed by SparkEdge Innovations
+          <a href="https://linktr.ee/SparkEdgeInnovations" target="_blank" rel="noopener noreferrer" className="hover:underline">
+            Developed by SparkEdge Innovations
+          </a>
         </div>
       </div>
     </div>
