@@ -131,7 +131,7 @@ export default function StockOrdersPage() {
                                                 <Link href={`/dashboard/stock-orders/${order.id}`}>View</Link>
                                             </Button>
                                              {order.is_invoice_created && order.invoices && order.invoices.length > 0 ? (
-                                                <Button asChild variant="secondary" size="sm">
+                                                <Button asChild variant="outline" size="sm">
                                                     <Link href={`/invoice/${order.invoices[0].id}`}>
                                                         <FileText className="mr-2 h-4 w-4" /> View Invoice
                                                     </Link>
