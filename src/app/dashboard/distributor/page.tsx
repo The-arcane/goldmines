@@ -53,7 +53,7 @@ export default function DistributorDashboardPage() {
       // 2. Fetch team members, outlets, and orders in parallel
       const [memberLinksRes, outletsRes, ordersRes] = await Promise.all([
         supabase.from("distributor_users").select("users(*)").eq("distributor_id", currentDistributorId),
-        supabase.from("outlets").select("*").limit(10), // Placeholder logic for assigned outlets
+        supabase.from("outlets").select("*").eq("distributor_id", currentDistributorId),
         supabase.from("orders").select("*, outlets(name)").eq("distributor_id", currentDistributorId).order("order_date", { ascending: false }).limit(5)
       ]);
 
@@ -243,3 +243,5 @@ export default function DistributorDashboardPage() {
     </div>
   );
 }
+
+    
