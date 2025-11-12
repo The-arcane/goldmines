@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/components/i18n/provider";
+import { SheetHeader, SheetTitle } from "../ui/sheet";
 
 const navItems = [
     { href: "/salesperson/dashboard", icon: Home, label: "Dashboard" },
@@ -44,12 +45,13 @@ export function MobileSidebar() {
   
   return (
     <div className="flex h-full max-h-screen flex-col gap-2">
-      <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
+      <SheetHeader className="border-b p-4">
+        <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
         <Link href="/salesperson/dashboard" className="flex items-center gap-2 font-semibold font-headline">
           <Rocket className="h-6 w-6 text-primary" />
           <span className="">Sales Portal</span>
         </Link>
-      </div>
+      </SheetHeader>
       <div className="flex-1">
         <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
           {navItems.map(({ href, icon: Icon, label }) => (
