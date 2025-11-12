@@ -185,57 +185,113 @@ export default function CreateStockOrderPage() {
                                         <Loader2 className="h-6 w-6 animate-spin" />
                                     </div>
                                 ) : (
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead className="w-[35%]">SKU</TableHead>
-                                                <TableHead className="text-center">Units/Case</TableHead>
-                                                <TableHead>Qty (Cases)</TableHead>
-                                                <TableHead className="text-right">Case Price</TableHead>
-                                                <TableHead className="text-right">Total Price</TableHead>
-                                                <TableHead className="w-[50px]"><span className="sr-only">Actions</span></TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
+                                    <>
+                                        <div className="hidden md:block">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead className="w-[35%]">SKU</TableHead>
+                                                        <TableHead className="text-center">Units/Case</TableHead>
+                                                        <TableHead>Qty (Cases)</TableHead>
+                                                        <TableHead className="text-right">Case Price</TableHead>
+                                                        <TableHead className="text-right">Total Price</TableHead>
+                                                        <TableHead className="w-[50px]"><span className="sr-only">Actions</span></TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {fields.map((field, index) => {
+                                                        const skuDetails = getSkuDetails(watchedItems[index]?.sku_id);
+                                                        return (
+                                                        <TableRow key={field.id}>
+                                                            <TableCell>
+                                                                <Controller
+                                                                    control={form.control}
+                                                                    name={`items.${index}.sku_id`}
+                                                                    render={({ field }) => (
+                                                                        <Select onValueChange={(value) => { field.onChange(value); handleSkuChange(index, value); }} defaultValue={String(field.value)}>
+                                                                            <FormControl><SelectTrigger><SelectValue placeholder="Select a SKU" /></SelectTrigger></FormControl>
+                                                                            <SelectContent position="popper">
+                                                                                {skus.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}{s.unit_type ? ` (${s.unit_type})` : ''}</SelectItem>)}
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    )}
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell className="text-center">{skuDetails?.units_per_case || 'N/A'}</TableCell>
+                                                            <TableCell>
+                                                                <Controller
+                                                                    control={form.control}
+                                                                    name={`items.${index}.quantity`}
+                                                                    render={({ field }) => (
+                                                                        <Input type="number" {...field} onChange={(e) => { field.onChange(e); handleQuantityChange(index, e.target.value); }} />
+                                                                    )}
+                                                                />
+                                                            </TableCell>
+                                                            <TableCell className="text-right font-mono">₹{skuDetails?.case_price?.toFixed(2) || '0.00'}</TableCell>
+                                                            <TableCell className="text-right font-mono">₹{watchedItems[index]?.total_price.toFixed(2) || '0.00'}</TableCell>
+                                                            <TableCell>
+                                                                <Button variant="ghost" size="icon" onClick={() => remove(index)}>
+                                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                                </Button>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    )})}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                         <div className="grid gap-4 md:hidden">
                                             {fields.map((field, index) => {
                                                 const skuDetails = getSkuDetails(watchedItems[index]?.sku_id);
                                                 return (
-                                                <TableRow key={field.id}>
-                                                    <TableCell>
-                                                        <Controller
-                                                            control={form.control}
-                                                            name={`items.${index}.sku_id`}
-                                                            render={({ field }) => (
-                                                                <Select onValueChange={(value) => { field.onChange(value); handleSkuChange(index, value); }} defaultValue={String(field.value)}>
-                                                                    <FormControl><SelectTrigger><SelectValue placeholder="Select a SKU" /></SelectTrigger></FormControl>
-                                                                    <SelectContent position="popper">
-                                                                        {skus.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}{s.unit_type ? ` (${s.unit_type})` : ''}</SelectItem>)}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            )}
-                                                        />
-                                                    </TableCell>
-                                                    <TableCell className="text-center">{skuDetails?.units_per_case || 'N/A'}</TableCell>
-                                                    <TableCell>
-                                                        <Controller
-                                                            control={form.control}
-                                                            name={`items.${index}.quantity`}
-                                                            render={({ field }) => (
-                                                                <Input type="number" {...field} onChange={(e) => { field.onChange(e); handleQuantityChange(index, e.target.value); }} />
-                                                            )}
-                                                        />
-                                                    </TableCell>
-                                                    <TableCell className="text-right font-mono">₹{skuDetails?.case_price?.toFixed(2) || '0.00'}</TableCell>
-                                                    <TableCell className="text-right font-mono">₹{watchedItems[index]?.total_price.toFixed(2) || '0.00'}</TableCell>
-                                                    <TableCell>
-                                                        <Button variant="ghost" size="icon" onClick={() => remove(index)}>
-                                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                                        </Button>
-                                                    </TableCell>
-                                                </TableRow>
-                                            )})}
-                                        </TableBody>
-                                    </Table>
+                                                    <Card key={field.id} className="w-full">
+                                                        <CardHeader>
+                                                            <div className="flex justify-between items-start">
+                                                                <Controller
+                                                                    control={form.control}
+                                                                    name={`items.${index}.sku_id`}
+                                                                    render={({ field: controllerField }) => (
+                                                                        <Select onValueChange={(value) => { controllerField.onChange(value); handleSkuChange(index, value); }} defaultValue={String(controllerField.value)}>
+                                                                            <FormControl><SelectTrigger><SelectValue placeholder="Select a SKU" /></SelectTrigger></FormControl>
+                                                                            <SelectContent position="popper">
+                                                                                {skus.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}{s.unit_type ? ` (${s.unit_type})` : ''}</SelectItem>)}
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                    )}
+                                                                />
+                                                                <Button variant="ghost" size="icon" onClick={() => remove(index)}>
+                                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                                </Button>
+                                                            </div>
+                                                        </CardHeader>
+                                                        <CardContent className="grid grid-cols-2 gap-4">
+                                                            <div>
+                                                                <FormLabel>Qty (Cases)</FormLabel>
+                                                                <Controller
+                                                                    control={form.control}
+                                                                    name={`items.${index}.quantity`}
+                                                                    render={({ field }) => (
+                                                                        <Input type="number" {...field} onChange={(e) => { field.onChange(e); handleQuantityChange(index, e.target.value); }} />
+                                                                    )}
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <FormLabel>Units/Case</FormLabel>
+                                                                <div className="font-medium pt-2">{skuDetails?.units_per_case || 'N/A'}</div>
+                                                            </div>
+                                                            <div className="text-sm">
+                                                                <FormLabel>Case Price</FormLabel>
+                                                                <div className="font-medium pt-2 font-mono">₹{skuDetails?.case_price?.toFixed(2) || '0.00'}</div>
+                                                            </div>
+                                                            <div className="text-sm">
+                                                                <FormLabel>Total Price</FormLabel>
+                                                                <div className="font-medium pt-2 font-mono">₹{watchedItems[index]?.total_price.toFixed(2) || '0.00'}</div>
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                )
+                                            })}
+                                        </div>
+                                    </>
                                 )}
                                 <div className="flex gap-2 mt-4">
                                     <Button type="button" variant="outline" size="sm" onClick={() => append({ sku_id: 0, quantity: 1, case_price: 0, total_price: 0 })} disabled={loading}>

@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback, useTransition } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { StockOrder, Distributor } from "@/lib/types";
 import { useAuth } from "@/lib/auth";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -109,49 +109,94 @@ export default function StockOrdersPage() {
                             <Skeleton className="h-12 w-full" />
                         </div>
                     ) : orders.length > 0 ? (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-[80px]">Order ID</TableHead>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead className="text-right">Value</TableHead>
-                                    <TableHead className="w-[200px] text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {orders.map((order) => (
-                                    <TableRow key={order.id}>
-                                        <TableCell className="font-mono">#{order.id}</TableCell>
-                                        <TableCell>{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
-                                        <TableCell><Badge variant={getStatusVariant(order.status)}>{order.status}</Badge></TableCell>
-                                        <TableCell className="text-right">₹{order.total_amount?.toFixed(2) || '0.00'}</TableCell>
-                                        <TableCell className="text-right space-x-2">
-                                            <Button asChild variant="outline" size="sm">
-                                                <Link href={`/dashboard/stock-orders/${order.id}`}>View</Link>
-                                            </Button>
-                                             {order.is_invoice_created && order.invoices && order.invoices.length > 0 ? (
-                                                <Button asChild variant="outline" size="sm">
-                                                    <Link href={`/invoice/${order.invoices[0].id}`}>
-                                                        <FileText className="mr-2 h-4 w-4" /> View Invoice
-                                                    </Link>
-                                                </Button>
-                                            ) : order.status === 'Shipped' && (
-                                                <Button 
-                                                    variant="default" 
-                                                    size="sm" 
-                                                    onClick={() => handleMarkAsReceived(order.id)}
-                                                    disabled={isPending}
-                                                >
-                                                    <Check className="mr-2 h-4 w-4" />
-                                                    Mark as Received
-                                                </Button>
-                                            )}
-                                        </TableCell>
+                        <>
+                        <div className="hidden md:block">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-[80px]">Order ID</TableHead>
+                                        <TableHead>Date</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead className="text-right">Value</TableHead>
+                                        <TableHead className="w-[200px] text-right">Actions</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {orders.map((order) => (
+                                        <TableRow key={order.id}>
+                                            <TableCell className="font-mono">#{order.id}</TableCell>
+                                            <TableCell>{format(new Date(order.order_date), 'MMM d, yyyy')}</TableCell>
+                                            <TableCell><Badge variant={getStatusVariant(order.status)}>{order.status}</Badge></TableCell>
+                                            <TableCell className="text-right">₹{order.total_amount?.toFixed(2) || '0.00'}</TableCell>
+                                            <TableCell className="text-right space-x-2">
+                                                <Button asChild variant="outline" size="sm">
+                                                    <Link href={`/dashboard/stock-orders/${order.id}`}>View</Link>
+                                                </Button>
+                                                {order.is_invoice_created && order.invoices && order.invoices.length > 0 ? (
+                                                    <Button asChild variant="outline" size="sm">
+                                                        <Link href={`/invoice/${order.invoices[0].id}`}>
+                                                            <FileText className="mr-2 h-4 w-4" /> View Invoice
+                                                        </Link>
+                                                    </Button>
+                                                ) : order.status === 'Shipped' ? (
+                                                    <Button 
+                                                        variant="default" 
+                                                        size="sm" 
+                                                        onClick={() => handleMarkAsReceived(order.id)}
+                                                        disabled={isPending}
+                                                    >
+                                                        <Check className="mr-2 h-4 w-4" />
+                                                        Mark as Received
+                                                    </Button>
+                                                ) : null}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
+                         <div className="grid gap-4 md:hidden">
+                            {orders.map((order) => (
+                                <Card key={order.id}>
+                                    <CardHeader>
+                                        <CardTitle className="text-base flex items-center justify-between">
+                                            <span>Order #{order.id}</span>
+                                            <Badge variant={getStatusVariant(order.status)}>{order.status}</Badge>
+                                        </CardTitle>
+                                        <CardDescription>
+                                            {format(new Date(order.order_date), 'MMM d, yyyy')}
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="flex justify-end items-center">
+                                        <div className="font-semibold text-lg">₹{order.total_amount?.toFixed(2) || '0.00'}</div>
+                                    </CardContent>
+                                    <CardFooter className="flex flex-col gap-2">
+                                        <Button asChild variant="outline" size="sm" className="w-full">
+                                            <Link href={`/dashboard/stock-orders/${order.id}`}>View Details</Link>
+                                        </Button>
+                                        {order.is_invoice_created && order.invoices && order.invoices.length > 0 ? (
+                                            <Button asChild variant="default" size="sm" className="w-full">
+                                                <Link href={`/invoice/${order.invoices[0].id}`}>
+                                                    <FileText className="mr-2 h-4 w-4" /> View Invoice
+                                                </Link>
+                                            </Button>
+                                        ) : order.status === 'Shipped' ? (
+                                            <Button 
+                                                variant="default" 
+                                                size="sm" 
+                                                className="w-full"
+                                                onClick={() => handleMarkAsReceived(order.id)}
+                                                disabled={isPending}
+                                            >
+                                                <Check className="mr-2 h-4 w-4" />
+                                                Mark as Received
+                                            </Button>
+                                        ) : null}
+                                    </CardFooter>
+                                </Card>
+                            ))}
+                        </div>
+                        </>
                     ) : (
                         <div className="text-center text-muted-foreground p-8 border-dashed border-2 rounded-md">
                             No stock orders found yet.
