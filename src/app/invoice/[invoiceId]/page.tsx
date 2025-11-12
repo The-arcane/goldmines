@@ -151,31 +151,59 @@ export default function InvoicePage({ params }: { params: { invoiceId: string } 
                         </div>
                         
                         <div className="mt-8">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Item</TableHead>
-                                        <TableHead>Weight/Unit</TableHead>
-                                        <TableHead className="text-center">Qty</TableHead>
-                                        <TableHead className="text-right">Rate</TableHead>
-                                        <TableHead className="text-right">Amount</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {items?.map((item: InvoiceItem, index: number) => (
-                                        <TableRow key={index}>
-                                            <TableCell>
-                                                <div className="font-medium">{item.name}</div>
-                                                <div className="text-xs text-muted-foreground">{item.code}</div>
-                                            </TableCell>
-                                            <TableCell>{item.weight || 'N/A'}</TableCell>
-                                            <TableCell className="text-center">{item.quantity}</TableCell>
-                                            <TableCell className="text-right font-mono">₹{item.unit_price.toFixed(2)}</TableCell>
-                                            <TableCell className="text-right font-mono">₹{item.total_price.toFixed(2)}</TableCell>
+                            <div className="hidden md:block">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Item</TableHead>
+                                            <TableHead>Weight/Unit</TableHead>
+                                            <TableHead className="text-center">Qty</TableHead>
+                                            <TableHead className="text-right">Rate</TableHead>
+                                            <TableHead className="text-right">Amount</TableHead>
                                         </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {items?.map((item: InvoiceItem, index: number) => (
+                                            <TableRow key={index}>
+                                                <TableCell>
+                                                    <div className="font-medium">{item.name}</div>
+                                                    <div className="text-xs text-muted-foreground">{item.code}</div>
+                                                </TableCell>
+                                                <TableCell>{item.weight || 'N/A'}</TableCell>
+                                                <TableCell className="text-center">{item.quantity}</TableCell>
+                                                <TableCell className="text-right font-mono">₹{item.unit_price.toFixed(2)}</TableCell>
+                                                <TableCell className="text-right font-mono">₹{item.total_price.toFixed(2)}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                            <div className="grid gap-4 md:hidden">
+                                {items?.map((item: InvoiceItem, index: number) => (
+                                    <Card key={index}>
+                                        <CardContent className="p-4 grid gap-2">
+                                            <div>
+                                                <p className="font-medium">{item.name}</p>
+                                                <p className="text-xs text-muted-foreground">{item.code}</p>
+                                            </div>
+                                            <div className="grid grid-cols-3 text-sm">
+                                                <div>
+                                                    <p className="text-muted-foreground">Qty</p>
+                                                    <p>{item.quantity}</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-muted-foreground">Rate</p>
+                                                    <p className="font-mono">₹{item.unit_price.toFixed(2)}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-muted-foreground">Amount</p>
+                                                    <p className="font-mono font-semibold">₹{item.total_price.toFixed(2)}</p>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
                         </div>
                     </CardContent>
                     <CardFooter className="flex-col items-end p-0 mt-8 space-y-2">
