@@ -107,6 +107,27 @@ export default function AdminCreateStockOrderPage() {
          });
     }
 
+    const handleAddAllSkus = () => {
+        const existingSkuIds = new Set(watchedItems.map(item => item.sku_id));
+        const newItems = skus
+            .filter(sku => !existingSkuIds.has(sku.id))
+            .map(sku => {
+                const casePrice = sku.case_price || 0;
+                return {
+                    sku_id: sku.id,
+                    quantity: 1,
+                    case_price: casePrice,
+                    total_price: casePrice * 1,
+                };
+            });
+
+        if (newItems.length > 0) {
+            append(newItems);
+        } else {
+            toast({ title: "No new SKUs to add", description: "All available master SKUs are already in the order." });
+        }
+    };
+
     const onSubmit = (data: StockOrderFormValues) => {
         const distributorId = parseInt(data.distributor_id);
         if (!distributorId) {
@@ -233,9 +254,14 @@ export default function AdminCreateStockOrderPage() {
                                         </TableBody>
                                     </Table>
                                 )}
-                                <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => append({ sku_id: 0, quantity: 1, case_price: 0, total_price: 0 })} disabled={loading}>
-                                    <PlusCircle className="mr-2 h-4 w-4" /> Add Item
-                                </Button>
+                                <div className="flex gap-2 mt-4">
+                                    <Button type="button" variant="outline" size="sm" onClick={() => append({ sku_id: 0, quantity: 1, case_price: 0, total_price: 0 })} disabled={loading}>
+                                        <PlusCircle className="mr-2 h-4 w-4" /> Add Item
+                                    </Button>
+                                    <Button type="button" variant="secondary" size="sm" onClick={handleAddAllSkus} disabled={loading || skus.length === 0}>
+                                        <PlusCircle className="mr-2 h-4 w-4" /> Add All SKUs
+                                    </Button>
+                                </div>
                                 <FormMessage>{form.formState.errors.items?.message}</FormMessage>
                             </CardContent>
                         </Card>
