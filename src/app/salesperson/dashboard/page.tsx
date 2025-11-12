@@ -35,7 +35,21 @@ export default function SalespersonDashboardPage() {
 
         const today = new Date().toISOString().slice(0, 10);
         
-        // --- Fetch all data in parallel ---
+        // 1. Find which distributor this user belongs to
+        const { data: distributorLink, error: distributorLinkError } = await supabase
+          .from('distributor_users')
+          .select('distributor_id')
+          .eq('user_id', user.id)
+          .single();
+
+        if (distributorLinkError || !distributorLink) {
+          toast({ variant: "destructive", title: "Error", description: "You are not assigned to a distributor." });
+          setLoading(false);
+          return;
+        }
+        const distributorId = distributorLink.distributor_id;
+
+        // 2. Fetch all other data in parallel, now scoped by distributorId
         const attendancePromise = supabase
             .from('attendance')
             .select('*')
@@ -46,7 +60,8 @@ export default function SalespersonDashboardPage() {
             .limit(1)
             .maybeSingle();
 
-        const outletsPromise = supabase.from('outlets').select('*');
+        // THIS IS THE FIX: Only select outlets for the correct distributor
+        const outletsPromise = supabase.from('outlets').select('*').eq('distributor_id', distributorId);
 
         const ordersPromise = supabase
             .from('orders')
