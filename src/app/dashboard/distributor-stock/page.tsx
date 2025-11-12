@@ -4,7 +4,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import type { DistributorStock, Distributor } from "@/lib/types";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useAuth } from "@/lib/auth";
 import { Badge } from "@/components/ui/badge";
@@ -79,7 +79,7 @@ export default function DistributorStockPage() {
                     </div>
                      <div className="flex items-center gap-2">
                         <Select onValueChange={handleDistributorChange} value={selectedDistributor} disabled={loading}>
-                            <SelectTrigger className="w-[250px]">
+                            <SelectTrigger className="w-full sm:w-[250px]">
                                 <SelectValue placeholder="Select a distributor" />
                             </SelectTrigger>
                             <SelectContent>
@@ -115,35 +115,75 @@ function DistributorStockTable({ stock }: { stock: DistributorStock[] }) {
         );
     }
      return (
-        <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead>Product Name</TableHead>
-                    <TableHead>SKU Code</TableHead>
-                    <TableHead className="text-right">Stock (Units)</TableHead>
-                    <TableHead>Unit Type</TableHead>
-                    <TableHead className="text-right">Units/Case</TableHead>
-                    <TableHead className="text-right">Case Price (₹)</TableHead>
-                    <TableHead className="text-right">MRP (₹)</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
+        <>
+            <div className="hidden md:block">
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Product Name</TableHead>
+                            <TableHead>SKU Code</TableHead>
+                            <TableHead className="text-right">Stock (Units)</TableHead>
+                            <TableHead>Unit Type</TableHead>
+                            <TableHead className="text-right">Units/Case</TableHead>
+                            <TableHead className="text-right">Case Price (₹)</TableHead>
+                            <TableHead className="text-right">MRP (₹)</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {stock.map((item) => (
+                            <TableRow key={item.id}>
+                                <TableCell className="font-medium">{item.skus.name}</TableCell>
+                                <TableCell>{item.skus.product_code || 'N/A'}</TableCell>
+                                <TableCell className="text-right">
+                                    <Badge variant={item.stock_quantity < 10 ? 'destructive' : 'secondary'}>
+                                        {item.stock_quantity}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell>{item.skus.unit_type || 'N/A'}</TableCell>
+                                <TableCell className="text-right">{item.units_per_case || 'N/A'}</TableCell>
+                                <TableCell className="text-right">₹{item.case_price?.toFixed(2) || '0.00'}</TableCell>
+                                <TableCell className="text-right">₹{item.mrp?.toFixed(2) || '0.00'}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+             <div className="grid gap-4 md:hidden">
                 {stock.map((item) => (
-                    <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.skus.name}</TableCell>
-                        <TableCell>{item.skus.product_code || 'N/A'}</TableCell>
-                        <TableCell className="text-right">
-                             <Badge variant={item.stock_quantity < 10 ? 'destructive' : 'secondary'}>
-                                {item.stock_quantity}
-                            </Badge>
-                        </TableCell>
-                        <TableCell>{item.skus.unit_type || 'N/A'}</TableCell>
-                        <TableCell className="text-right">{item.units_per_case || 'N/A'}</TableCell>
-                        <TableCell className="text-right">₹{item.case_price?.toFixed(2) || '0.00'}</TableCell>
-                        <TableCell className="text-right">₹{item.mrp?.toFixed(2) || '0.00'}</TableCell>
-                    </TableRow>
+                    <Card key={item.id}>
+                        <CardHeader>
+                            <CardTitle className="text-base">{item.skus.name}</CardTitle>
+                            <CardDescription>SKU: {item.skus.product_code || 'N/A'}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-2 gap-4 text-sm">
+                            <div className="space-y-1">
+                                <p className="text-muted-foreground">Stock</p>
+                                <Badge variant={item.stock_quantity < 10 ? 'destructive' : 'secondary'}>
+                                    {item.stock_quantity}
+                                </Badge>
+                            </div>
+                             <div className="space-y-1 text-right">
+                                <p className="text-muted-foreground">Unit Type</p>
+                                <p>{item.skus.unit_type || 'N/A'}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-muted-foreground">Units/Case</p>
+                                <p>{item.units_per_case || 'N/A'}</p>
+                            </div>
+                             <div className="space-y-1 text-right">
+                                <p className="text-muted-foreground">MRP</p>
+                                <p className="font-semibold">₹{item.mrp?.toFixed(2) || '0.00'}</p>
+                            </div>
+                        </CardContent>
+                        <CardFooter>
+                            <div className="w-full space-y-1 text-sm">
+                                <p className="text-muted-foreground">Case Price</p>
+                                <p className="font-semibold text-base">₹{item.case_price?.toFixed(2) || '0.00'}</p>
+                            </div>
+                        </CardFooter>
+                    </Card>
                 ))}
-            </TableBody>
-        </Table>
+            </div>
+        </>
     )
 }
