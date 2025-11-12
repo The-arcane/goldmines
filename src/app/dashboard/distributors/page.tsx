@@ -54,15 +54,15 @@ export default function DistributorsPage() {
     return (
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
             <Card>
-                <CardHeader className="flex flex-row items-center">
-                    <div className="grid gap-2">
+                <CardHeader className="flex flex-col md:flex-row md:items-center gap-4">
+                    <div className="grid gap-2 flex-grow">
                         <CardTitle>Distributor Organizations</CardTitle>
                         <CardDescription>
                            Create and manage distributor organizations and their administrators.
                         </CardDescription>
                     </div>
-                    <div className="ml-auto flex items-center gap-2">
-                        <Button asChild size="sm" className="h-8 gap-1">
+                    <div className="flex flex-col sm:flex-row items-center gap-2">
+                        <Button asChild size="sm" className="h-8 gap-1 w-full sm:w-auto">
                             <Link href="/dashboard/admin/create-stock-order">
                                 <PlusCircle className="h-3.5 w-3.5" />
                                 Create Stock Order
