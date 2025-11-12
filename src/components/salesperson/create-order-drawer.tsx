@@ -160,9 +160,11 @@ export function CreateOrderDrawer({ outlet, onOrderPlaced, disabled }: CreateOrd
                 else if (item.quantity >= 6) discountPercentage = 2;
                 else if (item.quantity >= 1) discountPercentage = 1;
             }
-        } else {
+        } else { // This is for 'units'
             totalPrice = perUnitPrice * item.quantity;
-            discountPercentage = 0;
+            if (item.apply_scheme && item.quantity >= 12) {
+                discountPercentage = 1;
+            }
         }
         
         return { unit_price: perUnitPrice, total_price: totalPrice, scheme_discount_percentage: discountPercentage };
@@ -290,9 +292,7 @@ export function CreateOrderDrawer({ outlet, onOrderPlaced, disabled }: CreateOrd
                                     <div className="grid gap-4">
                                         {fields.map((field, index) => {
                                             const stockInfo = distributorStock.find(s => s.sku_id === watchedItems[index]?.sku_id);
-                                            const isCases = watchedItems[index]?.order_unit_type === 'cases';
-                                            const { total_price, scheme_discount_percentage } = calculateItemTotals(watchedItems[index]);
-                                            const final_total_price = total_price * (1 - (scheme_discount_percentage / 100));
+                                            const { scheme_discount_percentage } = calculateItemTotals(watchedItems[index]);
                                             return (
                                                 <Card key={field.id} className="bg-muted/30">
                                                     <CardHeader className="p-4">
@@ -326,12 +326,10 @@ export function CreateOrderDrawer({ outlet, onOrderPlaced, disabled }: CreateOrd
                                                             <Label>Price</Label>
                                                             <div className="font-medium pt-2">₹{watchedItems[index]?.unit_price.toFixed(2)}</div>
                                                         </div>
-                                                        {isCases && (
-                                                            <div className="col-span-2 flex items-center justify-between">
+                                                        <div className="col-span-2 flex items-center justify-between">
                                                                 <Label htmlFor={`scheme-mobile-${index}`} className="pr-4">Apply Scheme ({scheme_discount_percentage}%)</Label>
                                                                 <Switch id={`scheme-mobile-${index}`} checked={watchedItems[index]?.apply_scheme} onCheckedChange={(checked) => handleFieldChange(index, 'apply_scheme', checked)} />
                                                             </div>
-                                                        )}
                                                     </CardContent>
                                                 </Card>
                                             )

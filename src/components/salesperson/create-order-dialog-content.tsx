@@ -145,9 +145,11 @@ export function CreateOrderDialogContent({ outlet, onOrderPlaced, setOpen, open 
                 else if (item.quantity >= 6) discountPercentage = 2;
                 else if (item.quantity >= 1) discountPercentage = 1;
             }
-        } else {
+        } else { // This is for 'units'
             totalPrice = perUnitPrice * item.quantity;
-            discountPercentage = 0;
+            if (item.apply_scheme && item.quantity >= 12) {
+                discountPercentage = 1;
+            }
         }
         
         return { unit_price: perUnitPrice, total_price: totalPrice, scheme_discount_percentage: discountPercentage };
@@ -285,7 +287,6 @@ export function CreateOrderDialogContent({ outlet, onOrderPlaced, setOpen, open 
                                     <TableBody>
                                         {fields.map((field, index) => {
                                             const stockInfo = distributorStock.find(s => s.sku_id === watchedItems[index]?.sku_id);
-                                            const isCases = watchedItems[index]?.order_unit_type === 'cases';
                                             const { total_price, scheme_discount_percentage } = calculateItemTotals(watchedItems[index]);
                                             const final_total_price = total_price * (1 - (scheme_discount_percentage / 100));
 
@@ -310,12 +311,10 @@ export function CreateOrderDialogContent({ outlet, onOrderPlaced, setOpen, open 
                                                     <TableCell>₹{watchedItems[index]?.unit_price.toFixed(2)}</TableCell>
                                                     <TableCell>₹{total_price.toFixed(2)}</TableCell>
                                                     <TableCell>
-                                                        {isCases ? (
-                                                            <div className="flex items-center gap-2">
-                                                                <Switch id={`scheme-${index}`} checked={watchedItems[index]?.apply_scheme} onCheckedChange={(checked) => handleFieldChange(index, 'apply_scheme', checked)} />
-                                                                <FormLabel htmlFor={`scheme-${index}`}>{scheme_discount_percentage}%</FormLabel>
-                                                            </div>
-                                                        ) : 'N/A'}
+                                                        <div className="flex items-center gap-2">
+                                                            <Switch id={`scheme-${index}`} checked={watchedItems[index]?.apply_scheme} onCheckedChange={(checked) => handleFieldChange(index, 'apply_scheme', checked)} />
+                                                            <FormLabel htmlFor={`scheme-${index}`}>{scheme_discount_percentage}%</FormLabel>
+                                                        </div>
                                                     </TableCell>
                                                     <TableCell className="font-bold">₹{final_total_price.toFixed(2)}</TableCell>
                                                     <TableCell><Button variant="ghost" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4 text-destructive" /></Button></TableCell>
