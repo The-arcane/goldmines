@@ -208,7 +208,7 @@ export default function CreateStockOrderPage() {
                                                             render={({ field }) => (
                                                                 <Select onValueChange={(value) => { field.onChange(value); handleSkuChange(index, value); }} defaultValue={String(field.value)}>
                                                                     <FormControl><SelectTrigger><SelectValue placeholder="Select a SKU" /></SelectTrigger></FormControl>
-                                                                    <SelectContent>
+                                                                    <SelectContent position="popper">
                                                                         {skus.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}{s.unit_type ? ` (${s.unit_type})` : ''}</SelectItem>)}
                                                                     </SelectContent>
                                                                 </Select>
