@@ -8,7 +8,6 @@ import { useAuth } from "@/lib/auth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { AddSalespersonOutletDialog } from "@/components/salesperson/add-outlet-dialog";
 
 export default function MyOutletsPage() {
     const { user, loading: authLoading } = useAuth();
@@ -50,9 +49,6 @@ export default function MyOutletsPage() {
                         <CardDescription>
                            A list of all outlets you have added.
                         </CardDescription>
-                    </div>
-                    <div className="flex-shrink-0">
-                        <AddSalespersonOutletDialog onOutletAdded={fetchOutlets} />
                     </div>
                 </CardHeader>
                 <CardContent>
