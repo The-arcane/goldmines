@@ -584,7 +584,7 @@ export async function updateOrderAndStock(orderId: number, outOfStockItemIds: nu
 
     const { data: order, error: fetchError } = await supabase
         .from('orders')
-        .select('*, order_items(*, skus(units_per_case))')
+        .select('*')
         .eq('id', orderId)
         .single();
     
@@ -595,10 +595,9 @@ export async function updateOrderAndStock(orderId: number, outOfStockItemIds: nu
     if (order.status !== 'Dispatched') {
         return { success: false, error: "Only dispatched orders can be marked as delivered." };
     }
-
-    // This logic is now handled when the order is created.
-    // When marking as delivered, we just confirm the status.
-    // Out-of-stock adjustments are done *before* dispatch.
+    
+    // The stock deduction logic is now handled at the point of order creation.
+    // This function's only responsibility is to update the order status.
 
     const { error: updateOrderError } = await supabase
         .from('orders')
@@ -615,6 +614,7 @@ export async function updateOrderAndStock(orderId: number, outOfStockItemIds: nu
     revalidatePath('/dashboard/distributor/orders');
     return { success: true };
 }
+
 
 export async function updateStockOrderStatus(orderId: number, status: string) {
     const supabase = createServerActionClient({ isAdmin: true });
@@ -846,5 +846,6 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
   revalidatePath('/dashboard/distributor/stock-orders');
   redirect(`/invoice/${invoiceData.id}`);
 }
+
 
 
