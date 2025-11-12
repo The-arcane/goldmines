@@ -105,7 +105,7 @@ export function Sidebar({ userRole }: { userRole: UserRole | undefined }) {
           </nav>
         </div>
         <div className="mt-auto p-4 text-center text-xs text-muted-foreground">
-          Version 1.0.1.0 by SparkEdge Innovations
+          Developed by SparkEdge Innovations
         </div>
       </div>
     </div>
