@@ -286,40 +286,9 @@ export async function createNewOrder(formData: OrderFormData, distributorId: num
     return { success: false, error: `Order items could not be saved: ${itemsError.message}` };
   }
 
-  // 4. Update distributor stock
-  for (const item of formData.items) {
-    const { data: stockItem, error: stockFetchError } = await supabase
-      .from('distributor_stock')
-      .select('stock_quantity, units_per_case')
-      .eq('distributor_id', distributorId)
-      .eq('sku_id', item.sku_id)
-      .single();
+  // Stock is now decremented on delivery, so we remove that logic from here.
 
-    if (stockFetchError || !stockItem) {
-      console.error(`Could not fetch stock for SKU ${item.sku_id} for distributor ${distributorId}. Skipping stock update for this item.`);
-      continue;
-    }
-    
-    const quantityToDecrement = item.order_unit_type === 'cases' 
-      ? item.quantity * (stockItem.units_per_case || 1) 
-      : item.quantity;
-      
-    const newStockQuantity = (stockItem.stock_quantity || 0) - quantityToDecrement;
-
-    const { error: stockUpdateError } = await supabase
-      .from('distributor_stock')
-      .update({ stock_quantity: newStockQuantity })
-      .eq('distributor_id', distributorId)
-      .eq('sku_id', item.sku_id);
-      
-    if (stockUpdateError) {
-       console.error(`Failed to update stock for SKU ${item.sku_id} for distributor ${distributorId}:`, stockUpdateError);
-       // In a real app, you might want to add more robust error handling or rollback logic here.
-    }
-  }
-
-
-  // 5. Update outlet due
+  // 4. Update outlet due
   const dueChange = formData.total_amount - (formData.amount_paid || 0);
   if (dueChange !== 0) {
       const { error: rpcError } = await supabase.rpc('update_outlet_due', {
@@ -582,9 +551,10 @@ export async function markAttendance(data: AttendanceData) {
 export async function updateOrderAndStock(orderId: number, outOfStockItemIds: number[]) {
     const supabase = createServerActionClient({ isAdmin: true });
 
+    // 1. Fetch order details including items
     const { data: order, error: fetchError } = await supabase
         .from('orders')
-        .select('*')
+        .select('*, order_items(*)')
         .eq('id', orderId)
         .single();
     
@@ -595,15 +565,58 @@ export async function updateOrderAndStock(orderId: number, outOfStockItemIds: nu
     if (order.status !== 'Dispatched') {
         return { success: false, error: "Only dispatched orders can be marked as delivered." };
     }
-    
-    // The stock deduction logic is now handled at the point of order creation.
-    // This function's only responsibility is to update the order status.
 
+    // 2. Decrement distributor stock for items that are NOT marked as out of stock
+    const deliveredItems = order.order_items.filter(item => !outOfStockItemIds.includes(item.id));
+
+    for (const item of deliveredItems) {
+        const { data: stockItem, error: stockFetchError } = await supabase
+            .from('distributor_stock')
+            .select('stock_quantity, units_per_case')
+            .eq('distributor_id', order.distributor_id)
+            .eq('sku_id', item.sku_id)
+            .single();
+
+        if (stockFetchError || !stockItem) {
+            console.error(`Could not fetch stock for SKU ${item.sku_id} for distributor ${order.distributor_id}. Skipping stock update for this item.`);
+            // In a real app you might want to stop and return an error here
+            continue; 
+        }
+        
+        const quantityToDecrement = item.order_unit_type === 'cases' 
+            ? item.quantity * (stockItem.units_per_case || 1) 
+            : item.quantity;
+            
+        const newStockQuantity = (stockItem.stock_quantity || 0) - quantityToDecrement;
+
+        const { error: stockUpdateError } = await supabase
+            .from('distributor_stock')
+            .update({ stock_quantity: newStockQuantity })
+            .eq('distributor_id', order.distributor_id)
+            .eq('sku_id', item.sku_id);
+            
+        if (stockUpdateError) {
+           console.error(`Failed to update stock for SKU ${item.sku_id} for distributor ${order.distributor_id}:`, stockUpdateError);
+           // Potentially return an error here if you want to be strict
+        }
+    }
+
+    // 3. Mark out-of-stock items in the database
+    if (outOfStockItemIds.length > 0) {
+        const { error: outOfStockError } = await supabase
+            .from('order_items')
+            .update({ is_out_of_stock: true })
+            .in('id', outOfStockItemIds);
+
+        if (outOfStockError) {
+             return { success: false, error: `Could not mark items as out of stock: ${outOfStockError.message}` };
+        }
+    }
+
+    // 4. Update the order status to 'Delivered'
     const { error: updateOrderError } = await supabase
         .from('orders')
-        .update({ 
-            status: 'Delivered',
-         })
+        .update({ status: 'Delivered' })
         .eq('id', orderId);
 
     if (updateOrderError) {
@@ -612,6 +625,7 @@ export async function updateOrderAndStock(orderId: number, outOfStockItemIds: nu
     
     revalidatePath(`/dashboard/distributor/orders/${orderId}`);
     revalidatePath('/dashboard/distributor/orders');
+    revalidatePath('/dashboard/distributor/skus');
     return { success: true };
 }
 
@@ -846,6 +860,7 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
   revalidatePath('/dashboard/distributor/stock-orders');
   redirect(`/invoice/${invoiceData.id}`);
 }
+
 
 
 
