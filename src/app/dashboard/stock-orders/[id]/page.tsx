@@ -93,7 +93,7 @@ export default function StockOrderDetailsPage({ params }: { params: { id: string
                 </h1>
                 <Badge variant={getStatusVariant(order.status)} className="ml-auto sm:ml-0">{order.status}</Badge>
                  <div className="hidden items-center gap-2 md:ml-auto md:flex">
-                     {order.status === 'Delivered' && (
+                     {user?.role === 'super_admin' && order.status === 'Delivered' && !order.is_invoice_created && (
                         <Button variant="outline" size="sm" onClick={handleGenerateInvoice} disabled={isPending}>
                             <FileText className="mr-2 h-4 w-4" />
                             Generate Invoice
@@ -167,7 +167,7 @@ export default function StockOrderDetailsPage({ params }: { params: { id: string
                 </div>
             </div>
              <div className="flex items-center justify-center gap-2 md:hidden">
-                {order.status === 'Delivered' && (
+                {user?.role === 'super_admin' && order.status === 'Delivered' && !order.is_invoice_created && (
                     <Button variant="outline" size="sm" onClick={handleGenerateInvoice} disabled={isPending} className="w-full">
                         <FileText className="mr-2 h-4 w-4" />
                         Generate Invoice

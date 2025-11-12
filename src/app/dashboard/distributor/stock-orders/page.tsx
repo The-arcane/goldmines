@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Check, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { updateOrderStatus } from "@/lib/actions";
+import { updateStockOrderStatus } from "@/lib/actions";
 
 
 export default function StockOrdersPage() {
@@ -76,12 +76,10 @@ export default function StockOrdersPage() {
         }
     }
     
-    const handleMarkAsDelivered = (orderId: number) => {
+    const handleMarkAsReceived = (orderId: number) => {
         startTransition(async () => {
-            // Note: This action is now handled by the admin. 
-            // A distributor would confirm delivery, which might trigger a different status update.
-            // For now, let's assume the distributor is confirming they received the order.
-            const result = await updateOrderStatus(orderId, 'Delivered');
+            // This action confirms delivery and triggers the stock update on the backend
+            const result = await updateStockOrderStatus(orderId, 'Delivered');
             if(result.success) {
                 toast({ title: "Order Received", description: `The stock order has been marked as received and your inventory is updated.`});
                 fetchOrders();
@@ -142,7 +140,7 @@ export default function StockOrdersPage() {
                                                 <Button 
                                                     variant="default" 
                                                     size="sm" 
-                                                    onClick={() => handleMarkAsDelivered(order.id)}
+                                                    onClick={() => handleMarkAsReceived(order.id)}
                                                     disabled={isPending}
                                                 >
                                                     <Check className="mr-2 h-4 w-4" />
