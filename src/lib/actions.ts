@@ -661,12 +661,13 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
             continue;
         }
 
+        const casesToMove = item.quantity; // This is the number of cases
         const totalUnitsToMove = item.quantity * (item.skus.units_per_case || 1);
 
-        // 1. Decrement Super Admin's stock in the 'skus' table
+        // 1. Decrement Super Admin's stock in the 'skus' table by number of cases
         const { error: adminStockError } = await supabase.rpc('decrement_master_stock', {
             p_sku_id: item.sku_id,
-            p_quantity: totalUnitsToMove
+            p_quantity: casesToMove // Decrement by the number of cases
         });
         if (adminStockError) {
              stockUpdateErrors.push(`Failed to update master stock for SKU ${item.sku_id}: ${adminStockError.message}`);
@@ -674,7 +675,7 @@ async function updateStockAndMarkAsDelivered(orderId: number) {
         }
         
 
-        // 2. Increment/Insert Distributor's stock in 'distributor_stock' table
+        // 2. Increment/Insert Distributor's stock in 'distributor_stock' table by number of units
         const { data: existingStock, error: fetchStockError } = await supabase
             .from('distributor_stock')
             .select('id, stock_quantity')
@@ -845,4 +846,5 @@ export async function generateInvoice(orderId?: number, stockOrderId?: number) {
   revalidatePath('/dashboard/distributor/stock-orders');
   redirect(`/invoice/${invoiceData.id}`);
 }
+
 
